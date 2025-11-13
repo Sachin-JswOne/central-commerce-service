@@ -91,6 +91,24 @@
 <!--            <groupId>com.jswone</groupId>-->
 <!--            <artifactId>auth-common-util</artifactId>-->
 <!--        </dependency>-->
+
+        <!-- Commercetools SDKs -->
+        <dependency>
+            <groupId>com.commercetools.sdk</groupId>
+            <artifactId>commercetools-okhttp-client4</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.commercetools.sdk</groupId>
+            <artifactId>commercetools-sdk-java-api</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.commercetools.sdk</groupId>
+            <artifactId>commercetools-sdk-java-importapi</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.commercetools.sdk</groupId>
+            <artifactId>commercetools-sdk-java-ml</artifactId>
+        </dependency>
     </dependencies>
 
 </project>
