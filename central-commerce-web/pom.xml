@@ -62,6 +62,35 @@
             <artifactId>lombok</artifactId>
             <scope>provided</scope>
         </dependency>
+        <!-- Company/internal artifacts (keep as-is) -->
+        <dependency>
+            <groupId>com.jswone.measurement.common</groupId>
+            <artifactId>measurement_common_model</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.jswone.ordering.common</groupId>
+            <artifactId>jsw_ordering_common_model</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.jswonemsme</groupId>
+            <artifactId>product.common.util</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.jswonemsme</groupId>
+            <artifactId>catalogue_common_model</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.jsw</groupId>
+            <artifactId>notification_common_model</artifactId>
+        </dependency>
+<!--        <dependency>-->
+<!--            <groupId>com.jswone</groupId>-->
+<!--            <artifactId>jsw_measurement_util</artifactId>-->
+<!--        </dependency>-->
+<!--        <dependency>-->
+<!--            <groupId>com.jswone</groupId>-->
+<!--            <artifactId>auth-common-util</artifactId>-->
+<!--        </dependency>-->
     </dependencies>
 
 </project>
