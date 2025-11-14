@@ -1,8 +1,7 @@
 package com.jswone.commerce.core.util;
 
-//import com.google.cloud.datastore.Key;
-//import com.jswone.commerce.core.constant.JWTConstants;
-import com.jswone.commerce.core.constant.JWTConstants;
+
+import com.jswone.commerce.core.constants.JWTConstants;
 import com.jswone.commerce.core.exceptions.CentralCommerceServiceException;
 import io.jsonwebtoken.*;
 import lombok.extern.log4j.Log4j2;
@@ -15,9 +14,6 @@ import java.io.Serializable;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.Base64;
-//import java.security.MessageDigest;
-//import java.security.NoSuchAlgorithmException;
-//import java.util.Base64;
 
 @Component
 @Log4j2
