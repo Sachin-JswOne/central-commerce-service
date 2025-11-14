@@ -101,6 +101,14 @@
             <groupId>com.google.cloud</groupId>
             <artifactId>spring-cloud-gcp-starter-data-firestore</artifactId>
         </dependency>
+        <dependency>
+            <groupId>com.jswone.ordering.common</groupId>
+            <artifactId>jsw_ordering_common_model</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.jswone.ordering.common</groupId>
+            <artifactId>jsw_ordering_common_util</artifactId>
+        </dependency>
     </dependencies>
 
 </project>

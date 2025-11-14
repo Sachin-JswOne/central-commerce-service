@@ -110,6 +110,21 @@
                 <artifactId>spring-cloud-gcp-starter-data-firestore</artifactId>
                 <version>6.0.0</version>
             </dependency>
+            <dependency>
+                <groupId>com.jswone.ordering.common</groupId>
+                <artifactId>jsw_ordering_common_util</artifactId>
+                <version>0.0.332</version>
+                <exclusions>
+                    <exclusion>
+                        <groupId>one.talon</groupId>
+                        <artifactId>talon-one-client</artifactId>
+                    </exclusion>
+                    <exclusion>
+                        <groupId>gradle.plugin.org.mockito</groupId>
+                        <artifactId>mockito-release-tools</artifactId>
+                    </exclusion>
+                </exclusions>
+            </dependency>
         </dependencies>
     </dependencyManagement>
 

@@ -19,4 +19,6 @@ public class JWTConstants {
                     "/cart/dlq/cart-opportunity",
                     "/**/actuator/**");
 
+    public static final String USER_ID_CLAIM = "userId";
+
 }
