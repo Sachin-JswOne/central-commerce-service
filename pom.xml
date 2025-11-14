@@ -18,6 +18,7 @@
     <modules>
         <module>central-commerce-core</module>
         <module>central-commerce-web</module>
+        <module>central-commerce-application</module>
     </modules>
     <properties>
         <java.version>21</java.version>
