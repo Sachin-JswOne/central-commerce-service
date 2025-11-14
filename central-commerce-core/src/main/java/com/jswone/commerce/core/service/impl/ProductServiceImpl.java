@@ -25,10 +25,13 @@ import java.util.stream.Collectors;
 @Log4j2
 public class ProductServiceImpl implements ProductService {
     private final ProductCatalogueStoreRepository productCatalogueStoreRepository;
+    private final ProductAttributeUtil productAttributeUtil;
 
-    public ProductServiceImpl(ProductCatalogueStoreRepository productCatalogueStoreRepository) {
+    public ProductServiceImpl(ProductCatalogueStoreRepository productCatalogueStoreRepository, ProductAttributeUtil productAttributeUtil) {
         this.productCatalogueStoreRepository = productCatalogueStoreRepository;
+        this.productAttributeUtil = productAttributeUtil;
     }
+
 
     @Override
     public SkuInfo getMatchedVariantResponse(ProductSkuRequest productSkuRequest) {
@@ -80,7 +83,7 @@ public class ProductServiceImpl implements ProductService {
 
         List<Attribute> attributes =
                 variantAttributes.stream()
-                        .map(ProductAttributeUtil::transformToAttribute)
+                        .map(productAttributeUtil::transformToAttribute)
                         .collect(Collectors.toList());
 
         List<String> availableSkus = new ArrayList<>();

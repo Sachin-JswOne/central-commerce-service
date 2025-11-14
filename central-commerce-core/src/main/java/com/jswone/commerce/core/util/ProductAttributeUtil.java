@@ -1,5 +1,6 @@
 package com.jswone.commerce.core.util;
 
+import com.jswone.commerce.core.config.CommerceValueConfig;
 import com.jswone.commerce.core.constants.JSWProductConstants;
 import com.jswone.commerce.core.entity.productCatalogueStore.Attribute;
 import com.jswone.commerce.core.enums.MaterialMasterToCTAttribute;
@@ -15,9 +16,14 @@ import java.util.List;
 @Log4j2
 @Component
 public class ProductAttributeUtil {
-    private static final PropertyLoader propertyLoader = PropertyLoader.getInstance();
-    static final String[] productSkuFilters =
-            propertyLoader.getProperty("product.sku.double.attributes").split(",");
+
+    private final CommerceValueConfig commerceValueConfig;
+
+    public ProductAttributeUtil(CommerceValueConfig commerceValueConfig) {
+        this.commerceValueConfig = commerceValueConfig;
+    }
+
+
 
     public List<ProductAttributeDTO> convertAttributes(List<ProductAttributeDTO> inputAttributes) {
 
@@ -39,7 +45,9 @@ public class ProductAttributeUtil {
         return output;
     }
 
-    public static Attribute transformToAttribute(ProductAttributeDTO request) {
+    public Attribute transformToAttribute(ProductAttributeDTO request) {
+        String[] productSkuFilters =
+                commerceValueConfig.getProductSkuDoubleAttributes().split(",");
         return Attribute.builder()
                 .name(
                         request.getKey()

@@ -55,4 +55,6 @@ public class CommerceValueConfig {
     @Value("${spring.cloud.gcp.project-id}")
     private String projectId;
 
+    @Value("${product.sku.double.attributes}")
+    private String productSkuDoubleAttributes;
 }
