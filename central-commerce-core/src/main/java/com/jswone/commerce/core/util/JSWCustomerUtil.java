@@ -4,6 +4,7 @@ import com.commercetools.api.client.ApiRoot;
 import com.commercetools.api.client.ByProjectKeyRequestBuilder;
 import com.commercetools.api.models.common.Address;
 import com.commercetools.api.models.customer.Customer;
+import com.jswone.commerce.core.config.CommerceValueConfig;
 import com.jswone.commerce.core.config.JSWCommerceToolsConfig;
 import com.jswone.commerce.core.exceptions.CentralCommerceServiceException;
 import com.jswone.commerce.core.service.ClientService;
@@ -25,24 +26,28 @@ import static com.jswone.commerce.core.constants.JSWChannelConstants.COMMA_SPACE
 @Log4j2
 public class JSWCustomerUtil {
 
-    @Autowired
-    ClientService clientService;
 
-    @Autowired
-    JSWCommerceToolsConfig ctConfig;
+    private final ClientService clientService;
+
+    private final CommerceValueConfig commerceValueConfig;
 
     @Autowired
     @Qualifier("requestBuilderCTAdmin") ByProjectKeyRequestBuilder requestBuilderCT;
+
+    public JSWCustomerUtil(ClientService clientService, CommerceValueConfig commerceValueConfig) {
+        this.clientService = clientService;
+        this.commerceValueConfig = commerceValueConfig;
+    }
 
     public Customer getCurrentCustomer(String accessToken) {
         ApiRoot myCustomerRoot = null;
         Customer customerResponse = null;
         try {
             myCustomerRoot =
-                    clientService.createConstantTokenApiClient(accessToken, ctConfig.getApiUrl());
+                    clientService.createConstantTokenApiClient(accessToken, commerceValueConfig.getApiUrl());
             customerResponse =
                     myCustomerRoot
-                            .withProjectKey(ctConfig.getProjectKey())
+                            .withProjectKey(commerceValueConfig.getProjectKey())
                             .me()
                             .get()
                             .executeBlocking()

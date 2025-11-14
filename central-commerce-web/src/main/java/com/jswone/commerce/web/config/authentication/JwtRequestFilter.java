@@ -1,5 +1,6 @@
 package com.jswone.commerce.web.config.authentication;
 
+import com.jswone.commerce.core.config.CommerceValueConfig;
 import com.jswone.commerce.core.exceptions.UserTokenException;
 import com.jswone.commerce.core.service.UserTokenService;
 import com.jswone.commerce.core.util.JwtTokenUtil;
@@ -11,7 +12,6 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.extern.log4j.Log4j2;
 import org.apache.commons.lang3.StringUtils;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -38,13 +38,13 @@ public class JwtRequestFilter extends OncePerRequestFilter {
 
     private JwtTokenUtil jwtTokenUtil;
     private final com.jswone.commerce.core.service.UserTokenService userTokenService;
+    private final CommerceValueConfig commerceValueConfig;
 
-    @Value("${api.key.commerce.service}")
-    private String X_API_KEY_COMMERCE_SERVICE;
 
-    public JwtRequestFilter(JwtTokenUtil jwtTokenUtil, UserTokenService userTokenService) {
+    public JwtRequestFilter(JwtTokenUtil jwtTokenUtil, UserTokenService userTokenService, CommerceValueConfig commerceValueConfig) {
         this.jwtTokenUtil = jwtTokenUtil;
         this.userTokenService = userTokenService;
+        this.commerceValueConfig = commerceValueConfig;
     }
 
     @Override
@@ -126,8 +126,8 @@ public class JwtRequestFilter extends OncePerRequestFilter {
             return;
         }
 
-        if (xApiKey.equals(X_API_KEY_COMMERCE_SERVICE)) {
-            List<String> apiKeyParts = Arrays.asList(X_API_KEY_COMMERCE_SERVICE.split("-"));
+        if (xApiKey.equals(commerceValueConfig.getX_API_KEY_COMMERCE_SERVICE())) {
+            List<String> apiKeyParts = Arrays.asList(commerceValueConfig.getX_API_KEY_COMMERCE_SERVICE().split("-"));
             if (apiKeyParts.size() >= 3) {
                 String userId = apiKeyParts.get(0);
                 String token = apiKeyParts.get(2);
