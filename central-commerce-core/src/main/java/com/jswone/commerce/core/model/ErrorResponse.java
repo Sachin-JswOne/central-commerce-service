@@ -1,4 +1,4 @@
-package com.jswone.commerce.web.model;
+package com.jswone.commerce.core.model;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import lombok.Builder;
