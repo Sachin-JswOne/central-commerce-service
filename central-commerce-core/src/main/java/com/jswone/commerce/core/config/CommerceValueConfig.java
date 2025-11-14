@@ -52,4 +52,7 @@ public class CommerceValueConfig {
     @Value("${api.key.commerce.service}")
     private String X_API_KEY_COMMERCE_SERVICE;
 
+    @Value("${spring.cloud.gcp.project-id}")
+    private String projectId;
+
 }

@@ -29,7 +29,7 @@ import java.util.Arrays;
  * Configuration class to set the CT Configuration parameters
  */
 @Configuration
-@PropertySource("classpath:dev.properties")
+@PropertySource("classpath:application.properties")
 @Log4j2
 public class JSWCommerceToolsConfig {
 
