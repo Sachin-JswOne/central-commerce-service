@@ -7,7 +7,7 @@ RUN addgroup --system jswuser && adduser -S -s /bin/false -G jswuser jswuser
 USER jswuser
 
 VOLUME /tmp
-ADD /build/libs/central_commerce_service-0.0.1-SNAPSHOT.jar app.jar
+ADD central_commerce_service/target/central_commerce_service-0.0.1-SNAPSHOT.jar app.jar
 #ENTRYPOINT ["java","-jar","/app.jar"]
 
 

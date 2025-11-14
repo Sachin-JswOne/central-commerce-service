@@ -5,8 +5,8 @@
     <parent>
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-starter-parent</artifactId>
-        <version>3.5.7</version>
-        <relativePath/> <!-- lookup parent from repository -->
+        <version>3.4.2</version>
+        <relativePath/>
     </parent>
     <groupId>com.jswone.central-commerce</groupId>
     <artifactId>central-commerce-service</artifactId>
@@ -109,6 +109,21 @@
                 <groupId>com.google.cloud</groupId>
                 <artifactId>spring-cloud-gcp-starter-data-firestore</artifactId>
                 <version>6.0.0</version>
+            </dependency>
+            <dependency>
+                <groupId>com.jswone.ordering.common</groupId>
+                <artifactId>jsw_ordering_common_util</artifactId>
+                <version>0.0.332</version>
+                <exclusions>
+                    <exclusion>
+                        <groupId>one.talon</groupId>
+                        <artifactId>talon-one-client</artifactId>
+                    </exclusion>
+                    <exclusion>
+                        <groupId>gradle.plugin.org.mockito</groupId>
+                        <artifactId>mockito-release-tools</artifactId>
+                    </exclusion>
+                </exclusions>
             </dependency>
         </dependencies>
     </dependencyManagement>

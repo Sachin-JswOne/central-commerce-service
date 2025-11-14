@@ -1,6 +1,7 @@
 package com.jswone.commerce.web.handler;
 
 import com.jswone.commerce.core.exceptions.CentralCommerceServiceException;
+import com.jswone.commerce.core.exceptions.ProductSelectorException;
 import com.jswone.commerce.core.exceptions.UserTokenException;
 
 import com.jswone.commerce.core.model.ApiResponse;
@@ -39,6 +40,17 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(CentralCommerceServiceException.class)
     public ApiResponse<Object> handleCommerceException(
             CentralCommerceServiceException ex, HttpServletRequest request) {
+        String messages = ex.getMessage();
+        return ApiResponse.builder()
+                .status(BAD_REQUEST)
+                .error(new ErrorResponse(BAD_REQUEST.value(), messages))
+                .success(false)
+                .build();
+    }
+
+    @ExceptionHandler(ProductSelectorException.class)
+    public ApiResponse<Object> handleProductSelectorException(
+            ProductSelectorException ex, HttpServletRequest request) {
         String messages = ex.getMessage();
         return ApiResponse.builder()
                 .status(BAD_REQUEST)

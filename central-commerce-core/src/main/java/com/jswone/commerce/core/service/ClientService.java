@@ -12,12 +12,14 @@ import io.vrap.rmf.base.client.oauth2.ClientCredentials;
 import io.vrap.rmf.base.client.oauth2.ClientCredentialsTokenSupplier;
 import io.vrap.rmf.base.client.oauth2.StaticTokenSupplier;
 import lombok.extern.log4j.Log4j2;
+import org.springframework.stereotype.Service;
 
 import java.io.IOException;
 import java.util.Properties;
 import java.util.concurrent.ExecutionException;
 
 @Log4j2
+@Service
 public class ClientService {
 
     public static ApiRoot apiRoot;
@@ -33,7 +35,7 @@ public class ClientService {
             final String prefix) throws IOException {
 
         final Properties prop = new Properties();
-        prop.load(ClientService.class.getResourceAsStream("/dev.properties"));
+        prop.load(ClientService.class.getResourceAsStream("/application.properties"));
         String clientId = prop.getProperty(prefix + "clientId");
         String clientSecret = prop.getProperty(prefix + "clientSecret");
 
@@ -62,7 +64,7 @@ public class ClientService {
             throws IOException {
 
         final Properties prop = new Properties();
-        prop.load(ClientService.class.getResourceAsStream("/dev.properties"));
+        prop.load(ClientService.class.getResourceAsStream("/application.properties"));
         String projectKey = prop.getProperty(prefix + "projectKey");
         String clientId = prop.getProperty(prefix + "clientId");
         String clientSecret = prop.getProperty(prefix + "clientSecret");

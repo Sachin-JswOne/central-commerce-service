@@ -1,5 +1,6 @@
 package com.jswone.commerce.core.model;
 
+
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;

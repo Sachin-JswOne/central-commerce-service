@@ -29,57 +29,16 @@ import java.util.Arrays;
  * Configuration class to set the CT Configuration parameters
  */
 @Configuration
-@PropertySource("classpath:dev.properties")
+@PropertySource("classpath:application.properties")
 @Log4j2
 public class JSWCommerceToolsConfig {
 
-    @Value("${ctp.admin.projectKey}")
-    private String projectKey;
-
-    @Value("${ctp.admin.clientId}")
-    private String clientId;
-
-    @Value("${ctp.admin.clientSecret}")
-    private String clientSecret;
-
-    @Value("${ctp.authUrl}")
-    private String authUrl;
-
-    @Value("${ctp.apiUrl}")
-    private String apiUrl;
-
-    @Value("${ctp.admin.scopes}")
-    private String scopes;
-
-    @Value("${ctp.anon.clientId}")
-    private String anonClientId;
-
-    @Value("${ctp.anon.clientSecret}")
-    private String anonClientSecret;
-
-    @Value("${ctp.anon.scopes}")
-    private String anonScopes;
-
-    @Value("${ct.connection.timeout.seconds}")
-    private int ctConnectionTimeout;
-
-    @Value("${ct.write.timeout.seconds}")
-    private int ctWriteTimeout;
-
-    @Value("${ct.read.timeout.seconds}")
-    private int ctReadTimeout;
-
-    @Value("${ct.error.retry.count}")
-    private int ctErrorRetryCount;
-
     private static final String JSW_CLIENT = "jsw-one-platform";
 
-    public String getAnonScopes() {
-        return anonScopes;
-    }
+    private final CommerceValueConfig commerceValueConfig;
 
-    public void setAnonScopes(String anonScopes) {
-        this.anonScopes = anonScopes;
+    public JSWCommerceToolsConfig(CommerceValueConfig commerceValueConfig) {
+        this.commerceValueConfig = commerceValueConfig;
     }
 
     private ApiRoot apiRoot;
@@ -90,9 +49,9 @@ public class JSWCommerceToolsConfig {
             VrapHttpClient httpClient =
                     new CtOkHttp4Client(
                             builder ->
-                                    builder.connectTimeout(Duration.ofSeconds(ctConnectionTimeout))
-                                            .writeTimeout(Duration.ofSeconds(ctWriteTimeout))
-                                            .readTimeout(Duration.ofSeconds(ctReadTimeout))
+                                    builder.connectTimeout(Duration.ofSeconds(commerceValueConfig.getCtConnectionTimeout()))
+                                            .writeTimeout(Duration.ofSeconds(commerceValueConfig.getCtWriteTimeout()))
+                                            .readTimeout(Duration.ofSeconds(commerceValueConfig.getCtReadTimeout()))
                                             .protocols(
                                                     Arrays.asList(
                                                             Protocol.HTTP_2, Protocol.HTTP_1_1)));
@@ -103,18 +62,18 @@ public class JSWCommerceToolsConfig {
                                     ErrorMiddleware.of(
                                             HttpExceptionFactory.of(ResponseSerializer.of())))
                             .withRetryMiddleware(
-                                    ctErrorRetryCount,
+                                    commerceValueConfig.getCtErrorRetryCount(),
                                     Arrays.asList(500, 503, 504)) // HTTP Status to retry
-                            .withMiddleware(ConcurrentModificationMiddleware.of(ctErrorRetryCount))
+                            .withMiddleware(ConcurrentModificationMiddleware.of(commerceValueConfig.getCtErrorRetryCount()))
                             .addNotFoundExceptionMiddleware()
                             .withUserAgentSupplier(() -> JSW_CLIENT)
                             .withInternalLoggerMiddleware(
                                     InternalLoggerMiddleware.of(ApiInternalLoggerFactory::get))
                             .defaultClient(
                                     ClientCredentials.of()
-                                            .withClientId(clientId)
-                                            .withClientSecret(clientSecret)
-                                            .withScopes(scopes)
+                                            .withClientId(commerceValueConfig.getClientId())
+                                            .withClientSecret(commerceValueConfig.getClientSecret())
+                                            .withScopes(commerceValueConfig.getScopes())
                                             .build(),
                                     ServiceRegion.GCP_AUSTRALIA_SOUTHEAST1)
                             .build();
@@ -126,45 +85,9 @@ public class JSWCommerceToolsConfig {
     public ByProjectKeyRequestBuilder requestBuilderCTAdmin() {
         ByProjectKeyRequestBuilder byProjectKeyRequestBuilder = null;
         if (ObjectUtils.isNotEmpty(getApiRoot())) {
-            byProjectKeyRequestBuilder = apiRoot.withProjectKey(projectKey);
+            byProjectKeyRequestBuilder = apiRoot.withProjectKey(commerceValueConfig.getProjectKey());
         }
         return byProjectKeyRequestBuilder;
-    }
-
-    public String getProjectKey() {
-        return projectKey;
-    }
-
-    public String getAuthUrl() {
-        return authUrl;
-    }
-
-    public void setAuthUrl(String authUrl) {
-        this.authUrl = authUrl;
-    }
-
-    public String getApiUrl() {
-        return apiUrl;
-    }
-
-    public void setApiUrl(String apiUrl) {
-        this.apiUrl = apiUrl;
-    }
-
-    public String getAnonClientId() {
-        return anonClientId;
-    }
-
-    public void setAnonClientId(String anonClientId) {
-        this.anonClientId = anonClientId;
-    }
-
-    public String getAnonClientSecret() {
-        return anonClientSecret;
-    }
-
-    public void setAnonClientSecret(String anonClientSecret) {
-        this.anonClientSecret = anonClientSecret;
     }
 
     @PreDestroy
