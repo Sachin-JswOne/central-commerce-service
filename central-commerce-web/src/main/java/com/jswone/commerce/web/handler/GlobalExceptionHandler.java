@@ -7,7 +7,6 @@ import com.jswone.commerce.core.exceptions.UserTokenException;
 import com.jswone.commerce.core.model.ApiResponse;
 import com.jswone.commerce.core.model.ErrorResponse;
 import jakarta.servlet.http.HttpServletRequest;
-import lombok.extern.log4j.Log4j2;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.Ordered;
 import org.springframework.core.annotation.Order;
