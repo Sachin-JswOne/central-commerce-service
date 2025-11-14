@@ -104,6 +104,12 @@
                 <artifactId>commercetools-sdk-java-ml</artifactId>
                 <version>${commercetools.version}</version>
             </dependency>
+            <!-- FireStore -->
+            <dependency>
+                <groupId>com.google.cloud</groupId>
+                <artifactId>spring-cloud-gcp-starter-data-firestore</artifactId>
+                <version>6.0.0</version>
+            </dependency>
         </dependencies>
     </dependencyManagement>
 
@@ -120,10 +126,48 @@
 <!--    </distributionManagement>-->
 
     <repositories>
+
+        <!-- ===================== -->
+        <!-- 1. Maven Central      -->
+        <!-- ===================== -->
+        <repository>
+            <id>central</id>
+            <name>Maven Central Repository</name>
+            <url>https://repo.maven.apache.org/maven2</url>
+            <releases>
+                <enabled>true</enabled>
+            </releases>
+            <snapshots>
+                <enabled>false</enabled>
+            </snapshots>
+            <!-- Forces Maven to use HTTPS transport, not artifactregistry-wagon -->
+            <layout>default</layout>
+        </repository>
+
+        <!-- ===================== -->
+        <!-- 2. Google Maven Repo  -->
+        <!-- ===================== -->
+        <repository>
+            <id>google-maven</id>
+            <name>Google Maven Repository</name>
+            <url>https://maven.google.com/</url>
+            <releases>
+                <enabled>true</enabled>
+            </releases>
+            <snapshots>
+                <enabled>false</enabled>
+            </snapshots>
+            <!-- Avoid wagon override -->
+            <layout>default</layout>
+        </repository>
+
+        <!-- ============================= -->
+        <!-- 3. JSW Artifact Registry - Snapshot -->
+        <!-- ============================= -->
         <repository>
             <id>artifact-registry-snapshot</id>
-            <url>artifactregistry://asia-south1-maven.pkg.dev/modular-bucksaw-305821/jsw-one-msme-artifacts-snapshot
-            </url>
+            <name>JSW Artifact Registry (Snapshot)</name>
+            <url>artifactregistry://asia-south1-maven.pkg.dev/modular-bucksaw-305821/jsw-one-msme-artifacts-snapshot</url>
             <releases>
                 <enabled>false</enabled>
             </releases>
@@ -131,8 +175,13 @@
                 <enabled>true</enabled>
             </snapshots>
         </repository>
+
+        <!-- ============================= -->
+        <!-- 4. JSW Artifact Registry - Release -->
+        <!-- ============================= -->
         <repository>
             <id>artifact-registry</id>
+            <name>JSW Artifact Registry (Release)</name>
             <url>artifactregistry://asia-south1-maven.pkg.dev/modular-bucksaw-305821/jsw-one-msme-artifacts</url>
             <releases>
                 <enabled>true</enabled>
@@ -141,6 +190,7 @@
                 <enabled>false</enabled>
             </snapshots>
         </repository>
+
     </repositories>
 
     <build>

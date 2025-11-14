@@ -97,7 +97,10 @@
             <groupId>com.commercetools.sdk</groupId>
             <artifactId>commercetools-sdk-java-ml</artifactId>
         </dependency>
-
+        <dependency>
+            <groupId>com.google.cloud</groupId>
+            <artifactId>spring-cloud-gcp-starter-data-firestore</artifactId>
+        </dependency>
     </dependencies>
 
 </project>
