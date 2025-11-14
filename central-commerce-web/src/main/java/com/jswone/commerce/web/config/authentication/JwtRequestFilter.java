@@ -30,7 +30,6 @@ import java.io.IOException;
 import java.util.*;
 
 import static com.jswone.commerce.core.constants.JWTConstants.*;
-import static com.jswone.commons.constants.JSWGenericConstants.USER_ID_CLAIM;
 
 @Component
 @Log4j2
