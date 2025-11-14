@@ -2,7 +2,7 @@ package com.jswone.commerce.core.repository;
 
 import com.google.api.core.ApiFuture;
 import com.google.cloud.firestore.*;
-import com.jswone.commerce.core.entity.ProductCatalogueStore;
+import com.jswone.commerce.core.entity.productCatalogueStore.ProductCatalogueStore;
 import org.springframework.stereotype.Repository;
 
 import java.util.*;

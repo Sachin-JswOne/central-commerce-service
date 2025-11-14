@@ -1,11 +1,10 @@
-package com.jswone.commerce.core.entity;
+package com.jswone.commerce.core.entity.productCatalogueStore;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonInclude;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import lombok.*;
+
+import java.util.List;
 
 @Data
 @Builder
@@ -13,7 +12,9 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @JsonIgnoreProperties(ignoreUnknown = true)
 @JsonInclude(JsonInclude.Include.NON_NULL)
-public class PLPAttribute {
+@Setter
+public class ProductAttribute {
     private String displayName;
-    private String value;
+    private String keyInCT;
+    private List<String> value;
 }

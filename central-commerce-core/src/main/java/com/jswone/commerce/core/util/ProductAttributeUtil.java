@@ -1,8 +1,7 @@
 package com.jswone.commerce.core.util;
 
-import com.commercetools.api.models.product.AttributeBuilder;
 import com.jswone.commerce.core.constants.JSWProductConstants;
-import com.jswone.commerce.core.entity.Attribute;
+import com.jswone.commerce.core.entity.productCatalogueStore.Attribute;
 import com.jswone.commerce.core.enums.MaterialMasterToCTAttribute;
 import com.jswone.commerce.core.model.request.ProductAttributeDTO;
 import com.jswone.commons.util.PropertyLoader;

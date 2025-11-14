@@ -1,8 +1,8 @@
 package com.jswone.commerce.core.service.impl;
 
-import com.jswone.commerce.core.entity.Attribute;
-import com.jswone.commerce.core.entity.ProductCatalogueStore;
-import com.jswone.commerce.core.entity.Variant;
+import com.jswone.commerce.core.entity.productCatalogueStore.Attribute;
+import com.jswone.commerce.core.entity.productCatalogueStore.ProductCatalogueStore;
+import com.jswone.commerce.core.entity.productCatalogueStore.Variant;
 import com.jswone.commerce.core.exceptions.ProductSelectorException;
 import com.jswone.commerce.core.model.request.ProductAttributeDTO;
 import com.jswone.commerce.core.model.request.ProductSkuRequest;
@@ -195,7 +195,7 @@ public class ProductServiceImpl implements ProductService {
     }
 
     protected static Pair<Boolean, List<Attribute>> checkForRangeBasedMatch(
-            List<com.jswone.commerce.core.entity.Attribute> attributes, Variant variant) {
+            List<Attribute> attributes, Variant variant) {
 
         boolean productFlag = false;
         List<Attribute> customAttributes = new ArrayList<>();

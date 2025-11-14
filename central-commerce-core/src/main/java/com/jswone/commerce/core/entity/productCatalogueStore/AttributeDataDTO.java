@@ -1,4 +1,4 @@
-package com.jswone.commerce.core.entity;
+package com.jswone.commerce.core.entity.productCatalogueStore;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonInclude;

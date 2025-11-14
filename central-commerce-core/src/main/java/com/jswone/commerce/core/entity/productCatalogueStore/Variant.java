@@ -1,4 +1,4 @@
-package com.jswone.commerce.core.entity;
+package com.jswone.commerce.core.entity.productCatalogueStore;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonInclude;
@@ -7,17 +7,19 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.util.List;
+
 @Data
 @Builder
 @AllArgsConstructor
 @NoArgsConstructor
 @JsonIgnoreProperties(ignoreUnknown = true)
 @JsonInclude(JsonInclude.Include.NON_NULL)
-public class BreadCrumb {
-    private String name;
-    private String categoryId;
-    private String categoryKey;
-    private String description;
-    private String slug;
-    private boolean hasPartingCharges;
+public class Variant {
+    private String variantKey;
+    private String sku;
+    private List<Attribute> attributes;
+    private Object catalogEnabledFor;
+    private Object deal;
+    private String mmId;
 }
