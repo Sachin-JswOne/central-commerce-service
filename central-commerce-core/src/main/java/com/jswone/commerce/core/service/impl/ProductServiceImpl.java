@@ -1,8 +1,8 @@
 package com.jswone.commerce.core.service.impl;
 
-import com.jswone.commerce.core.entity.productCatalogueStore.Attribute;
-import com.jswone.commerce.core.entity.productCatalogueStore.ProductCatalogueStore;
-import com.jswone.commerce.core.entity.productCatalogueStore.Variant;
+import com.jswone.commerce.core.entity.catalogue.Attribute;
+import com.jswone.commerce.core.entity.catalogue.ProductCatalogueStore;
+import com.jswone.commerce.core.entity.catalogue.Variant;
 import com.jswone.commerce.core.exceptions.ProductSelectorException;
 import com.jswone.commerce.core.model.request.ProductAttributeDTO;
 import com.jswone.commerce.core.model.request.ProductSkuRequest;
@@ -35,6 +35,9 @@ public class ProductServiceImpl implements ProductService {
 
     @Override
     public SkuInfo getMatchedVariantResponse(ProductSkuRequest productSkuRequest) {
+        List<ProductAttributeDTO> productAttributeDTOS = productSkuRequest.getProductAttributes();
+        List<ProductAttributeDTO> newProductAttributeDTO = productAttributeUtil.convertAttributes(productAttributeDTOS);
+        productSkuRequest = productSkuRequest.toBuilder().productAttributes(newProductAttributeDTO).build();
         return getMatchedVariant(productSkuRequest);
     }
 
@@ -42,10 +45,10 @@ public class ProductServiceImpl implements ProductService {
         try {
             log.info(
                     "Making request to get matched variant from product catalogue store for product:{}",
-                    productSkuRequest.getProductKey());
+                    productSkuRequest.getProductMaterialMasterId());
             ProductCatalogueStore productCatalogueStore = null;
-            productCatalogueStore = productCatalogueStoreRepository.findProductCatalogueStoresByProductKey(
-                    productSkuRequest.getProductKey());
+            productCatalogueStore = productCatalogueStoreRepository.findProductCatalogueStoresByProductMaterialMasterId(
+                    productSkuRequest.getProductMaterialMasterId());
             ProductSelectorSkuResponse productSkuRes =
                     Objects.nonNull(productCatalogueStore)
                             && Objects.nonNull(productSkuRequest.getProductAttributes())
@@ -157,7 +160,7 @@ public class ProductServiceImpl implements ProductService {
 
         productSkuResponse.setId(
                 productCatalogueStore.getIdentifier() != null
-                        ? productCatalogueStore.getIdentifier()
+                        ? productCatalogueStore.getIdentifier().toString()
                         : null);
         productSkuResponse.setProductKey(productCatalogueStore.getProductKey());
         productSkuResponse.setProductName(productCatalogueStore.getProductTitle());

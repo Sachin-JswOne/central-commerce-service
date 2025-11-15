@@ -1,72 +1,92 @@
 package com.jswone.commerce.core.service.impl;
 
+import com.google.cloud.datastore.Key;
+import com.jswone.commerce.core.constants.JWTConstants;
 import com.jswone.commerce.core.entity.UserTokenEntity;
-import com.jswone.commerce.core.exceptions.UserTokenException;
+import com.jswone.commerce.core.exceptions.CentralCommerceServiceException;
 import com.jswone.commerce.core.repository.UserTokenRepository;
 import com.jswone.commerce.core.service.UserTokenService;
-import com.jswone.commerce.core.util.JwtTokenUtil;
-import lombok.extern.log4j.Log4j2;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.util.Base64;
+
 @Service
-@Log4j2
+
 public class UserTokenServiceImpl implements UserTokenService {
 
+    private static final Logger log = LogManager.getLogger(UserTokenServiceImpl.class);
     private final UserTokenRepository userTokenRepository;
-    private final JwtTokenUtil jwtAuthTokenUtil;
+    @Value("${spring.cloud.gcp.datastore.project-id}")
+    private String projectId;
 
-
-    public UserTokenServiceImpl(UserTokenRepository userTokenRepository,
-                                JwtTokenUtil jwtAuthTokenUtil) {
+    public UserTokenServiceImpl(UserTokenRepository userTokenRepository) {
         this.userTokenRepository = userTokenRepository;
-        this.jwtAuthTokenUtil = jwtAuthTokenUtil;
     }
 
-    @Override
     public boolean saveUserToken(UserTokenEntity userTokenEntity) {
-        log.info("Saving user token for userId: {}", userTokenEntity.getCustomerId());
+        log.info(" request to save user token details for user id : {}", userTokenEntity.getCustomerId());
 
         try {
-            // Firestore save() returns Mono<UserTokenEntity>
-            userTokenRepository.save(userTokenEntity).block();
-            return true;
-
+            UserTokenEntity savedUserTokenEntity = (UserTokenEntity)this.userTokenRepository.save(userTokenEntity);
+            return savedUserTokenEntity != null;
         } catch (Exception e) {
-            log.error("Error saving user token entity in Firestore", e);
-            throw new UserTokenException("Error saving user token entity in Firestore", e);
+            log.error(" error while saving user token entity  in datastore");
+            throw new CentralCommerceServiceException("error while saving user token entity  in datastore", e.getCause());
         }
     }
 
-    @Override
+    public boolean userTokenExists(Key jwtTokenHash) {
+        return this.userTokenRepository.existsById(jwtTokenHash);
+    }
+
     public boolean userTokenExists(String jwtToken) {
         try {
-            // Generate hash — this becomes the Firestore doc ID
-            String jwtTokenHash = jwtAuthTokenUtil.generateJWTHash(jwtToken);
-
-            if (jwtTokenHash == null) {
-                return false;
+            Key tokenHashKey = null;
+            String jwtTokenHash = generateJWTHash(jwtToken);
+            if (jwtTokenHash != null) {
+                tokenHashKey = keyBuilder("user_auth_token_store", jwtTokenHash);
             }
 
-            Boolean exists = userTokenRepository.existsById(jwtTokenHash).block();
-            return exists != null && exists;
-
+            if (tokenHashKey != null) {
+                boolean isUserTokenFound = this.userTokenRepository.existsById(tokenHashKey);
+                return isUserTokenFound;
+            } else {
+                return false;
+            }
         } catch (Exception e) {
-            log.error("Exception during JWT token reuse validation", e);
-            throw new UserTokenException("Exception during JWT token reuse validation", e);
+            log.error("exception while jwt token re-use validation : {}", e);
+            throw new CentralCommerceServiceException("exception while jwt token re-use validation", e.getCause());
         }
     }
 
-    @Override
     public void deleteUserToken(UserTokenEntity userTokenEntity) {
-        log.info("Deleting user token for userId: {}", userTokenEntity.getCustomerId());
+        log.info(" request to delete user token for user id : {} ", userTokenEntity.getCustomerId());
 
         try {
-            userTokenRepository.deleteById(userTokenEntity.getTokenHash()).block();
-
+            this.userTokenRepository.deleteById(userTokenEntity.getTokenHash());
         } catch (Exception e) {
-            log.error("Error deleting token for userId: {}", userTokenEntity.getCustomerId(), e);
-            throw new UserTokenException(
-                    "Error deleting token for userId: " + userTokenEntity.getCustomerId(), e);
+            log.error("error while deleting token for userId : {}", userTokenEntity.getCustomerId());
+            throw new CentralCommerceServiceException("error while deleting token for userId : ".concat(userTokenEntity.getCustomerId()), e.getCause());
         }
+    }
+
+    public String generateJWTHash(String token) {
+        try {
+            MessageDigest messageDigest = MessageDigest.getInstance(JWTConstants.SHA_512);
+            byte[] hash = messageDigest.digest(token.getBytes());
+            return Base64.getEncoder().encodeToString(hash);
+        } catch (NoSuchAlgorithmException e) {
+            log.error("error while generating token hash. error : {}", e);
+            return null;
+        }
+    }
+
+    public Key keyBuilder(String entityName, String value) {
+        return Key.newBuilder(this.projectId, entityName, value).build();
     }
 }

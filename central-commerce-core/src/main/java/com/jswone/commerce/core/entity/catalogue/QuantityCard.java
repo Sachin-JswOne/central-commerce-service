@@ -1,8 +1,8 @@
-package com.jswone.commerce.core.entity.productCatalogueStore;
+package com.jswone.commerce.core.entity.catalogue;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonInclude;
-import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.cloud.spring.data.datastore.core.mapping.Entity;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -14,10 +14,10 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @JsonIgnoreProperties(ignoreUnknown = true)
 @JsonInclude(JsonInclude.Include.NON_NULL)
-public class CartOrderDisplayCardAttributesDto {
+@Entity
+public class QuantityCard {
+    private String identifier;
     private String displayName;
-    @JsonProperty("attributeNameInCt")
-    private String attributeNameInCT;
-    private String displayType;
     private String measureUnit;
+    private boolean hasDecimal;
 }

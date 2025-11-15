@@ -2,10 +2,9 @@ package com.jswone.commerce.core.util;
 
 import com.jswone.commerce.core.config.CommerceValueConfig;
 import com.jswone.commerce.core.constants.JSWProductConstants;
-import com.jswone.commerce.core.entity.productCatalogueStore.Attribute;
+import com.jswone.commerce.core.entity.catalogue.Attribute;
 import com.jswone.commerce.core.enums.MaterialMasterToCTAttribute;
 import com.jswone.commerce.core.model.request.ProductAttributeDTO;
-import com.jswone.commons.util.PropertyLoader;
 import lombok.extern.log4j.Log4j2;
 import org.springframework.stereotype.Component;
 
@@ -33,9 +32,9 @@ public class ProductAttributeUtil {
             String ctKey = attr.getKey().toUpperCase();
 
             try {
-                MaterialMasterToCTAttribute enumEntry =
-                        MaterialMasterToCTAttribute.valueOf(ctKey);
-                output.add(new ProductAttributeDTO(enumEntry.toString(), attr.getValue(),attr.getUnit()));
+                String enumEntry =
+                        MaterialMasterToCTAttribute.valueOf(ctKey.toUpperCase()).getMaterialMasterCTAttribute();
+                output.add(new ProductAttributeDTO(enumEntry, attr.getValue(),attr.getUnit()));
 
             } catch (IllegalArgumentException e) {
                 output.add(attr);
