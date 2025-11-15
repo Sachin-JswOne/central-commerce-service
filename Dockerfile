@@ -1,4 +1,4 @@
-FROM amazoncorretto:17
+FROM eclipse-temurin:21
 
 
 #Add a user with name jswuser into user group jswuser
