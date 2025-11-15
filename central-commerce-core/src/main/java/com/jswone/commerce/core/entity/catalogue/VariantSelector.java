@@ -16,10 +16,10 @@ import lombok.NoArgsConstructor;
 @JsonInclude(JsonInclude.Include.NON_NULL)
 @Entity
 public class VariantSelector {
-    private String displayName;
-    private String displayType;
-    private String attributeNameInCT;
-    private String minValue;
-    private String maxValue;
-    private String textboxInputLabel;
+  private String displayName;
+  private String displayType;
+  private String attributeNameInCT;
+  private String minValue;
+  private String maxValue;
+  private String textboxInputLabel;
 }

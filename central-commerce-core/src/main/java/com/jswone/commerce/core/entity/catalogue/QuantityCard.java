@@ -16,8 +16,8 @@ import lombok.NoArgsConstructor;
 @JsonInclude(JsonInclude.Include.NON_NULL)
 @Entity
 public class QuantityCard {
-    private String identifier;
-    private String displayName;
-    private String measureUnit;
-    private boolean hasDecimal;
+  private String identifier;
+  private String displayName;
+  private String measureUnit;
+  private boolean hasDecimal;
 }

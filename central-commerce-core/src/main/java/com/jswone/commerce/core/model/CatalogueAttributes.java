@@ -4,15 +4,15 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-import org.springframework.http.HttpStatus;
 
 @Data
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class ApiResponse<T> {
-  private HttpStatus status;
-  private T data;
-  private ErrorResponse error;
-  private boolean success;
+public class CatalogueAttributes {
+  private String meta_description;
+  private String seo_url;
+  private String meta_title;
+  private String slug;
+  private String href;
 }

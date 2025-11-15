@@ -3,12 +3,11 @@ package com.jswone.commerce.core.entity.catalogue;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.google.cloud.spring.data.datastore.core.mapping.Entity;
+import java.util.List;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-
-import java.util.List;
 
 @Data
 @Builder
@@ -18,9 +17,9 @@ import java.util.List;
 @JsonInclude(JsonInclude.Include.NON_NULL)
 @Entity
 public class BreadCrumbResource {
-    private double priority;
-    private String urlkey;
-    private String breadCrumb;
-    private String description;
-    private List<BreadCrumb> breadCrumbDetailList;
+  private double priority;
+  private String urlkey;
+  private String breadCrumb;
+  private String description;
+  private List<BreadCrumb> breadCrumbDetailList;
 }

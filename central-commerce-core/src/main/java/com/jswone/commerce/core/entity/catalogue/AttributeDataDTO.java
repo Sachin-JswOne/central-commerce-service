@@ -17,16 +17,21 @@ import lombok.NoArgsConstructor;
 @JsonInclude(JsonInclude.Include.NON_NULL)
 @Entity
 public class AttributeDataDTO {
-    @JsonProperty("category_id")
-    private int categoryId;
-    @JsonProperty("name")
-    private String name;
-    @JsonProperty("optional")
-    private boolean optional;
-    @JsonProperty("unit")
-    private String unit;
-    @JsonProperty("value_type")
-    private String valueType;
-    @JsonProperty("ui_label")
-    private String uiLabel;
+  @JsonProperty("category_id")
+  private int categoryId;
+
+  @JsonProperty("name")
+  private String name;
+
+  @JsonProperty("optional")
+  private boolean optional;
+
+  @JsonProperty("unit")
+  private String unit;
+
+  @JsonProperty("value_type")
+  private String valueType;
+
+  @JsonProperty("ui_label")
+  private String uiLabel;
 }

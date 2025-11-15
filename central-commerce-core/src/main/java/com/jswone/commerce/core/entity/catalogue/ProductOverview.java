@@ -3,12 +3,11 @@ package com.jswone.commerce.core.entity.catalogue;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.google.cloud.spring.data.datastore.core.mapping.Entity;
+import java.util.List;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-
-import java.util.List;
 
 @Data
 @Builder
@@ -18,7 +17,7 @@ import java.util.List;
 @JsonInclude(JsonInclude.Include.NON_NULL)
 @Entity
 public class ProductOverview {
-    private String productInformation;
-    private List<LabelValuePair> details;
-    private String packaging;
+  private String productInformation;
+  private List<LabelValuePair> details;
+  private String packaging;
 }

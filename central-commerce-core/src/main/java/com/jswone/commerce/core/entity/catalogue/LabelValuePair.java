@@ -16,6 +16,6 @@ import lombok.NoArgsConstructor;
 @JsonInclude(JsonInclude.Include.NON_NULL)
 @Entity
 public class LabelValuePair {
-    private String label;
-    private String value;
+  private String label;
+  private String value;
 }

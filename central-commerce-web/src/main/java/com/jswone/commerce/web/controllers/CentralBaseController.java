@@ -5,5 +5,4 @@ import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequestMapping("/central_commerce")
-public interface CentralBaseController {
-}
+public interface CentralBaseController {}

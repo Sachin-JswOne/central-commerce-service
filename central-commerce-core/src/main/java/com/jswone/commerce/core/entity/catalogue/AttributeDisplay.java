@@ -16,6 +16,6 @@ import lombok.NoArgsConstructor;
 @JsonIgnoreProperties(ignoreUnknown = true)
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public class AttributeDisplay {
-    String displayName;
-    Object value;
+  String displayName;
+  Object value;
 }

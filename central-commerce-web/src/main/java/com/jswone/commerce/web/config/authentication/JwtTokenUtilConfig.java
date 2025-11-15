@@ -5,10 +5,10 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 @Configuration
-public class JwtTokenUtilConfig{
+public class JwtTokenUtilConfig {
 
-    @Bean
-    public JwtTokenUtil jwtTokenUtil() {
-        return new JwtTokenUtil();
-    }
+  @Bean
+  public JwtTokenUtil jwtTokenUtil() {
+    return new JwtTokenUtil();
+  }
 }

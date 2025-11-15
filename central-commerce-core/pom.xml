@@ -118,6 +118,17 @@
             <artifactId>spring-cloud-gcp-starter-data-datastore</artifactId>
             <version>4.9.2</version> <!-- Latest stable compatible with Spring Boot 3 -->
         </dependency>
+        <dependency>
+            <groupId>org.mapstruct</groupId>
+            <artifactId>mapstruct</artifactId>
+            <version>1.5.5.Final</version>
+        </dependency>
+        <dependency>
+            <groupId>org.mapstruct</groupId>
+            <artifactId>mapstruct-processor</artifactId>
+            <version>1.5.5.Final</version>
+            <scope>provided</scope>
+        </dependency>
     </dependencies>
 
 </project>

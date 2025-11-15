@@ -1,18 +1,17 @@
 package com.jswone.commerce.core.model;
 
+import java.util.List;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-import org.springframework.http.HttpStatus;
 
 @Data
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class ApiResponse<T> {
-  private HttpStatus status;
-  private T data;
-  private ErrorResponse error;
-  private boolean success;
+public class CatalogueCategoryTreeResponse {
+  private int statusCode;
+  private String status;
+  private List<CatalogueCategoryTree> data;
 }
