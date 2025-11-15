@@ -1,4 +1,5 @@
-FROM amazoncorretto:21-alpine
+FROM eclipse-temurin:21
+
 
 #Add a user with name jswuser into user group jswuser
 RUN addgroup --system jswuser && adduser -S -s /bin/false -G jswuser jswuser
