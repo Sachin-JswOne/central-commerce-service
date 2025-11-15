@@ -1,6 +1,6 @@
 package com.jswone.commerce.core.model.response;
 
-import com.jswone.commerce.core.entity.productCatalogueStore.Attribute;
+import com.jswone.commerce.core.entity.catalogue.Attribute;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;

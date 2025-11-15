@@ -1,9 +1,13 @@
 package com.jswone.commerce.core.entity;
 
-import com.google.cloud.firestore.annotation.DocumentId;
-import com.google.cloud.spring.data.firestore.Document;
-import lombok.*;
-
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.cloud.datastore.Key;
+import com.google.cloud.spring.data.datastore.core.mapping.Entity;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+import org.springframework.data.annotation.Id;
 
 import java.time.LocalDateTime;
 
@@ -11,12 +15,11 @@ import java.time.LocalDateTime;
 @Builder
 @AllArgsConstructor
 @NoArgsConstructor
-@Document(collectionName = "user_auth_token_store")
+@Entity(name = "user_auth_token_store")
 public class UserTokenEntity {
-
-    // Firestore document ID = Datastore Key Name
-    @DocumentId
-    private String tokenHash;
+    @Id
+    @JsonProperty("identifier")
+    Key tokenHash;
 
     private String customerId;
 
