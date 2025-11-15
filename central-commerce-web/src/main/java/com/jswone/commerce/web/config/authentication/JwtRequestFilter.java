@@ -3,8 +3,8 @@ package com.jswone.commerce.web.config.authentication;
 import com.jswone.commerce.core.config.CommerceValueConfig;
 import com.jswone.commerce.core.exceptions.UserTokenException;
 import com.jswone.commerce.core.service.UserTokenService;
-import com.jswone.commerce.core.util.JwtTokenUtil;
 
+import com.jswone.commons.util.JwtTokenUtil;
 import io.jsonwebtoken.JwtException;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -35,8 +35,8 @@ import static com.jswone.commerce.core.constants.JWTConstants.*;
 @Log4j2
 public class JwtRequestFilter extends OncePerRequestFilter {
 
-    private JwtTokenUtil jwtTokenUtil;
-    private final com.jswone.commerce.core.service.UserTokenService userTokenService;
+    private final JwtTokenUtil jwtTokenUtil;
+    private final UserTokenService userTokenService;
     private final CommerceValueConfig commerceValueConfig;
 
 

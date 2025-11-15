@@ -18,6 +18,7 @@
     <modules>
         <module>central-commerce-core</module>
         <module>central-commerce-web</module>
+        <module>central-commerce-application</module>
     </modules>
     <properties>
         <java.version>21</java.version>
@@ -105,11 +106,11 @@
                 <version>${commercetools.version}</version>
             </dependency>
             <!-- FireStore -->
-            <dependency>
-                <groupId>com.google.cloud</groupId>
-                <artifactId>spring-cloud-gcp-starter-data-firestore</artifactId>
-                <version>6.0.0</version>
-            </dependency>
+<!--            <dependency>-->
+<!--                <groupId>com.google.cloud</groupId>-->
+<!--                <artifactId>spring-cloud-gcp-starter-data-firestore</artifactId>-->
+<!--                <version>6.0.0</version>-->
+<!--            </dependency>-->
             <dependency>
                 <groupId>com.jswone.ordering.common</groupId>
                 <artifactId>jsw_ordering_common_util</artifactId>
@@ -124,6 +125,21 @@
                         <artifactId>mockito-release-tools</artifactId>
                     </exclusion>
                 </exclusions>
+            </dependency>
+            <dependency>
+                <groupId>javax.xml.bind</groupId>
+                <artifactId>jaxb-api</artifactId>
+                <version>2.3.1</version>
+            </dependency>
+            <dependency>
+                <groupId>org.glassfish.jaxb</groupId>
+                <artifactId>jaxb-runtime</artifactId>
+                <version>2.3.1</version>
+            </dependency>
+            <dependency>
+                <groupId>com.google.cloud</groupId>
+                <artifactId>google-cloud-datastore</artifactId>
+                <version>2.26.1</version> <!-- Latest stable as of now -->
             </dependency>
         </dependencies>
     </dependencyManagement>

@@ -49,7 +49,7 @@ public class CommerceValueConfig {
     @Value("${ct.error.retry.count}")
     private int ctErrorRetryCount;
 
-    @Value("${api.key.commerce.service}")
+    @Value("${api.key.commerce.service.web}")
     private String X_API_KEY_COMMERCE_SERVICE;
 
     @Value("${spring.cloud.gcp.project-id}")

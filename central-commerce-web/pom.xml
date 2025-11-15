@@ -83,6 +83,18 @@
             <groupId>com.jsw</groupId>
             <artifactId>notification_common_model</artifactId>
         </dependency>
+        <dependency>
+            <groupId>com.jswone.ordering.common</groupId>
+            <artifactId>jsw_ordering_common_util</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>javax.xml.bind</groupId>
+            <artifactId>jaxb-api</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.glassfish.jaxb</groupId>
+            <artifactId>jaxb-runtime</artifactId>
+        </dependency>
 <!--        <dependency>-->
 <!--            <groupId>com.jswone</groupId>-->
 <!--            <artifactId>jsw_measurement_util</artifactId>-->

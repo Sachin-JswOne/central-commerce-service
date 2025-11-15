@@ -9,10 +9,10 @@ import lombok.NoArgsConstructor;
 import java.util.List;
 
 @Data
-@Builder
+@Builder(toBuilder = true)
 @NoArgsConstructor
 @AllArgsConstructor
 public class ProductSkuRequest {
-    private String productKey;
+    private String productMaterialMasterId;
     private List<ProductAttributeDTO> productAttributes;
 }
