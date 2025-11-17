@@ -12,7 +12,9 @@ import lombok.NoArgsConstructor;
 public class CatalogueAttributes {
   private String meta_description;
   private String seo_url;
+  private String category_title;
   private String meta_title;
   private String slug;
   private String href;
+  private String link_title_seo_purpose;
 }

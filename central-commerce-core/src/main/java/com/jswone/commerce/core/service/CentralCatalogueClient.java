@@ -1,10 +1,6 @@
 package com.jswone.commerce.core.service;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.jswone.commerce.core.exceptions.CentralCommerceServiceException;
 import com.jswone.commerce.core.model.CatalogueCategoryTreeResponse;
-import java.io.File;
-import java.io.IOException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.*;
@@ -48,21 +44,8 @@ public class CentralCatalogueClient {
   //    }
   //  }
 
-  public CatalogueCategoryTreeResponse getCatalogueTree() {
-    try {
-      ObjectMapper mapper = new ObjectMapper();
-      CatalogueCategoryTreeResponse response =
-          mapper.readValue(
-              new File(
-                  "central-commerce-application/src/main/resources/CatalogueCategoryTree.json"),
-              CatalogueCategoryTreeResponse.class);
-      return response;
-
-    } catch (IOException ex) {
-      throw new CentralCommerceServiceException(
-          "Error calling central catalogue category tree API: ",
-          HttpStatus.INTERNAL_SERVER_ERROR,
-          ex);
-    }
+  // for local testing purpose
+  public CatalogueCategoryTreeResponse getCatalogueCategoryTree() {
+    return new CatalogueCategoryTreeResponse();
   }
 }

@@ -1,3 +1,8 @@
 package com.jswone.commerce.core.service;
 
-public interface CatalogueCategoryService {}
+import com.jswone.commerce.core.model.CategoryTreeResponse;
+
+public interface CatalogueCategoryService {
+
+  CategoryTreeResponse getCatalogueCategoryTree();
+}

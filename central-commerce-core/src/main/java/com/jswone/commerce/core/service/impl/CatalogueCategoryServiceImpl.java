@@ -29,7 +29,8 @@ public class CatalogueCategoryServiceImpl implements CatalogueCategoryService {
 
   public CategoryTreeResponse getCatalogueCategoryTree() {
 
-    CatalogueCategoryTreeResponse catalogueCategoryTree = centralCatalogueClient.getCatalogueTree();
+    CatalogueCategoryTreeResponse catalogueCategoryTree =
+        centralCatalogueClient.getCatalogueCategoryTree();
     if (catalogueCategoryTree == null || catalogueCategoryTree.getData() == null) {
       log.error("Catalogue category tree data not found");
       throw new CentralCommerceServiceException(

@@ -9,17 +9,16 @@ import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 import org.mapstruct.ReportingPolicy;
 
-// @Mapper(componentModel = "spring")
 @Mapper(componentModel = "spring", unmappedTargetPolicy = ReportingPolicy.IGNORE)
 public interface CategoryMapper {
 
-  @Mapping(source = "key", target = "name")
+  @Mapping(source = "attributes.category_title", target = "name")
   @Mapping(source = "attributes.seo_url", target = "seoUrl")
   @Mapping(source = "attributes.meta_title", target = "metaTitle")
   @Mapping(source = "attributes.meta_description", target = "metaDescription")
   @Mapping(source = "attributes.slug", target = "slug")
   @Mapping(source = "attributes.href", target = "href")
-  @Mapping(target = "linkTitle", source = "key")
+  @Mapping(source = "attributes.link_title_seo_purpose", target = "linkTitleSeoPurpose")
   @Mapping(target = "subMenu", expression = "java(mapCategories(category.getSub_menu()))")
   NavigationItem mapCategory(CatalogueCategoryTree category);
 
