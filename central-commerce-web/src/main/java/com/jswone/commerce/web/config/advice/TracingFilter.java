@@ -20,7 +20,7 @@ public class TracingFilter extends OncePerRequestFilter {
             throws ServletException, IOException {
 
         String randomId = UUID.randomUUID().toString();
-        String traceId = request.getHeader("trace_id");
+        String traceId = request.getHeader("traceId");
         if (traceId == null || traceId.equals("")) {
             traceId = randomId;
         }
