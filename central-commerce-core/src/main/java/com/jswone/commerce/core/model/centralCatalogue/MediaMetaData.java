@@ -1,5 +1,6 @@
 package com.jswone.commerce.core.model.centralCatalogue;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -9,6 +10,8 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class MediaMetaData {
     private String title;
-    private String alt_text;
+
+    @JsonProperty("alt_text")
+    private String altText;
 }
 

@@ -1,5 +1,6 @@
 package com.jswone.commerce.core.model.centralCatalogue;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -10,18 +11,40 @@ import java.util.List;
 @NoArgsConstructor
 @AllArgsConstructor
 public class Product {
+
     private String id;
+
     private int version;
+
     private ProductAttributes attributes;
+
     private List<Variant> variants;
-    private String product_type_id;
-    private String product_mmid;
-    private List<AssociatedCategory> associated_categories;
-    private String created_at;
-    private String last_modified_at;
-    private List<String> enabled_storefronts;
-    private MetaData meta_data;
+
+    @JsonProperty("product_type_id")
+    private String productTypeId;
+
+    @JsonProperty("product_mmid")
+    private String productMmid;
+
+    @JsonProperty("associated_categories")
+    private List<AssociatedCategory> associatedCategories;
+
+    @JsonProperty("created_at")
+    private String createdAt;
+
+    @JsonProperty("last_modified_at")
+    private String lastModifiedAt;
+
+    @JsonProperty("enabled_storefronts")
+    private List<String> enabledStorefronts;
+
+    @JsonProperty("meta_data")
+    private MetaData metaData;
+
     private Double rank;
-    private List<ProductLocation> product_location;
+
+    @JsonProperty("product_location")
+    private List<ProductLocation> productLocation;
+
 }
 

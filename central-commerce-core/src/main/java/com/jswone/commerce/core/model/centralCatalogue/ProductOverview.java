@@ -1,5 +1,6 @@
 package com.jswone.commerce.core.model.centralCatalogue;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -8,8 +9,14 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 public class ProductOverview {
-    private String supply_condition;
-    private String product_information;
-    private String packaging_information;
+
+    @JsonProperty("supply_condition")
+    private String supplyCondition;
+
+    @JsonProperty("product_information")
+    private String productInformation;
+
+    @JsonProperty("packaging_information")
+    private String packagingInformation;
 }
 

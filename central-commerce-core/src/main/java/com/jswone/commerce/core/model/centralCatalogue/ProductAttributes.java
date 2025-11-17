@@ -1,5 +1,6 @@
 package com.jswone.commerce.core.model.centralCatalogue;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -10,26 +11,61 @@ import java.util.List;
 @NoArgsConstructor
 @AllArgsConstructor
 public class ProductAttributes {
-    private String product_id;
-    private String grade;
-    private String created_at;
-    private Integer id;
-    private String created_by;
-    private String brand;
-    private String product_title;
-    private String sub_grade;
-    private Double diameter_min;
 
-    private List<String> text_set;
-    private String localised_text;
-    private String meta_title;
-    private List<Integer> number_set;
-    private String localized_date;
-    private Boolean boolean_attribute;
+    @JsonProperty("product_id")
+    private String productId;
+
+    private String grade;
+
+    @JsonProperty("created_at")
+    private String createdAt;
+
+    private Integer id;
+
+    @JsonProperty("created_by")
+    private String createdBy;
+
+    private String brand;
+
+    @JsonProperty("product_title")
+    private String productTitle;
+
+    @JsonProperty("sub_grade")
+    private String subGrade;
+
+    @JsonProperty("diameter_min")
+    private Double diameterMin;
+
+    @JsonProperty("text_set")
+    private List<String> textSet;
+
+    @JsonProperty("localised_text")
+    private String localisedText;
+
+    @JsonProperty("meta_title")
+    private String metaTitle;
+
+    @JsonProperty("number_set")
+    private List<Integer> numberSet;
+
+    @JsonProperty("localized_date")
+    private String localizedDate;
+
+    @JsonProperty("boolean_attribute")
+    private Boolean booleanAttribute;
+
     private Integer number;
-    private String meta_description;
-    private Integer Diametermm;
-    private String rich_text;
+
+    @JsonProperty("meta_description")
+    private String metaDescription;
+
+    @JsonProperty("diametermm")
+    private Integer diameterMM;
+
+    @JsonProperty("rich_text")
+    private String richText;
+
     private String text;
+
     private String slug;
 }

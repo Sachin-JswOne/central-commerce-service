@@ -1,5 +1,6 @@
 package com.jswone.commerce.core.model.centralCatalogue;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -11,11 +12,20 @@ import java.util.Map;
 @NoArgsConstructor
 @AllArgsConstructor
 public class Variant {
-    private long created_at;
+
+    @JsonProperty("created_at")
+    private long createdAt;
+
     private Map<String, String> attributes;
-    private String variant_mmid;
+
+    @JsonProperty("variant_mmid")
+    private String variantMmid;
+
     private String id;
-    private List<String> enabled_storefront;
+
+    @JsonProperty("enabled_storefront")
+    private List<String> enabledStorefront;
+
     private int version;
 }
 

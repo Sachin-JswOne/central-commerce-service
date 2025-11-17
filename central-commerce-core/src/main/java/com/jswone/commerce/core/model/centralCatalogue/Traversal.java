@@ -9,7 +9,7 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class Traversal {
     private String depth;
-    private AssociatedCategoryAttributes attributes;
+    private AssociatedCategoryAttributes associatedCategoryAttributes;
     private String id;
 }
 

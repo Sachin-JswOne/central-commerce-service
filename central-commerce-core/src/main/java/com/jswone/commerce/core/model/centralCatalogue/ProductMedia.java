@@ -1,5 +1,6 @@
 package com.jswone.commerce.core.model.centralCatalogue;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -8,11 +9,22 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 public class ProductMedia {
-    private String public_url;
-    private String content_type;
-    private String file_name;
-    private String asset_type;
-    private MediaMetaData meta_data;
+
+    @JsonProperty("public_url")
+    private String publicUrl;
+
+    @JsonProperty("content_type")
+    private String contentType;
+
+    @JsonProperty("file_name")
+    private String fileName;
+
+    @JsonProperty("asset_type")
+    private String assetType;
+
+    @JsonProperty("meta_data")
+    private MediaMetaData metaData;
+
     private int rank;
 }
 
