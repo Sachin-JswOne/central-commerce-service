@@ -35,7 +35,7 @@ public class RestUtil {
             headers.setAll(headersMap);
         }
         headers.add("traceId", MDC.get("traceId"));
-        headers.add("appName", "cart-service");
+        headers.add("appName", "central-commerce-service");
 
         // Create the HttpEntity with request body and headers
         HttpEntity<Object> httpEntity = new HttpEntity<>(requestBody, headers);

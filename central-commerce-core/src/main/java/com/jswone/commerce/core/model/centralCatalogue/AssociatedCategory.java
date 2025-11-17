@@ -5,6 +5,8 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.util.List;
+import java.util.Map;
+import java.util.Objects;
 
 @Data
 @NoArgsConstructor
@@ -12,7 +14,7 @@ import java.util.List;
 public class AssociatedCategory {
     private String path;
     private String rank;
-    private AssociatedCategoryAttributes attributes;
+    private Map<String, Object> attributes;
     private String id;
     private List<Traversal> traversal;
 }

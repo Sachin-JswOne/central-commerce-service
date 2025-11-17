@@ -1,4 +1,4 @@
-package com.jswone.commerce.core.model.response;
+package com.jswone.commerce.core.model.response.centralCatalogue;
 
 import com.jswone.commerce.core.model.centralCatalogue.Product;
 import lombok.AllArgsConstructor;
