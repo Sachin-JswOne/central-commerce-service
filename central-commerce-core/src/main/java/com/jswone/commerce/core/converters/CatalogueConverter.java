@@ -33,9 +33,7 @@ public class CatalogueConverter {
         this.UNIT_MAP = new HashMap<>(catalogueDynamicConfig.getUnitMap());
     }
 
-    // ------------------------------------------------------
-    // MAIN CONVERTER
-    // ------------------------------------------------------
+
     public SearchResponse convertGenericSearchToSearchResponse(
             ProductSearchResponse productSearchResponse, SearchRequest searchRequest) {
 
@@ -46,10 +44,10 @@ public class CatalogueConverter {
 
             SearchResponse response = new SearchResponse();
 
-            // 1️⃣ Dynamic Filters
+            //Dynamic Filters
             response.setFilterConditions(buildDynamicFilters(products));
 
-            // 2️⃣ SearchAction → Products OR Suggestions
+            //SearchAction → Products OR Suggestions
             if (searchRequest.isSearchAction()) {
 
                 List<PLPCard> plpCards = products.stream()
@@ -66,7 +64,6 @@ public class CatalogueConverter {
                 response.setCount(0L);
                 response.setTotal(0L);
 
-                // Suggestions only mode
                 response.setFilterConditions(Collections.emptyList());
                 response.setSuggestions(
                         products.stream()
@@ -89,9 +86,6 @@ public class CatalogueConverter {
         }
     }
 
-    // -----------------------------------------------------
-    // PRODUCT → PLP CARD
-    // -----------------------------------------------------
     private PLPCard convertToPLPCard(Product product) {
 
         Map<String, Object> attrs = product.getAttributes();
@@ -115,9 +109,6 @@ public class CatalogueConverter {
                 .build();
     }
 
-    // -----------------------------------------------------
-    // PRODUCT → SearchSuggestion
-    // -----------------------------------------------------
     private SearchSuggestion convertToSuggestion(Product product) {
         Map<String, Object> attrs = product.getAttributes();
 
@@ -129,16 +120,13 @@ public class CatalogueConverter {
                 .build();
     }
 
-    // -----------------------------------------------------
     // UNIT-ONLY PRODUCT ATTRIBUTES FOR PLP CARDS
-    // -----------------------------------------------------
     private List<PLPAttribute> buildDynamicPLPAttributes(Map<String, Object> attrs) {
 
         List<PLPAttribute> finalList = new ArrayList<>();
         Map<String, Double> minMap = new HashMap<>();
         Map<String, Double> maxMap = new HashMap<>();
 
-        // 1️⃣ Track min/max pairs
         attrs.forEach((key, val) -> {
             if (key.endsWith("_min")) {
                 minMap.put(key.replace("_min", ""), safeDouble(val));
@@ -147,7 +135,6 @@ public class CatalogueConverter {
             }
         });
 
-        // 2️⃣ Add range attributes
         for (String base : minMap.keySet()) {
             String unit = getUnitFor(base);
 
@@ -157,7 +144,6 @@ public class CatalogueConverter {
                     .build());
         }
 
-        // 3️⃣ Add single-value numeric attributes WITH unit only
         attrs.forEach((key, val) -> {
 
             if (val == null) return;
@@ -179,9 +165,7 @@ public class CatalogueConverter {
         return finalList;
     }
 
-    // -----------------------------------------------------
     // DYNAMIC FILTER GENERATION
-    // -----------------------------------------------------
     private List<ProductFilterConditions> buildDynamicFilters(List<Product> products) {
 
         Map<String, Set<String>> selectionValues = new HashMap<>();
@@ -241,9 +225,7 @@ public class CatalogueConverter {
         return out;
     }
 
-    // -----------------------------------------------------
     // HELPERS
-    // -----------------------------------------------------
     private String extractImage(Product p) {
         try {
             return p.getMetaData().getProductMedia().get(0).getPublicUrl();
