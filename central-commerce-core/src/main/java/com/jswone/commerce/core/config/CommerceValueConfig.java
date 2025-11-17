@@ -58,9 +58,9 @@ public class CommerceValueConfig {
     @Value("${product.sku.double.attributes}")
     private String productSkuDoubleAttributes;
 
-    @Value("${jsw.service.connection.timeout}")
+    @Value("${service.connection.timeout}")
     private long serviceConnectionTimeOut;
 
-    @Value("${jsw.service.connection.readTimeout}")
+    @Value("${service.connection.readTimeout}")
     private long serviceReadTimeOut;
 }
