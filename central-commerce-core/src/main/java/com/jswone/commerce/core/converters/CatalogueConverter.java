@@ -11,6 +11,7 @@ import com.jswone.commerce.core.model.response.plp.ProductFilterConditions;
 import com.jswone.commerce.core.model.response.search.SearchResponse;
 import com.jswone.commerce.core.model.response.search.SearchSuggestion;
 
+import com.jswone.commerce.core.util.CatalogueUtil;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
@@ -87,19 +88,19 @@ public class CatalogueConverter {
 
         Map<String, Object> attrs = product.getAttributes();
 
-        String delivery = str(attrs.getOrDefault("delivery time", ""));
+        String delivery = CatalogueUtil.str(attrs.getOrDefault("delivery time", ""));
         if (delivery.isBlank()) {
-            delivery = str(attrs.getOrDefault("delivery_time", ""));
+            delivery = CatalogueUtil.str(attrs.getOrDefault("delivery_time", ""));
         }
 
         return PLPCard.builder()
-                .productTitle(str(attrs.get("product_title")))
-                .productSlug(str(attrs.get("slug")))
-                .brand(str(attrs.get("brand")))
+                .productTitle(CatalogueUtil.str(attrs.get("product_title")))
+                .productSlug(CatalogueUtil.str(attrs.get("slug")))
+                .brand(CatalogueUtil.str(attrs.get("brand")))
                 .deliveryInfo(delivery)
                 .distributedDeliveryInfo("Delivery in 30 - 45 days")
-                .imageUrl(extractImage(product))
-                .altText(extractAlt(product))
+                .imageUrl(CatalogueUtil.extractImage(product))
+                .altText(CatalogueUtil.extractAlt(product))
                 .productAttributes(buildDynamicPLPAttributes(attrs))
                 .productMaterialMasterId(product.getProductMmid())
                 .priceRange(null)
@@ -110,9 +111,9 @@ public class CatalogueConverter {
         Map<String, Object> attrs = product.getAttributes();
 
         return SearchSuggestion.builder()
-                .suggestionText(str(attrs.get("product_title")))
-                .productSlug(str(attrs.get("slug")))
-                .imageUrl(extractImage(product))
+                .suggestionText(CatalogueUtil.str(attrs.get("product_title")))
+                .productSlug(CatalogueUtil.str(attrs.get("slug")))
+                .imageUrl(CatalogueUtil.extractImage(product))
                 .productMaterialMasterId(product.getProductMmid())
                 .build();
     }
@@ -128,19 +129,19 @@ public class CatalogueConverter {
 
         attrs.forEach((key, val) -> {
             if (key.endsWith("_min")) {
-                minMap.put(key.replace("_min", ""), safeDouble(val));
+                minMap.put(key.replace("_min", ""), CatalogueUtil.safeDouble(val));
             } else if (key.endsWith("_max")) {
-                maxMap.put(key.replace("_max", ""), safeDouble(val));
+                maxMap.put(key.replace("_max", ""), CatalogueUtil.safeDouble(val));
             }
         });
 
         // Add RANGE attributes (still allowed for PLP display)
         for (String base : minMap.keySet()) {
-            String unit = getUnitFor(base);
+            String unit = CatalogueUtil.getUnitFor(base, UNIT_MAP);
 
             finalList.add(PLPAttribute.builder()
-                    .displayName(formatName(base))
-                    .value(formatRange(minMap.get(base), maxMap.get(base), unit))
+                    .displayName(CatalogueUtil.formatName(base))
+                    .value(CatalogueUtil.formatRange(minMap.get(base), maxMap.get(base), unit))
                     .build());
         }
 
@@ -151,22 +152,22 @@ public class CatalogueConverter {
             if (NON_ATTRIBUTE_KEYS.contains(key)) return;
             if (key.endsWith("_min") || key.endsWith("_max")) return;
 
-            Double num = safeDouble(val);
+            Double num = CatalogueUtil.safeDouble(val);
             if (num == null) return;
 
-            String unit = getUnitFor(key);
+            String unit = CatalogueUtil.getUnitFor(key, UNIT_MAP);
             if (unit.isBlank()) return;
 
             finalList.add(PLPAttribute.builder()
-                    .displayName(formatName(key))
-                    .value(trim(num) + unitSuffix(unit))
+                    .displayName(CatalogueUtil.formatName(key))
+                    .value(CatalogueUtil.trim(num) + CatalogueUtil.unitSuffix(unit))
                     .build());
         });
 
         return finalList;
     }
 
-// ONLY KEYS IN ATTRIBUTE_KEYS WILL BE USED
+    // ONLY KEYS IN ATTRIBUTE_KEYS WILL BE USED
     private List<ProductFilterConditions> buildDynamicFilters(List<Product> products) {
 
         Map<String, Set<String>> selectionValues = new HashMap<>();
@@ -189,11 +190,11 @@ public class CatalogueConverter {
 
                 // Collect range values (but not using them for CCS)
                 if (key.endsWith("_min")) {
-                    minCollector.put(key.replace("_min", ""), safeDouble(val));
+                    minCollector.put(key.replace("_min", ""), CatalogueUtil.safeDouble(val));
                     continue;
                 }
                 if (key.endsWith("_max")) {
-                    maxCollector.put(key.replace("_max", ""), safeDouble(val));
+                    maxCollector.put(key.replace("_max", ""), CatalogueUtil.safeDouble(val));
                     continue;
                 }
 
@@ -228,7 +229,7 @@ public class CatalogueConverter {
         selectionValues.forEach((key, values) -> out.add(
                 ProductFilterConditions.builder()
                         .id(key.toUpperCase())
-                        .displayText(formatName(key))
+                        .displayText(CatalogueUtil.formatName(key))
                         .type("selection")
                         .values(new ArrayList<>(values))
                         .selectedValues(new ArrayList<>())
@@ -236,69 +237,5 @@ public class CatalogueConverter {
         ));
 
         return out;
-    }
-
-    // HELPERS
-    private String extractImage(Product p) {
-        try {
-            return p.getMetaData().getProductMedia().get(0).getPublicUrl();
-        } catch (Exception e) {
-            return "";
-        }
-    }
-
-    private String extractAlt(Product p) {
-        try {
-            return p.getMetaData().getProductMedia().get(0).getMetaData().getAltText();
-        } catch (Exception e) {
-            return "";
-        }
-    }
-
-    private String str(Object o) {
-        return o == null ? "" : o.toString();
-    }
-
-    private Double safeDouble(Object o) {
-        if (o instanceof Number num) return num.doubleValue();
-        try {
-            return Double.parseDouble(o.toString());
-        } catch (Exception e) {
-            return null;
-        }
-    }
-
-    private String formatRange(Double min, Double max, String unit) {
-        if (min == null && max == null) return "";
-        if (min != null && max != null) return trim(min) + " - " + trim(max) + unitSuffix(unit);
-        if (min != null) return trim(min) + unitSuffix(unit);
-        return trim(max) + unitSuffix(unit);
-    }
-
-    private String trim(Double d) {
-        return (d == d.intValue()) ? String.valueOf(d.intValue()) : d.toString();
-    }
-
-    private String formatName(String raw) {
-        raw = raw.replace("_", " ").trim();
-        return Character.toUpperCase(raw.charAt(0)) + raw.substring(1);
-    }
-
-    private String unitSuffix(String u) { return u.isBlank() ? "" : " " + u; }
-
-    // SMART UNIT DETECTION
-    private String getUnitFor(String base) {
-        String key = base.toLowerCase();
-
-        if (UNIT_MAP.containsKey(key)) return UNIT_MAP.get(key);
-
-        if (key.contains("weight")) return "kg/m";
-        if (key.contains("diameter")) return "mm";
-        if (key.contains("depth")) return "mm";
-        if (key.contains("width")) return "mm";
-        if (key.contains("thickness")) return "mm";
-        if (key.contains("length")) return "mm";
-
-        return "";
     }
 }
