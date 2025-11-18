@@ -52,20 +52,19 @@ public class CatalogueConverter {
 
                 response.setProducts(plpCards);
                 response.setCount((long) plpCards.size());
-                response.setTotal((long) plpCards.size());
+                response.setTotal(productSearchResponse.getTotalHits());
                 response.setSuggestions(Collections.emptyList());
 
             } else {
                 response.setProducts(Collections.emptyList());
-                response.setCount(0L);
-                response.setTotal(0L);
+                List<SearchSuggestion> suggestionList = products.stream()
+                        .map(this::convertToSuggestion)
+                        .toList();
+                response.setCount((long) suggestionList.size());
+                response.setTotal(productSearchResponse.getTotalHits());
 
                 response.setFilterConditions(Collections.emptyList());
-                response.setSuggestions(
-                        products.stream()
-                                .map(this::convertToSuggestion)
-                                .collect(Collectors.toList())
-                );
+                response.setSuggestions(suggestionList);
             }
 
             response.setQuery(searchRequest.getText());
