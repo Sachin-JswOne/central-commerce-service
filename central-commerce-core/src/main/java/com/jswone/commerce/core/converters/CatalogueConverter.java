@@ -22,11 +22,13 @@ import java.util.stream.Collectors;
 public class CatalogueConverter {
 
     private final Set<String> NON_ATTRIBUTE_KEYS;
+    private final Set<String> ATTRIBUTE_KEYS;
     private final Map<String, String> UNIT_MAP;
 
     public CatalogueConverter(CatalogueDynamicConfig catalogueDynamicConfig) {
         this.NON_ATTRIBUTE_KEYS = new HashSet<>(catalogueDynamicConfig.getExcludedAttributes());
         this.UNIT_MAP = new HashMap<>(catalogueDynamicConfig.getUnitMap());
+        ATTRIBUTE_KEYS = new HashSet<>(catalogueDynamicConfig.getIncludedAttributes());
     }
 
     // MAIN CONVERTER
@@ -164,9 +166,7 @@ public class CatalogueConverter {
         return finalList;
     }
 
-    // =======================
-    // FILTERS (NO RANGE FILTERS)
-    // =======================
+// ONLY KEYS IN ATTRIBUTE_KEYS WILL BE USED
     private List<ProductFilterConditions> buildDynamicFilters(List<Product> products) {
 
         Map<String, Set<String>> selectionValues = new HashMap<>();
@@ -174,14 +174,20 @@ public class CatalogueConverter {
         Map<String, Double> maxCollector = new HashMap<>();
 
         for (Product p : products) {
+
             Map<String, Object> attrs = p.getAttributes();
+            if (attrs == null) continue;
 
             for (var entry : attrs.entrySet()) {
+
                 String key = entry.getKey();
                 Object val = entry.getValue();
 
-                if (NON_ATTRIBUTE_KEYS.contains(key)) continue;
+                if (!ATTRIBUTE_KEYS.contains(key)) continue;
 
+                if (val == null) continue;
+
+                // Collect range values (but not using them for CCS)
                 if (key.endsWith("_min")) {
                     minCollector.put(key.replace("_min", ""), safeDouble(val));
                     continue;
@@ -191,32 +197,34 @@ public class CatalogueConverter {
                     continue;
                 }
 
-                selectionValues.computeIfAbsent(key, x -> new TreeSet<>())
+                // Collect selection values
+                selectionValues
+                        .computeIfAbsent(key, x -> new TreeSet<>())
                         .add(String.valueOf(val));
             }
         }
 
         List<ProductFilterConditions> out = new ArrayList<>();
 
-        // ❌ RANGE FILTERS REMOVED — CENTRAL CATALOGUE DOES NOT SUPPORT THEM
-        /*
-        for (String base : minCollector.keySet()) {
+        //  RANGE FILTERS NOT SUPPORTED — COMMENTED
+    /*
+    for (String base : minCollector.keySet()) {
 
-            TreeSet<String> values = new TreeSet<>();
-            if (minCollector.get(base) != null) values.add(trim(minCollector.get(base)));
-            if (maxCollector.get(base) != null) values.add(trim(maxCollector.get(base)));
+        TreeSet<String> values = new TreeSet<>();
+        if (minCollector.get(base) != null) values.add(trim(minCollector.get(base)));
+        if (maxCollector.get(base) != null) values.add(trim(maxCollector.get(base)));
 
-            out.add(ProductFilterConditions.builder()
-                    .id(base.toUpperCase())
-                    .displayText(formatName(base))
-                    .type("range")
-                    .values(new ArrayList<>(values))
-                    .selectedValues(new ArrayList<>())
-                    .build());
-        }
-        */
+        out.add(ProductFilterConditions.builder()
+                .id(base.toUpperCase())
+                .displayText(formatName(base))
+                .type("range")
+                .values(new ArrayList<>(values))
+                .selectedValues(new ArrayList<>())
+                .build());
+    }
+    */
 
-        // ✅ SELECTION FILTERS ONLY
+        //  SELECTION FILTERS ONLY (SUPPORTED BY CCS)
         selectionValues.forEach((key, values) -> out.add(
                 ProductFilterConditions.builder()
                         .id(key.toUpperCase())

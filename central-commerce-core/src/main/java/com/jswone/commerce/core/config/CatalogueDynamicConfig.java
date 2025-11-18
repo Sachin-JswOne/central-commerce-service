@@ -18,6 +18,11 @@ public class CatalogueDynamicConfig {
     private List<String> excludedAttributes;
 
     /**
+     * Comma separated list → auto converted to List<String>
+     */
+    private List<String> includedAttributes;
+
+    /**
      * key:value,key2:value2 → auto converted to Map<String, String>
      */
     private Map<String, String> unitMap;
