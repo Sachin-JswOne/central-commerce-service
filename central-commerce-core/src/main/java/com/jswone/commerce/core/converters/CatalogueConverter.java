@@ -25,15 +25,11 @@ public class CatalogueConverter {
     private final Map<String, String> UNIT_MAP;
 
     public CatalogueConverter(CatalogueDynamicConfig catalogueDynamicConfig) {
-
-        // Load excluded attributes from properties
         this.NON_ATTRIBUTE_KEYS = new HashSet<>(catalogueDynamicConfig.getExcludedAttributes());
-
-        // Load unit map from properties
         this.UNIT_MAP = new HashMap<>(catalogueDynamicConfig.getUnitMap());
     }
 
-
+    // MAIN CONVERTER
     public SearchResponse convertGenericSearchToSearchResponse(
             ProductSearchResponse productSearchResponse, SearchRequest searchRequest) {
 
@@ -44,10 +40,10 @@ public class CatalogueConverter {
 
             SearchResponse response = new SearchResponse();
 
-            //Dynamic Filters
+            // Dynamic Filters
             response.setFilterConditions(buildDynamicFilters(products));
 
-            //SearchAction → Products OR Suggestions
+            // searchAction flag logic
             if (searchRequest.isSearchAction()) {
 
                 List<PLPCard> plpCards = products.stream()
@@ -120,7 +116,9 @@ public class CatalogueConverter {
                 .build();
     }
 
-    // UNIT-ONLY PRODUCT ATTRIBUTES FOR PLP CARDS
+    // =======================
+    // UNIT-ONLY PLP ATTRIBUTES
+    // =======================
     private List<PLPAttribute> buildDynamicPLPAttributes(Map<String, Object> attrs) {
 
         List<PLPAttribute> finalList = new ArrayList<>();
@@ -135,6 +133,7 @@ public class CatalogueConverter {
             }
         });
 
+        // Add RANGE attributes (still allowed for PLP display)
         for (String base : minMap.keySet()) {
             String unit = getUnitFor(base);
 
@@ -144,6 +143,7 @@ public class CatalogueConverter {
                     .build());
         }
 
+        // Add SINGLE numeric attributes only if unit exists
         attrs.forEach((key, val) -> {
 
             if (val == null) return;
@@ -151,10 +151,10 @@ public class CatalogueConverter {
             if (key.endsWith("_min") || key.endsWith("_max")) return;
 
             Double num = safeDouble(val);
-            if (num == null) return;       // numeric only
+            if (num == null) return;
 
             String unit = getUnitFor(key);
-            if (unit.isBlank()) return;    // must have unit
+            if (unit.isBlank()) return;
 
             finalList.add(PLPAttribute.builder()
                     .displayName(formatName(key))
@@ -165,7 +165,9 @@ public class CatalogueConverter {
         return finalList;
     }
 
-    // DYNAMIC FILTER GENERATION
+    // =======================
+    // FILTERS (NO RANGE FILTERS)
+    // =======================
     private List<ProductFilterConditions> buildDynamicFilters(List<Product> products) {
 
         Map<String, Set<String>> selectionValues = new HashMap<>();
@@ -197,7 +199,8 @@ public class CatalogueConverter {
 
         List<ProductFilterConditions> out = new ArrayList<>();
 
-        // Range filters
+        // ❌ RANGE FILTERS REMOVED — CENTRAL CATALOGUE DOES NOT SUPPORT THEM
+        /*
         for (String base : minCollector.keySet()) {
 
             TreeSet<String> values = new TreeSet<>();
@@ -212,15 +215,18 @@ public class CatalogueConverter {
                     .selectedValues(new ArrayList<>())
                     .build());
         }
+        */
 
-        // Selection filters
-        selectionValues.forEach((key, values) -> out.add(ProductFilterConditions.builder()
-                .id(key.toUpperCase())
-                .displayText(formatName(key))
-                .type("selection")
-                .values(new ArrayList<>(values))
-                .selectedValues(new ArrayList<>())
-                .build()));
+        // ✅ SELECTION FILTERS ONLY
+        selectionValues.forEach((key, values) -> out.add(
+                ProductFilterConditions.builder()
+                        .id(key.toUpperCase())
+                        .displayText(formatName(key))
+                        .type("selection")
+                        .values(new ArrayList<>(values))
+                        .selectedValues(new ArrayList<>())
+                        .build()
+        ));
 
         return out;
     }

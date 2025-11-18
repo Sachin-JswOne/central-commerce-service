@@ -37,15 +37,48 @@ public class CentralCatalogueClientImpl implements CentralCatalogueClient {
     public ProductSearchResponse genericSearch(SearchRequest searchRequest) {
         try {
 
-            String url = String.format(
-                    "%s%s?query=%s&storefront=%s&size=%d&page=%d",
-                    commerceValueConfig.getCentralCatalogueBaseUrl(),
-                    commerceValueConfig.getCentralCatalogueGenericSearchEndpoint(),
-                    encode(searchRequest.getText()),
-                    encode(searchRequest.getStorefront()),
-                    searchRequest.getLimit(),
-                    searchRequest.getOffSet()
+            // Base URL
+            StringBuilder urlBuilder = new StringBuilder(
+                    String.format(
+                            "%s%s?query=%s&storefront=%s&size=%d&page=%d",
+                            commerceValueConfig.getCentralCatalogueBaseUrl(),
+                            commerceValueConfig.getCentralCatalogueGenericSearchEndpoint(),
+                            encode(searchRequest.getText()),
+                            encode(searchRequest.getStorefront()),
+                            searchRequest.getLimit(),
+                            searchRequest.getOffSet()
+                    )
             );
+
+            // ================================
+            //   ADD FILTER CONDITIONS
+            // ================================
+            if (searchRequest.getFilterConditions() != null) {
+
+                searchRequest.getFilterConditions().forEach(filter -> {
+
+                    // Central Catalogue supports **only selection filters**
+                    if (!"selection".equalsIgnoreCase(filter.getType())) return;
+
+                    String key = filter.getId().toLowerCase(); // Example: GRADE -> grade
+
+                    if (filter.getSelectedValues() != null) {
+                        filter.getSelectedValues().forEach(selectedValue -> {
+                            if (selectedValue != null && !selectedValue.isBlank()) {
+
+                                urlBuilder.append("&")
+                                        .append(key)
+                                        .append("=")
+                                        .append(encode(selectedValue));
+                            }
+                        });
+                    }
+                });
+            }
+
+            String finalUrl = urlBuilder.toString();
+
+            log.info("Calling Central Catalogue Search URL: {}", finalUrl);
 
             Map<String, String> headers = Map.of(
                     X_API_KEY, commerceValueConfig.getCentralCatalogueApiKey(),
@@ -53,7 +86,7 @@ public class CentralCatalogueClientImpl implements CentralCatalogueClient {
             );
 
             ResponseEntity<ProductSearchResponse> response = restUtil.makeRestCall(
-                    url,
+                    finalUrl,
                     null,
                     HttpMethod.GET,
                     ProductSearchResponse.class,
@@ -61,12 +94,18 @@ public class CentralCatalogueClientImpl implements CentralCatalogueClient {
             );
 
             return response.getBody();
-        }catch (HttpClientErrorException httpClientErrorException) {
-            log.error("HttpClientErrorException while calling central catalogue generic search:{}", httpClientErrorException.getMessage(), httpClientErrorException);
-            throw new CentralCatalogueServiceException(String.format("HttpClientErrorException while calling central catalogue generic search: %s", httpClientErrorException.getMessage()), HttpStatus.valueOf(httpClientErrorException.getStatusCode().value()));
+
+        } catch (HttpClientErrorException httpClientErrorException) {
+            log.error("HttpClientErrorException while calling central catalogue generic search: {}",
+                    httpClientErrorException.getMessage(), httpClientErrorException);
+
+            throw new CentralCatalogueServiceException(
+                    "HttpClientErrorException while calling central catalogue generic search: "
+                            + httpClientErrorException.getMessage(),
+                    HttpStatus.valueOf(httpClientErrorException.getStatusCode().value())
+            );
         }
     }
-
     @Override
     public ProductBulkResponse bulkMMIDResponse(ProductBulkRequest productBulkRequest) {
         try {
