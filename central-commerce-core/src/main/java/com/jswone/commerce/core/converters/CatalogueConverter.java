@@ -173,7 +173,6 @@ public class CatalogueConverter {
         Map<String, Double> minCollector = new HashMap<>();
         Map<String, Double> maxCollector = new HashMap<>();
 
-        // 1️⃣ Collect values from CCS response only
         for (Product p : products) {
 
             Map<String, Object> attrs = p.getAttributes();
@@ -205,7 +204,7 @@ public class CatalogueConverter {
 
         List<ProductFilterConditions> out = new ArrayList<>();
 
-        // ❌ RANGE FILTERS REMOVED — STILL COMMENTED
+        // RANGE FILTERS REMOVED — STILL COMMENTED
     /*
     for (String base : minCollector.keySet()) {
         TreeSet<String> values = new TreeSet<>();
@@ -222,7 +221,6 @@ public class CatalogueConverter {
     }
     */
 
-        // 2️⃣ Build selection filters — PRESERVE selectedValues from request
         Map<String, List<String>> selectedFromRequestMap = new HashMap<>();
 
         if (searchRequest.getFilterConditions() != null) {
@@ -236,7 +234,6 @@ public class CatalogueConverter {
             }
         }
 
-        // 3️⃣ Create filter list WITHOUT merging selectedValues into CCS values
         selectionValues.forEach((key, values) -> {
 
             List<String> selected = selectedFromRequestMap.getOrDefault(key.toLowerCase(), Collections.emptyList());
@@ -246,8 +243,8 @@ public class CatalogueConverter {
                             .id(key.toUpperCase())
                             .displayText(CatalogueUtil.formatName(key))
                             .type("selection")
-                            .values(new ArrayList<>(values))   // ONLY CCS values
-                            .selectedValues(selected)          // ONLY FE values
+                            .values(new ArrayList<>(values))
+                            .selectedValues(selected)
                             .build()
             );
         });
