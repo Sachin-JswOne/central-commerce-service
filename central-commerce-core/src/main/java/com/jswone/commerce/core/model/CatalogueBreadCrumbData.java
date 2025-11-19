@@ -10,9 +10,9 @@ import lombok.NoArgsConstructor;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class CatalogueCategoryTreeResponse {
-  private int statusCode;
-  private String status;
-  private List<CatalogueCategoryTree> data;
-  private ErrorResponse error;
+public class CatalogueBreadCrumbData {
+  private String url_key;
+  private String bread_crumb;
+  private String description;
+  private List<CatalogueBreadCrumbDetail> bread_crumb_details;
 }

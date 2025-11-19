@@ -1,10 +1,9 @@
 package com.jswone.commerce.core.service.impl;
 
 import com.jswone.commerce.core.exceptions.CentralCommerceServiceException;
+import com.jswone.commerce.core.mapper.BreadcrumbMapper;
 import com.jswone.commerce.core.mapper.CategoryMapper;
-import com.jswone.commerce.core.model.CatalogueCategoryTreeResponse;
-import com.jswone.commerce.core.model.CategoryTreeResponse;
-import com.jswone.commerce.core.model.NavigationItem;
+import com.jswone.commerce.core.model.*;
 import com.jswone.commerce.core.service.CatalogueCategoryService;
 import com.jswone.commerce.core.service.CentralCatalogueClient;
 import java.util.List;
@@ -20,6 +19,8 @@ public class CatalogueCategoryServiceImpl implements CatalogueCategoryService {
   @Autowired private CentralCatalogueClient centralCatalogueClient;
 
   @Autowired private CategoryMapper categoryMapper;
+
+  @Autowired private BreadcrumbMapper breadcrumbMapper;
 
   public CatalogueCategoryServiceImpl(
       CentralCatalogueClient centralCatalogueClient, CategoryMapper categoryMapper) {
@@ -44,5 +45,12 @@ public class CatalogueCategoryServiceImpl implements CatalogueCategoryService {
     categoryTreeResponse.setNavigation(navigationList);
     log.info("Category tree mapping completed successfully");
     return categoryTreeResponse;
+  }
+
+  public BreadcrumbData getBreadcrumbData(String categoryId) {
+    CatalogueBreadCrumbData catalogueBreadcrumbResponse =
+        centralCatalogueClient.fetchBreadcrumb(categoryId);
+    log.info("Mapping Catalogue breadcrumb data to central commerce format");
+    return breadcrumbMapper.toBreadcrumbResponse(catalogueBreadcrumbResponse);
   }
 }

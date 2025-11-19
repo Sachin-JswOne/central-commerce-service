@@ -1,6 +1,5 @@
 package com.jswone.commerce.core.model;
 
-import java.util.List;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -10,9 +9,9 @@ import lombok.NoArgsConstructor;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class CatalogueCategoryTreeResponse {
+public class CatalogueBreadcrumbResponse {
   private int statusCode;
   private String status;
-  private List<CatalogueCategoryTree> data;
+  private CatalogueBreadCrumbData data;
   private ErrorResponse error;
 }

@@ -57,4 +57,13 @@ public class CommerceValueConfig {
 
   @Value("${product.sku.double.attributes}")
   private String productSkuDoubleAttributes;
+
+  @Value("${catalogue.category.base.url}")
+  private String catalogueCategoryBaseUrl;
+
+  @Value("${catalogue.category.api.key}")
+  private String catalogueCategoryApiKey;
+
+  @Value("${catalogue.category.client.id}")
+  private String catalogueCategoryClientId;
 }
