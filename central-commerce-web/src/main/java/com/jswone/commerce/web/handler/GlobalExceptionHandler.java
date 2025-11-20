@@ -2,6 +2,7 @@ package com.jswone.commerce.web.handler;
 
 import static org.springframework.http.HttpStatus.BAD_REQUEST;
 
+import com.jswone.commerce.core.exceptions.CentralCatalogueServiceException;
 import com.jswone.commerce.core.exceptions.CentralCommerceServiceException;
 import com.jswone.commerce.core.exceptions.ProductSelectorException;
 import com.jswone.commerce.core.exceptions.UserTokenException;
@@ -53,6 +54,16 @@ public class GlobalExceptionHandler {
     return ApiResponse.builder()
         .status(BAD_REQUEST)
         .error(new ErrorResponse(BAD_REQUEST.value(), messages))
+        .success(false)
+        .build();
+  }
+
+  @ExceptionHandler(CentralCatalogueServiceException.class)
+  public ApiResponse<Object> handleCatalogueException(
+      CentralCatalogueServiceException ex, HttpServletRequest request) {
+    return ApiResponse.builder()
+        .status(ex.getHttpStatus())
+        .error(new ErrorResponse(ex.getHttpStatus().value(), ex.getMessage()))
         .success(false)
         .build();
   }

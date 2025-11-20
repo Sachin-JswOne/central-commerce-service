@@ -9,7 +9,6 @@ import com.jswone.commerce.core.service.CentralCatalogueClient;
 import java.util.List;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -30,17 +29,14 @@ public class CatalogueCategoryServiceImpl implements CatalogueCategoryService {
 
   public CategoryTreeResponse getCatalogueCategoryTree() {
 
-    CatalogueCategoryTreeResponse catalogueCategoryTree =
-        centralCatalogueClient.getCatalogueCategoryTree();
-    if (catalogueCategoryTree == null || catalogueCategoryTree.getData() == null) {
-      log.error("Catalogue category tree data not found");
-      throw new CentralCommerceServiceException(
-          "Catalogue category tree data not found", HttpStatus.NOT_FOUND);
+    List<CatalogueCategoryTree> catalogueCategoryTree = centralCatalogueClient.getCategoryTree();
+    if (catalogueCategoryTree == null || catalogueCategoryTree.getFirst() == null) {
+      log.error("Category tree API returned invalid or empty data");
+      throw new CentralCommerceServiceException("Category tree API returned invalid or empty data");
     }
 
     log.info("Mapping catalogue data to central commerce format");
-    List<NavigationItem> navigationList =
-        categoryMapper.mapCategories(catalogueCategoryTree.getData());
+    List<NavigationItem> navigationList = categoryMapper.mapCategories(catalogueCategoryTree);
     CategoryTreeResponse categoryTreeResponse = new CategoryTreeResponse();
     categoryTreeResponse.setNavigation(navigationList);
     log.info("Category tree mapping completed successfully");
@@ -49,7 +45,16 @@ public class CatalogueCategoryServiceImpl implements CatalogueCategoryService {
 
   public BreadcrumbData getBreadcrumbData(String categoryId) {
     CatalogueBreadCrumbData catalogueBreadcrumbResponse =
-        centralCatalogueClient.fetchBreadcrumb(categoryId);
+        centralCatalogueClient.getBreadcrumb(categoryId);
+
+    if (catalogueBreadcrumbResponse == null
+        || catalogueBreadcrumbResponse.getBread_crumb_details() == null) {
+      log.error(
+          "Category breadcrumb API returned invalid or empty data for categoryId: {}", categoryId);
+      throw new CentralCommerceServiceException(
+          "Category breadcrumb API returned invalid or empty data for categoryId");
+    }
+
     log.info("Mapping Catalogue breadcrumb data to central commerce format");
     return breadcrumbMapper.toBreadcrumbResponse(catalogueBreadcrumbResponse);
   }

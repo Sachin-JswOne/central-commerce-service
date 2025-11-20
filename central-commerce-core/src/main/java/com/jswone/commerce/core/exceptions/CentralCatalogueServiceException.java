@@ -7,34 +7,34 @@ import lombok.Getter;
 import org.springframework.http.HttpStatus;
 
 @Getter
-public class CentralCommerceServiceException extends RuntimeException {
+public class CentralCatalogueServiceException extends RuntimeException {
 
-  @Serial private static final long serialVersionUID = 6405119194042283089L;
+  @Serial private static final long serialVersionUID = 6305119194042283081L;
   private final HttpStatus httpStatus;
 
-  public CentralCommerceServiceException(
+  public CentralCatalogueServiceException(
       String message, Throwable throwable, HttpStatus httpStatus) {
     super(message, throwable);
     this.httpStatus = httpStatus;
   }
 
-  public CentralCommerceServiceException(
+  public CentralCatalogueServiceException(
       String message, HttpStatus httpStatus, Throwable throwable) {
     super(message, throwable);
     this.httpStatus = httpStatus;
   }
 
-  public CentralCommerceServiceException(String message, Throwable throwable) {
+  public CentralCatalogueServiceException(String message, Throwable throwable) {
     super(message, throwable);
     this.httpStatus = INTERNAL_SERVER_ERROR;
   }
 
-  public CentralCommerceServiceException(String message) {
+  public CentralCatalogueServiceException(String message) {
     super(message);
     this.httpStatus = INTERNAL_SERVER_ERROR;
   }
 
-  public CentralCommerceServiceException(String message, HttpStatus httpStatus) {
+  public CentralCatalogueServiceException(String message, HttpStatus httpStatus) {
     super(message);
     this.httpStatus = httpStatus;
   }

@@ -33,8 +33,8 @@ class CatalogueCategoryServiceImplTest {
 
     CategoryTreeResponse categoryTreeResponse = CatalogueTestUtilCore.getCategoryTree();
 
-    Mockito.when(centralCatalogueClient.getCatalogueCategoryTree())
-        .thenReturn(mockCatalogueResponse);
+    Mockito.when(centralCatalogueClient.getCategoryTree())
+        .thenReturn(mockCatalogueResponse.getData());
     Mockito.when(categoryMapper.mapCategories(Mockito.anyList()))
         .thenReturn(categoryTreeResponse.getNavigation());
 
@@ -46,13 +46,13 @@ class CatalogueCategoryServiceImplTest {
 
   @Test
   void testGetCatalogueCategoryTree_NullResponse() {
-    Mockito.when(centralCatalogueClient.getCatalogueCategoryTree()).thenReturn(null);
+    Mockito.when(centralCatalogueClient.getCategoryTree()).thenReturn(null);
 
     CentralCommerceServiceException ex =
         assertThrows(
             CentralCommerceServiceException.class, () -> service.getCatalogueCategoryTree());
 
-    assertEquals("Catalogue category tree data not found", ex.getMessage());
+    assertEquals("Category tree API returned invalid or empty data", ex.getMessage());
   }
 
   @Test
@@ -60,12 +60,12 @@ class CatalogueCategoryServiceImplTest {
     CatalogueCategoryTreeResponse emptyResponse = new CatalogueCategoryTreeResponse();
     emptyResponse.setData(null);
 
-    Mockito.when(centralCatalogueClient.getCatalogueCategoryTree()).thenReturn(emptyResponse);
+    Mockito.when(centralCatalogueClient.getCategoryTree()).thenReturn(emptyResponse.getData());
 
     CentralCommerceServiceException ex =
         assertThrows(
             CentralCommerceServiceException.class, () -> service.getCatalogueCategoryTree());
 
-    assertEquals(HttpStatus.NOT_FOUND, ex.getHttpStatus());
+    assertEquals(HttpStatus.INTERNAL_SERVER_ERROR, ex.getHttpStatus());
   }
 }
