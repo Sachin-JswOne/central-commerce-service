@@ -11,17 +11,20 @@ import org.springframework.stereotype.Service;
 @Service
 public class CentralCatalogueServiceImpl implements CentralCatalogueService {
 
-    private final CentralCatalogueClient centralCatalogueClient;
-    private final CatalogueConverter catalogueConverter;
+  private final CentralCatalogueClient centralCatalogueClient;
+  private final CatalogueConverter catalogueConverter;
 
-    public CentralCatalogueServiceImpl(CentralCatalogueClient centralCatalogueClient, CatalogueConverter catalogueConverter) {
-        this.centralCatalogueClient = centralCatalogueClient;
-        this.catalogueConverter = catalogueConverter;
-    }
+  public CentralCatalogueServiceImpl(
+      CentralCatalogueClient centralCatalogueClient, CatalogueConverter catalogueConverter) {
+    this.centralCatalogueClient = centralCatalogueClient;
+    this.catalogueConverter = catalogueConverter;
+  }
 
-    @Override
-    public SearchResponse searchCatalogue(SearchRequest searchRequest) {
-        ProductSearchResponse productSearchResponse = centralCatalogueClient.genericSearch(searchRequest);
-        return catalogueConverter.convertGenericSearchToSearchResponse(productSearchResponse,searchRequest);
-    }
+  @Override
+  public SearchResponse searchCatalogue(SearchRequest searchRequest) {
+    ProductSearchResponse productSearchResponse =
+        centralCatalogueClient.genericSearch(searchRequest);
+    return catalogueConverter.convertGenericSearchToSearchResponse(
+        productSearchResponse, searchRequest);
+  }
 }

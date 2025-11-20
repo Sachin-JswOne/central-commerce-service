@@ -6,6 +6,7 @@ import com.jswone.commerce.core.model.response.centralCatalogue.ProductBulkRespo
 import com.jswone.commerce.core.model.response.centralCatalogue.ProductSearchResponse;
 
 public interface CentralCatalogueClient {
-    ProductSearchResponse genericSearch(SearchRequest searchRequest);
-    ProductBulkResponse bulkMMIDResponse(ProductBulkRequest productBulkRequest);
+  ProductSearchResponse genericSearch(SearchRequest searchRequest);
+
+  ProductBulkResponse bulkMMIDResponse(ProductBulkRequest productBulkRequest);
 }

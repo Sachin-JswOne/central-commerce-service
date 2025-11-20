@@ -8,6 +8,6 @@ import lombok.Data;
 @Builder
 @Entity
 public class PLPAttribute {
-    private String displayName;
-    private String value;
+  private String displayName;
+  private String value;
 }

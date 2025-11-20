@@ -3,7 +3,7 @@ package com.jswone.commerce.core.service;
 import static com.jswone.commerce.core.util.CatalogueUtil.extractErrorMessage;
 
 import com.jswone.commerce.core.config.CommerceValueConfig;
-import com.jswone.commerce.core.constants.GeneralConstants;
+import com.jswone.commerce.core.constants.RestConstants;
 import com.jswone.commerce.core.exceptions.CentralCatalogueServiceException;
 import com.jswone.commerce.core.exceptions.CentralCommerceServiceException;
 import com.jswone.commerce.core.model.*;
@@ -31,8 +31,8 @@ public class CentralCatalogueClient {
           "Calling external central catalogue category tree API: {}",
           commerceValueConfig.getCatalogueCategoryBaseUrl());
       HttpHeaders headers = new HttpHeaders();
-      headers.set(GeneralConstants.X_API_KEY, commerceValueConfig.getCatalogueCategoryApiKey());
-      headers.set(GeneralConstants.CLIENT_ID, commerceValueConfig.getCatalogueCategoryClientId());
+      headers.set(RestConstants.X_API_KEY, commerceValueConfig.getCatalogueCategoryApiKey());
+      headers.set(RestConstants.CLIENT_ID, commerceValueConfig.getCatalogueCategoryClientId());
 
       HttpEntity<?> entity = new HttpEntity<>(headers);
       String url = commerceValueConfig.getCatalogueCategoryBaseUrl().concat("/category-tree");
@@ -70,8 +70,8 @@ public class CentralCatalogueClient {
 
     try {
       HttpHeaders headers = new HttpHeaders();
-      headers.set(GeneralConstants.X_API_KEY, commerceValueConfig.getCatalogueCategoryApiKey());
-      headers.set(GeneralConstants.CLIENT_ID, commerceValueConfig.getCatalogueCategoryClientId());
+      headers.set(RestConstants.X_API_KEY, commerceValueConfig.getCatalogueCategoryApiKey());
+      headers.set(RestConstants.CLIENT_ID, commerceValueConfig.getCatalogueCategoryClientId());
       HttpEntity<?> entity = new HttpEntity<>(headers);
 
       ResponseEntity<CatalogueBreadcrumbResponse> response =
