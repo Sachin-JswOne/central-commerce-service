@@ -44,7 +44,7 @@ public class CatalogueConverter {
             SearchResponse response = new SearchResponse();
 
             // Dynamic Filters
-            response.setFilterConditions(buildDynamicFilters(products));
+            response.setFilterConditions(buildDynamicFilters(products,searchRequest));
 
             // searchAction flag logic
             if (searchRequest.isSearchAction()) {
@@ -166,9 +166,8 @@ public class CatalogueConverter {
 
         return finalList;
     }
-
     // ONLY KEYS IN ATTRIBUTE_KEYS WILL BE USED
-    private List<ProductFilterConditions> buildDynamicFilters(List<Product> products) {
+    private List<ProductFilterConditions> buildDynamicFilters(List<Product> products, SearchRequest searchRequest) {
 
         Map<String, Set<String>> selectionValues = new HashMap<>();
         Map<String, Double> minCollector = new HashMap<>();
@@ -185,10 +184,8 @@ public class CatalogueConverter {
                 Object val = entry.getValue();
 
                 if (!ATTRIBUTE_KEYS.contains(key)) continue;
-
                 if (val == null) continue;
 
-                // Collect range values (but not using them for CCS)
                 if (key.endsWith("_min")) {
                     minCollector.put(key.replace("_min", ""), CatalogueUtil.safeDouble(val));
                     continue;
@@ -198,7 +195,7 @@ public class CatalogueConverter {
                     continue;
                 }
 
-                // Collect selection values
+                // CCS-supported selection filters
                 selectionValues
                         .computeIfAbsent(key, x -> new TreeSet<>())
                         .add(String.valueOf(val));
@@ -207,10 +204,9 @@ public class CatalogueConverter {
 
         List<ProductFilterConditions> out = new ArrayList<>();
 
-        //  RANGE FILTERS NOT SUPPORTED — COMMENTED
+        // RANGE FILTERS REMOVED — STILL COMMENTED
     /*
     for (String base : minCollector.keySet()) {
-
         TreeSet<String> values = new TreeSet<>();
         if (minCollector.get(base) != null) values.add(trim(minCollector.get(base)));
         if (maxCollector.get(base) != null) values.add(trim(maxCollector.get(base)));
@@ -225,16 +221,33 @@ public class CatalogueConverter {
     }
     */
 
-        //  SELECTION FILTERS ONLY (SUPPORTED BY CCS)
-        selectionValues.forEach((key, values) -> out.add(
-                ProductFilterConditions.builder()
-                        .id(key.toUpperCase())
-                        .displayText(CatalogueUtil.formatName(key))
-                        .type("selection")
-                        .values(new ArrayList<>(values))
-                        .selectedValues(new ArrayList<>())
-                        .build()
-        ));
+        Map<String, List<String>> selectedFromRequestMap = new HashMap<>();
+
+        if (searchRequest.getFilterConditions() != null) {
+            for (ProductFilterConditions reqFilter : searchRequest.getFilterConditions()) {
+                if (!"selection".equalsIgnoreCase(reqFilter.getType())) continue;
+
+                selectedFromRequestMap.put(
+                        reqFilter.getId().toLowerCase(),
+                        reqFilter.getSelectedValues() == null ? Collections.emptyList() : reqFilter.getSelectedValues()
+                );
+            }
+        }
+
+        selectionValues.forEach((key, values) -> {
+
+            List<String> selected = selectedFromRequestMap.getOrDefault(key.toLowerCase(), Collections.emptyList());
+
+            out.add(
+                    ProductFilterConditions.builder()
+                            .id(key.toUpperCase())
+                            .displayText(CatalogueUtil.formatName(key))
+                            .type("selection")
+                            .values(new ArrayList<>(values))
+                            .selectedValues(selected)
+                            .build()
+            );
+        });
 
         return out;
     }
