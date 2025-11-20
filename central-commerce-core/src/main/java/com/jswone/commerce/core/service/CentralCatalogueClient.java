@@ -1,5 +1,7 @@
 package com.jswone.commerce.core.service;
 
+import static com.jswone.commerce.core.util.CatalogueUtil.extractErrorMessage;
+
 import com.jswone.commerce.core.config.CommerceValueConfig;
 import com.jswone.commerce.core.constants.GeneralConstants;
 import com.jswone.commerce.core.exceptions.CentralCatalogueServiceException;
@@ -49,8 +51,8 @@ public class CentralCatalogueClient {
 
     } catch (HttpClientErrorException | HttpServerErrorException ex) {
       log.error("Error calling catalogue tree API: {}", ex.getMessage(), ex);
-      throw new CentralCatalogueServiceException(
-          "Error calling catalogue tree API", (HttpStatus) ex.getStatusCode());
+      String errorMessage = extractErrorMessage(ex.getResponseBodyAsString());
+      throw new CentralCatalogueServiceException(errorMessage, (HttpStatus) ex.getStatusCode());
 
     } catch (Exception ex) {
       log.error("Error calling external Catalogue API: {}", ex.getMessage(), ex);
@@ -86,8 +88,8 @@ public class CentralCatalogueClient {
 
     } catch (HttpClientErrorException | HttpServerErrorException ex) {
       log.error("Error calling catalogue breadcrumb API: {}", ex.getMessage(), ex);
-      throw new CentralCatalogueServiceException(
-          "Error calling catalogue breadcrumb API", (HttpStatus) ex.getStatusCode());
+      String errorMessage = extractErrorMessage(ex.getResponseBodyAsString());
+      throw new CentralCatalogueServiceException(errorMessage, (HttpStatus) ex.getStatusCode());
 
     } catch (Exception ex) {
       log.error("Error calling catalogue breadcrumb API: {}", ex.getMessage(), ex);
