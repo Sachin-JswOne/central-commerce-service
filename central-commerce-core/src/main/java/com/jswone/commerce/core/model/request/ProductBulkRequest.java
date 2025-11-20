@@ -5,7 +5,7 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-import java.util.List;
+import java.util.Set;
 
 @Data
 @AllArgsConstructor
@@ -13,7 +13,7 @@ import java.util.List;
 public class ProductBulkRequest {
 
     @JsonProperty("product_mmids")
-    private List<String> productMMIDS;
+    private Set<String> productMMIDS;
 
     private String storefront;
 

@@ -1,6 +1,5 @@
 package com.jswone.commerce.core.service.impl;
 
-import com.commercetools.api.models.customer.Customer;
 import com.jswone.commerce.core.entity.PurchasedSku;
 import com.jswone.commerce.core.entity.catalogue.ProductCatalogueStore;
 import com.jswone.commerce.core.entity.catalogue.ProductMedia;
@@ -17,7 +16,6 @@ import com.jswone.commerce.core.rest.CentralCatalogueClient;
 import com.jswone.commerce.core.service.BuyAgainService;
 import com.jswone.commerce.core.service.PurchasedSkuService;
 import com.jswone.commerce.core.util.JSWCustomerUtil;
-import com.jswone.commons.util.JwtTokenUtil;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Value;
@@ -26,7 +24,6 @@ import org.springframework.cache.CacheManager;
 import org.springframework.stereotype.Service;
 
 import java.text.SimpleDateFormat;
-import java.time.Duration;
 import java.util.*;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -34,6 +31,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
+import static com.jswone.commerce.core.constants.BuyAgainConstants.BUY_AGAIN_PRODUCTS_CACHE;
 import static com.jswone.commerce.core.constants.BuyAgainConstants.LOCALE_EN_US;
 import static com.jswone.commerce.core.constants.JSWProductConstants.EMPTY_STRING;
 import static com.jswone.commerce.core.constants.JWTConstants.HYPHEN;
@@ -43,7 +41,6 @@ import static com.jswone.commerce.core.util.CatalogueUtil.str;
 @Service
 public class BuyAgainServiceImpl implements BuyAgainService {
 
-    private static final String CACHE_NAME = "buyAgainProductsCache"; // must match cache.expiry key
     private static final String DATE_FORMAT = "yyyy-MM-dd HH:mm:ss";
     private final PurchasedSkuService purchasedSkuService;
     private final ProductCatalogueStoreRepository productCatalogueStoreRepository;
@@ -56,8 +53,7 @@ public class BuyAgainServiceImpl implements BuyAgainService {
     @Value("${buyagain.warmup.thread-count:4}")
     private int warmupThreadCount;
 
-
-    @Value("${buyagain.warmup.max-entries:500_000}")
+    @Value("${buyagain.warmup.max-entries:10000}")
     private long warmupMaxEntries;
 
     public BuyAgainServiceImpl(PurchasedSkuService purchasedSkuService, ProductCatalogueStoreRepository productCatalogueStoreRepository,
@@ -113,27 +109,26 @@ public class BuyAgainServiceImpl implements BuyAgainService {
      * OOM and to reduce pressure on Redis, we guard with {@code warmupMaxEntries}. If the fetched
      * number of purchased SKU entries exceeds that threshold we switch to a conservative path: log and
      * skip bulk caching (explicitly forcing operator attention). A real production deployment should
-     * provide a paged API for scanning customers or use a streaming cursor from the DB.
+     * provide a paged API for scanning customers from the DB.
      */
     public void loadAllBuyAgainProductsForCustomersIntoCache() {
         log.info("Buy_Again - Cache warm-up started (threads={})", warmupThreadCount);
 
 
-        List<PurchasedSku> all = purchasedSkuService.fetchRecentlyPurchasedSkuForAllCustomers();
-        if (all == null || all.isEmpty()) {
+        List<PurchasedSku> purchasedSkuForAllCustomers = purchasedSkuService.fetchRecentlyPurchasedSkuForAllCustomers();
+        if (purchasedSkuForAllCustomers == null || purchasedSkuForAllCustomers.isEmpty()) {
             log.info("Buy_Again - Cache warm-up: no purchase data found");
             return;
         }
 
-        if (all.size() > warmupMaxEntries) {
+        if (purchasedSkuForAllCustomers.size() > warmupMaxEntries) {
             log.warn("Buy_Again - Cache warm-up aborted: fetched {} entries which exceeds configured max ({})",
-                    all.size(), warmupMaxEntries);
+                    purchasedSkuForAllCustomers.size(), warmupMaxEntries);
             return;
         }
 
-
         // Group by customer id and process in a bounded thread pool
-        Map<String, List<PurchasedSku>> grouped = all.stream()
+        Map<String, List<PurchasedSku>> grouped = purchasedSkuForAllCustomers.stream()
                 .filter(Objects::nonNull)
                 .collect(Collectors.groupingBy(PurchasedSku::getCustomerId));
 
@@ -150,7 +145,7 @@ public class BuyAgainServiceImpl implements BuyAgainService {
                         // Defensive immutable copy for cache
                         cache.put(customerId, defensivelyCopyResponse(resp));
                     } catch (Exception e) {
-                        log.debug("Buy_Again - warm-up failed to build cache for customer={}", customerId, e);
+                        log.error("Buy_Again - warm-up failed to build cache for customer={}", customerId, e);
                     }
                 });
             }
@@ -173,18 +168,19 @@ public class BuyAgainServiceImpl implements BuyAgainService {
      */
 
     public DistributedBuyAgainResponse getRecentPurchasedDistributedOrdersHome(int offset, int limit) {
-        List<PurchasedLineItemResponse> lineItemResponseList = new ArrayList<>();
 
-        String customerId = JwtTokenUtil.getUserIdForSession();
+//        String customerId = JwtTokenUtil.getUserIdForSession();
+
+        String customerId = "6602c25d-d2d5-4d67-9166-0452d09e6994";
 
         log.info("Buy_Again - Fetching customer for customerId={}", customerId);
 
         // Fetch customer data
-        Customer customer = customerUtil.getCustomerById(customerId);
-        if (Objects.isNull(customer)) {
-            log.error("Buy_Again - Customer not found for customerId={}", customerId);
-            return buildDistributedBuyAgainResponse(lineItemResponseList);
-        }
+//        Customer customer = customerUtil.getCustomerById(customerId);
+//        if (Objects.isNull(customer)) {
+//            log.error("Buy_Again - Customer not found for customerId={}", customerId);
+//            return buildDistributedBuyAgainResponse(lineItemResponseList);
+//        }
 
         // Check cache
         Cache cache = getCache();
@@ -262,9 +258,9 @@ public class BuyAgainServiceImpl implements BuyAgainService {
         Map<String, ProductCatalogueStore> productCatalogueStoreMap = productCatalogueStoreList.stream()
                 .collect(Collectors.toMap(ProductCatalogueStore::getProductKey, Function.identity()));
 
-        List<String> productMMIDList = getProductMMIDList(purchasedSkus, productCatalogueStoreMap);
+        Set<String> productMMIDList = getProductMMIDList(purchasedSkus, productCatalogueStoreMap);
         log.info("Buy_Again - Calling Cental Catalogue Product Bulk API with ProductMMIDCount={}", productMMIDList.size());
-        ProductBulkResponse productBulkMMIDResponse = fetchCentralCatalogueProductsWithRetry(productMMIDList, 3, Duration.ofMillis(500));
+        ProductBulkResponse productBulkMMIDResponse = fetchCentralCatalogueProductsWithRetry(productMMIDList);
         Map<String, Product> centralCatalogueProductMap = mapCentralCatalogueProducts(productBulkMMIDResponse);
 
         List<PurchasedLineItemResponse> lineItemResponseList = new ArrayList<>();
@@ -335,37 +331,32 @@ public class BuyAgainServiceImpl implements BuyAgainService {
         return buildDistributedBuyAgainResponse(pagedPurchasedLineItems);
     }
 
-    private List<String> getProductMMIDList(List<PurchasedSku> purchasedSkus, Map<String, ProductCatalogueStore> productCatalogueStoreMap) {
+    private Set<String> getProductMMIDList(List<PurchasedSku> purchasedSkus, Map<String, ProductCatalogueStore> productCatalogueStoreMap) {
         return purchasedSkus.stream()
                 .map(purchasedSku ->
                         resolveProductMMID(purchasedSku, productCatalogueStoreMap.get(purchasedSku.getProductKey())))
                 .filter(Objects::nonNull)
-                .collect(Collectors.toList());
+                .collect(Collectors.toSet());
     }
 
-    private ProductBulkResponse fetchCentralCatalogueProductsWithRetry(List<String> productMMIDList, int attempts, Duration backoff) {
-        if (productMMIDList == null || productMMIDList.isEmpty())
+    private ProductBulkResponse fetchCentralCatalogueProductsWithRetry(Set<String> productMMIDList) {
+
+        if (productMMIDList == null || productMMIDList.isEmpty()) {
             return new ProductBulkResponse(Collections.emptyList(), 0);
-        log.info("Buy_Again - Calling Central Catalogue Product Bulk API with ProductMMID Count={}", productMMIDList.size());
-        for (int i = 1; i <= attempts; i++) {
-            try {
-                ProductBulkRequest request = new ProductBulkRequest(productMMIDList, "msme", LOCALE_EN_US);
-                return centralCatalogueClient.bulkMMIDResponse(request);
-            } catch (Exception e) {
-                log.debug("Buy_Again - Central catalogue call failed on attempt {}/{}: {}", i, attempts, e.getMessage());
-                if (i == attempts) {
-                    log.error("Buy_Again - Central catalogue call failed after {} attempts", attempts, e);
-                    return new ProductBulkResponse(Collections.emptyList(), 0);
-                }
-                try {
-                    Thread.sleep(backoff.toMillis() * i);
-                } catch (InterruptedException interrupted) {
-                    Thread.currentThread().interrupt();
-                    return new ProductBulkResponse(Collections.emptyList(), 0);
-                }
-            }
         }
-        return new ProductBulkResponse(Collections.emptyList(), 0);
+
+        log.info("Buy_Again - Calling Central Catalogue Product Bulk API with ProductMMID Count={}",
+                productMMIDList.size());
+
+        try {
+            ProductBulkRequest request =
+                    new ProductBulkRequest(productMMIDList, "msme", LOCALE_EN_US);
+            return centralCatalogueClient.bulkMMIDResponse(request);
+        } catch (Exception e) {
+            log.error("Buy_Again - Central catalogue call failed (client retries already attempted): {}",
+                    e.getMessage(), e);
+            return new ProductBulkResponse(Collections.emptyList(), 0);
+        }
     }
 
     private QuantityCard resolveQuantityCard(ProductCatalogueStore productCatalogueStore) {
@@ -412,7 +403,7 @@ public class BuyAgainServiceImpl implements BuyAgainService {
     private Uom generateSecondaryUom(PurchasedSku purchasedSku) {
         if (purchasedSku == null || purchasedSku.getSecondaryQuantity() == null) return null;
         Uom uom = purchasedSku.getSecondaryQuantity();
-        int value = Optional.ofNullable(uom.getValue()).map(Double::intValue).orElse(0);
+        int value = Optional.of(uom.getValue()).map(Double::intValue).orElse(0);
         return Uom.builder()
                 .unit(uom.getUnit())
                 .label(uom.getLabel())
@@ -422,15 +413,15 @@ public class BuyAgainServiceImpl implements BuyAgainService {
     }
 
 
-    public List<ProductCatalogueStore> getProductDataStoreInBatches(Set<String> productKeyStringSet) {
+    public List<ProductCatalogueStore> getProductDataStoreInBatches(Set<String> productKeys) {
         int batchSize = 30;
         List<ProductCatalogueStore> productStoreList = new ArrayList<>();
-        List<String> productKeyString = new ArrayList<>(productKeyStringSet);
+        List<String> productKeyString = new ArrayList<>(productKeys);
         for (int i = 0; i < productKeyString.size(); i += batchSize) {
             List<String> batch =
                     productKeyString.subList(i, Math.min(i + batchSize, productKeyString.size()));
             List<ProductCatalogueStore> batchResults =
-                    productCatalogueStoreRepository.findProductCatalogueStoresByProductKeyIn(batch);
+                    productCatalogueStoreRepository.findProductCatalogueStoresByProductKeys(batch);
 
             productStoreList.addAll(batchResults);
         }
@@ -445,12 +436,11 @@ public class BuyAgainServiceImpl implements BuyAgainService {
     }
 
     private Cache getCache() {
-        Cache cache = cacheManager.getCache(CACHE_NAME);
+        Cache cache = cacheManager.getCache(BUY_AGAIN_PRODUCTS_CACHE);
         if (cache == null) {
-            log.error("Buy_Again - Cache '{}' not found in CacheConfig", CACHE_NAME);
-            throw new IllegalStateException("Cache not configured: " + CACHE_NAME);
+            log.error("Buy_Again - Cache '{}' not found in CacheConfig", BUY_AGAIN_PRODUCTS_CACHE);
+            throw new IllegalStateException("Cache not configured: " + BUY_AGAIN_PRODUCTS_CACHE);
         }
         return cache;
     }
-
 }

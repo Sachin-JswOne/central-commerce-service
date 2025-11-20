@@ -1,0 +1,37 @@
+package com.jswone.commerce.core.service.impl;
+
+import com.jswone.commerce.core.entity.PurchasedSku;
+import com.jswone.commerce.core.mapper.PurchasedSkuRowMapper;
+import com.jswone.commerce.core.service.PurchasedSkuService;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.stereotype.Service;
+
+import java.util.List;
+
+@Service
+@Slf4j
+public class PurchasedSkuServiceImpl implements PurchasedSkuService {
+
+    private final JdbcTemplate jdbcTemplate;
+
+    private final PurchasedSkuRowMapper purchasedSkuRowMapper;
+
+    public PurchasedSkuServiceImpl(
+            JdbcTemplate jdbcTemplate, PurchasedSkuRowMapper purchasedSkuRowMapper) {
+        this.jdbcTemplate = jdbcTemplate;
+        this.purchasedSkuRowMapper = purchasedSkuRowMapper;
+    }
+
+    @Override
+    public List<PurchasedSku> fetchRecentlyPurchasedSku(String customerId) {
+        final String sql = "SELECT * FROM public.recent_purchase_vw where customer_id = ?";
+        return jdbcTemplate.query(sql, purchasedSkuRowMapper, customerId);
+    }
+
+    @Override
+    public List<PurchasedSku> fetchRecentlyPurchasedSkuForAllCustomers() {
+        final String sql = "SELECT * FROM public.recent_purchase_vw";
+        return jdbcTemplate.query(sql, purchasedSkuRowMapper);
+    }
+}

@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<project xmlns="http://maven.apache.org/POM/4.0.0"
-         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+<project xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xmlns="http://maven.apache.org/POM/4.0.0"
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
     <parent>
@@ -18,6 +18,16 @@
     </properties>
 
     <dependencies>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter</artifactId>
+            <exclusions>
+                <exclusion>
+                    <groupId>org.springframework.boot</groupId>
+                    <artifactId>spring-boot-starter-logging</artifactId>
+                </exclusion>
+            </exclusions>
+        </dependency>
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-security</artifactId>
@@ -97,10 +107,10 @@
             <groupId>com.commercetools.sdk</groupId>
             <artifactId>commercetools-sdk-java-ml</artifactId>
         </dependency>
-<!--        <dependency>-->
-<!--            <groupId>com.google.cloud</groupId>-->
-<!--            <artifactId>spring-cloud-gcp-starter-data-firestore</artifactId>-->
-<!--        </dependency>-->
+        <!--        <dependency>-->
+        <!--            <groupId>com.google.cloud</groupId>-->
+        <!--            <artifactId>spring-cloud-gcp-starter-data-firestore</artifactId>-->
+        <!--        </dependency>-->
         <dependency>
             <groupId>com.jswone.ordering.common</groupId>
             <artifactId>jsw_ordering_common_model</artifactId>
@@ -117,6 +127,22 @@
             <groupId>com.google.cloud</groupId>
             <artifactId>spring-cloud-gcp-starter-data-datastore</artifactId>
             <version>4.9.2</version> <!-- Latest stable compatible with Spring Boot 3 -->
+        </dependency>
+        <dependency>
+            <groupId>com.jswonemsme</groupId>
+            <artifactId>catalogue_common_model</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-data-redis</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>redis.clients</groupId>
+            <artifactId>jedis</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-cache</artifactId>
         </dependency>
     </dependencies>
 

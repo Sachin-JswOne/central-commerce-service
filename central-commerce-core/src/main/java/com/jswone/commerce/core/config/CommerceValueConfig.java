@@ -3,10 +3,15 @@ package com.jswone.commerce.core.config;
 
 import lombok.Getter;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.stereotype.Component;
+import org.springframework.boot.context.properties.ConfigurationProperties;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+
+import java.util.HashMap;
+import java.util.Map;
 
 @Getter
-@Component
+@Configuration
 public class CommerceValueConfig {
     /*
     Commercetools values.
@@ -79,5 +84,16 @@ public class CommerceValueConfig {
     @Value("${central.catalogue.bulk.mmid.endpoint}")
     private String centralCatalogueBulkMmidEndpoint;
 
+    @Value("${spring.redis.ttl-hours}")
+    private long ttlHours;
+
+    @Value("${spring.redis.prefix}")
+    private String prefix;
+
+    @ConfigurationProperties(prefix = "cache.expiry")
+    @Bean
+    public Map<String, Long> getCacheNameExpiryMap() {
+        return new HashMap<>();
+    }
 
 }
