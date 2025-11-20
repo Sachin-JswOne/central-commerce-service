@@ -8,6 +8,7 @@ import com.jswone.commerce.core.model.response.centralCatalogue.ProductBulkRespo
 import com.jswone.commerce.core.model.response.centralCatalogue.ProductSearchResponse;
 import com.jswone.commerce.core.rest.CentralCatalogueClient;
 import com.jswone.commerce.core.util.RestUtil;
+import com.jswone.commerce.core.util.RetryUtil;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
@@ -85,13 +86,15 @@ public class CentralCatalogueClientImpl implements CentralCatalogueClient {
                     CLIENT_ID, commerceValueConfig.getCentralCatalogueClientId()
             );
 
-            ResponseEntity<ProductSearchResponse> response = restUtil.makeRestCall(
+            ResponseEntity<ProductSearchResponse> response = RetryUtil.retryHttpCalls( () -> restUtil.makeRestCall(
                     finalUrl,
                     null,
                     HttpMethod.GET,
                     ProductSearchResponse.class,
                     headers
-            );
+            ),0,
+                    3,
+                    100);
 
             return response.getBody();
 
@@ -118,13 +121,15 @@ public class CentralCatalogueClientImpl implements CentralCatalogueClient {
                     "Content-Type", "application/json"
             );
 
-            ResponseEntity<ProductBulkResponse> response = restUtil.makeRestCall(
+            ResponseEntity<ProductBulkResponse> response = RetryUtil.retryHttpCalls( () ->restUtil.makeRestCall(
                     url,
                     productBulkRequest,
                     HttpMethod.POST,
                     ProductBulkResponse.class,
                     headers
-            );
+            ),0,
+                    3,
+                    100);
 
             return response.getBody();
 
