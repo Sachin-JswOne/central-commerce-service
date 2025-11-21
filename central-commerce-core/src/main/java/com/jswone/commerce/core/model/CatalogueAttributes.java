@@ -17,4 +17,5 @@ public class CatalogueAttributes {
   private String slug;
   private String href;
   private String link_title_seo_purpose;
+  private String link_title;
 }

@@ -19,5 +19,6 @@ public class NavigationItem {
   private String metaDescription;
   private String href;
   private String linkTitleSeoPurpose;
+  private String linkTitle;
   private List<NavigationItem> subMenu;
 }

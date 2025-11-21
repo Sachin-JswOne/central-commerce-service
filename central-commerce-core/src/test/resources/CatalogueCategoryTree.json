@@ -12,7 +12,8 @@
         "meta_title": "jsw_one",
         "slug": "JOFL",
         "category_title": "Steel",
-        "link_title_seo_purpose": "Link title"
+        "link_title_seo_purpose": "Link title",
+        "link_title": "Link title"
       },
       "sub_menu": [
         {

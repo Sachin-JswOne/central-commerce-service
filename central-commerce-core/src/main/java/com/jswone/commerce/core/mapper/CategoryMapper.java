@@ -19,6 +19,7 @@ public interface CategoryMapper {
   @Mapping(source = "attributes.slug", target = "slug")
   @Mapping(source = "attributes.href", target = "href")
   @Mapping(source = "attributes.link_title_seo_purpose", target = "linkTitleSeoPurpose")
+  @Mapping(source = "attributes.link_title", target = "linkTitle")
   @Mapping(target = "subMenu", expression = "java(mapCategories(category.getSub_menu()))")
   NavigationItem mapCategory(CatalogueCategoryTree category);
 

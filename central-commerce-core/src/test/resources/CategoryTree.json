@@ -8,6 +8,7 @@
         "metaTitle": "jsw_one",
         "metaDescription": "Desc",
         "href": null,
+        "linkTitleSeoPurpose": "Test_Category_New",
         "linkTitle": "Test_Category_New",
         "subMenu": [
           {
@@ -18,6 +19,7 @@
             "metaTitle": "jsw_one",
             "metaDescription": "Desc",
             "href": null,
+            "linkTitleSeoPurpose": "Test_Child_Category_New",
             "linkTitle": "Test_Child_Category_New",
             "subMenu": [
               {
@@ -28,6 +30,7 @@
                 "metaTitle": "jsw_one",
                 "metaDescription": "Desc",
                 "href": null,
+                "linkTitleSeoPurpose": "Test_Sub-Child_Category_New",
                 "linkTitle": "Test_Sub-Child_Category_New",
                 "subMenu": []
               }
