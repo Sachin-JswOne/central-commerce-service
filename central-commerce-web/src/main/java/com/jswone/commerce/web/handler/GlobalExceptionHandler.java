@@ -43,17 +43,6 @@ public class GlobalExceptionHandler {
     return buildError(ex.getHttpStatus(), ex.getMessage());
   }
 
-  @ExceptionHandler(CentralCommerceServiceException.class)
-  public ApiResponse<Object> handleCommerceException(
-      CentralCommerceServiceException ex, HttpServletRequest request) {
-    String messages = ex.getMessage();
-    return ApiResponse.builder()
-        .status(BAD_REQUEST)
-        .error(new ErrorResponse(BAD_REQUEST.value(), messages))
-        .success(false)
-        .build();
-  }
-
   @ExceptionHandler(ProductSelectorException.class)
   public ApiResponse<Object> handleSelectorException(ProductSelectorException ex) {
     log.error("ProductSelectorException:", ex);
@@ -177,17 +166,6 @@ public class GlobalExceptionHandler {
         .status(status)
         .error(new ErrorResponse(status.value(), message))
         .data(null)
-        .build();
-  }
-
-  @ExceptionHandler(ProductSelectorException.class)
-  public ApiResponse<Object> handleProductSelectorException(
-      ProductSelectorException ex, HttpServletRequest request) {
-    String messages = ex.getMessage();
-    return ApiResponse.builder()
-        .status(BAD_REQUEST)
-        .error(new ErrorResponse(BAD_REQUEST.value(), messages))
-        .success(false)
         .build();
   }
 }
