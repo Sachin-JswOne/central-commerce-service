@@ -13,6 +13,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.Ordered;
 import org.springframework.core.annotation.Order;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
@@ -35,36 +36,35 @@ public class GlobalExceptionHandler {
     // ================================================================
 
     @ExceptionHandler(UserTokenException.class)
-    public ApiResponse<Object> handleUserTokenException(UserTokenException ex) {
+    public ResponseEntity<ApiResponse<Object>> handleUserTokenException(UserTokenException ex) {
         log.error("UserTokenException:", ex);
-        return buildError(BAD_REQUEST, ex.getMessage());
+        return buildErrorResponse(BAD_REQUEST, ex.getMessage());
     }
 
     @ExceptionHandler(CentralCommerceServiceException.class)
-    public ApiResponse<Object> handleCommerceException(CentralCommerceServiceException ex) {
+    public ResponseEntity<ApiResponse<Object>> handleCommerceException(CentralCommerceServiceException ex) {
         log.error("CentralCommerceServiceException:", ex);
-        return buildError(ex.getHttpStatus(), ex.getMessage());
+        return buildErrorResponse(ex.getHttpStatus(), ex.getMessage());
     }
 
     @ExceptionHandler(ProductSelectorException.class)
-    public ApiResponse<Object> handleSelectorException(ProductSelectorException ex) {
+    public ResponseEntity<ApiResponse<Object>> handleSelectorException(ProductSelectorException ex) {
         log.error("ProductSelectorException:", ex);
-        return buildError(ex.getHttpStatus(), ex.getMessage());
+        return buildErrorResponse(ex.getHttpStatus(), ex.getMessage());
     }
 
     @ExceptionHandler(CentralCatalogueServiceException.class)
-    public ApiResponse<Object> handleCatalogueException(CentralCatalogueServiceException ex) {
+    public ResponseEntity<ApiResponse<Object>> handleCatalogueException(CentralCatalogueServiceException ex) {
         log.error("CentralCatalogueServiceException:", ex);
-        return buildError(ex.getHttpStatus(), ex.getMessage());
+        return buildErrorResponse(ex.getHttpStatus(), ex.getMessage());
     }
 
     // ================================================================
     // 2. VALIDATION & MALFORMED JSON
     // ================================================================
 
-    /** Catch bean validation errors: @Valid etc */
     @ExceptionHandler(MethodArgumentNotValidException.class)
-    public ApiResponse<Object> handleValidation(MethodArgumentNotValidException ex) {
+    public ResponseEntity<ApiResponse<Object>> handleValidation(MethodArgumentNotValidException ex) {
         log.error("Validation failed:", ex);
 
         String collected = ex.getBindingResult().getFieldErrors()
@@ -72,12 +72,11 @@ public class GlobalExceptionHandler {
                 .map(err -> err.getField() + ": " + err.getDefaultMessage())
                 .collect(Collectors.joining(", "));
 
-        return buildError(BAD_REQUEST, collected);
+        return buildErrorResponse(BAD_REQUEST, collected);
     }
 
-    /** Unified JSON parsing / wrong type handling */
     @ExceptionHandler(HttpMessageNotReadableException.class)
-    public ApiResponse<Object> handleInvalidJson(
+    public ResponseEntity<ApiResponse<Object>> handleInvalidJson(
             HttpMessageNotReadableException ex,
             HttpServletRequest request
     ) {
@@ -89,36 +88,28 @@ public class GlobalExceptionHandler {
 
         if (root instanceof MismatchedInputException mie) {
 
-            // Field name
             String field = mie.getPath().isEmpty()
                     ? "unknown"
                     : mie.getPath().get(0).getFieldName();
 
-            // Expected type
             String expected = (mie.getTargetType() != null)
                     ? mie.getTargetType().getSimpleName()
                     : "valid type";
 
-            // Actual received raw value
             String actualValue = extractActualValue(ex.getMessage());
 
             message = String.format(
                     "Invalid value for field '%s': expected %s, but got '%s'",
-                    field,
-                    expected,
-                    actualValue
+                    field, expected, actualValue
             );
         }
 
-        return buildError(BAD_REQUEST, message);
+        return buildErrorResponse(BAD_REQUEST, message);
     }
 
-    /** Extract actual wrong value shown inside JSON parse exception */
     private String extractActualValue(String errorMessage) {
         if (errorMessage == null) return "unknown";
 
-        // Example error message substring:
-        // "Cannot deserialize value of type `java.lang.Integer` from String \"abc\""
         int fromIdx = errorMessage.indexOf("from");
         int quoteIdx = errorMessage.indexOf("\"", fromIdx);
 
@@ -135,9 +126,9 @@ public class GlobalExceptionHandler {
     // ================================================================
 
     @ExceptionHandler(HttpRequestMethodNotSupportedException.class)
-    public ApiResponse<Object> handleMethodNotSupported(HttpRequestMethodNotSupportedException ex) {
+    public ResponseEntity<ApiResponse<Object>> handleMethodNotSupported(HttpRequestMethodNotSupportedException ex) {
         log.error("Method not allowed:", ex);
-        return buildError(HttpStatus.METHOD_NOT_ALLOWED, "Method not allowed");
+        return buildErrorResponse(HttpStatus.METHOD_NOT_ALLOWED, "Method not allowed");
     }
 
     // ================================================================
@@ -145,9 +136,10 @@ public class GlobalExceptionHandler {
     // ================================================================
 
     @ExceptionHandler(NoResourceFoundException.class)
-    public ApiResponse<Object> handleNoResourceFound(NoResourceFoundException ex) {
+    public ResponseEntity<ApiResponse<Object>> handleNoResourceFound(NoResourceFoundException ex) {
         log.error("NoResourceFoundException: {}", ex.getMessage());
-        return buildError(HttpStatus.NOT_FOUND, "The requested endpoint was not found on this server.");
+        return buildErrorResponse(HttpStatus.NOT_FOUND,
+                "The requested endpoint was not found on this server.");
     }
 
     // ================================================================
@@ -155,29 +147,32 @@ public class GlobalExceptionHandler {
     // ================================================================
 
     @ExceptionHandler(RuntimeException.class)
-    public ApiResponse<Object> handleRuntime(RuntimeException ex) {
+    public ResponseEntity<ApiResponse<Object>> handleRuntime(RuntimeException ex) {
         log.error("RuntimeException:", ex);
-        return buildError(HttpStatus.INTERNAL_SERVER_ERROR,
+        return buildErrorResponse(HttpStatus.INTERNAL_SERVER_ERROR,
                 "Something went wrong. Please try again.");
     }
 
     @ExceptionHandler(Exception.class)
-    public ApiResponse<Object> handleGeneric(Exception ex) {
+    public ResponseEntity<ApiResponse<Object>> handleGeneric(Exception ex) {
         log.error("Unhandled exception:", ex);
-        return buildError(HttpStatus.INTERNAL_SERVER_ERROR,
+        return buildErrorResponse(HttpStatus.INTERNAL_SERVER_ERROR,
                 "Internal server error");
     }
 
     // ================================================================
-    // Common Error builder
+    // Common Error builder (now returns ResponseEntity)
     // ================================================================
 
-    private ApiResponse<Object> buildError(HttpStatus status, String message) {
-        return ApiResponse.builder()
+    private ResponseEntity<ApiResponse<Object>> buildErrorResponse(HttpStatus status, String message) {
+
+        ApiResponse<Object> body = ApiResponse.builder()
                 .success(false)
                 .status(status)
                 .error(new ErrorResponse(status.value(), message))
                 .data(null)
                 .build();
+
+        return new ResponseEntity<>(body, status);  // IMPORTANT
     }
 }
