@@ -5,6 +5,7 @@ import com.jswone.commerce.core.model.request.Search.SearchRequest;
 import com.jswone.commerce.core.model.response.search.SearchResponse;
 import com.jswone.commerce.core.service.CentralCatalogueService;
 import com.jswone.commerce.core.util.ApiResponseUtil;
+import jakarta.validation.Valid;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -24,7 +25,7 @@ public class CatalogueController implements CentralBaseController{
     }
 
     @PostMapping(value = "/catalogue/search", produces = MediaType.APPLICATION_JSON_VALUE)
-    public ApiResponse<SearchResponse> searchCatalogue(@RequestBody SearchRequest searchRequest) {
+    public ApiResponse<SearchResponse> searchCatalogue(@Valid @RequestBody SearchRequest searchRequest) {
         log.info("Received request for generic search :{} ", searchRequest.toString());
         return ApiResponseUtil.createSuccessResponse(centralCatalogueService.searchCatalogue(searchRequest), HttpStatus.OK);
     }

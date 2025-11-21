@@ -1,11 +1,11 @@
 package com.jswone.commerce.core.model.request.Search;
 
 import com.jswone.commerce.core.model.response.plp.ProductFilterConditions;
+import jakarta.validation.constraints.NotBlank;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-import org.apache.logging.log4j.core.config.plugins.validation.constraints.NotBlank;
 
 import java.util.List;
 
