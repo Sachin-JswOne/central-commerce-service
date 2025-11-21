@@ -3,11 +3,12 @@ package com.jswone.commerce.core.entity.catalogue;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.google.cloud.spring.data.datastore.core.mapping.Entity;
-import java.util.List;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+
+import java.util.List;
 
 @Data
 @Builder
@@ -17,7 +18,7 @@ import lombok.NoArgsConstructor;
 @JsonInclude(JsonInclude.Include.NON_NULL)
 @Entity
 public class CategoryAttributes {
-  private String categoryId;
-  private List<AttributeDataDTO> mandatoryAttribute;
-  private List<AttributeDataDTO> optionalAttribute;
+    private String categoryId;
+    private List<AttributeDataDTO> mandatoryAttribute;
+    private List<AttributeDataDTO> optionalAttribute;
 }

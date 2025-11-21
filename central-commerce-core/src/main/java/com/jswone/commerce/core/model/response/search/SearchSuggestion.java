@@ -15,15 +15,15 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class SearchSuggestion {
 
-  /** Display text for suggestion (usually product title or keyword) */
-  private String suggestionText;
+    /** Display text for suggestion (usually product title or keyword) */
+    private String suggestionText;
 
-  /** Slug for redirect to PDP when clicked */
-  private String productSlug;
+    /** Slug for redirect to PDP when clicked */
+    private String productSlug;
 
-  /** Optional image to show in dropdown */
-  private String imageUrl;
+    /** Optional image to show in dropdown */
+    private String imageUrl;
 
-  /** Product MMID or key for internal reference */
-  private String productMaterialMasterId;
+    /** Product MMID or key for internal reference */
+    private String productMaterialMasterId;
 }

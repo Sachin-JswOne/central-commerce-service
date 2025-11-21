@@ -16,6 +16,6 @@ import lombok.NoArgsConstructor;
 @JsonInclude(JsonInclude.Include.NON_NULL)
 @Entity
 public class PLPAttribute {
-  private String displayName;
-  private String value;
+    private String displayName;
+    private String value;
 }

@@ -16,10 +16,10 @@ import lombok.NoArgsConstructor;
 @JsonInclude(JsonInclude.Include.NON_NULL)
 @Entity
 public class BreadCrumb {
-  private String name;
-  private String categoryId;
-  private String categoryKey;
-  private String description;
-  private String slug;
-  private boolean hasPartingCharges;
+    private String name;
+    private String categoryId;
+    private String categoryKey;
+    private String description;
+    private String slug;
+    private boolean hasPartingCharges;
 }

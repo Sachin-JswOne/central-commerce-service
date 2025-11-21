@@ -1,48 +1,52 @@
 package com.jswone.commerce.core.model.centralCatalogue;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-import java.util.List;
-import java.util.Map;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
 
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
 public class Product {
 
-  private String id;
+    private String id;
 
-  private int version;
+    private int version;
 
-  private Map<String, Object> attributes;
+    private Map<String, Object> attributes;
 
-  private List<Variant> variants;
+    private List<Variant> variants;
 
-  @JsonProperty("product_type_id")
-  private String productTypeId;
+    @JsonProperty("product_type_id")
+    private String productTypeId;
 
-  @JsonProperty("product_mmid")
-  private String productMmid;
+    @JsonProperty("product_mmid")
+    private String productMmid;
 
-  @JsonProperty("associated_categories")
-  private List<AssociatedCategory> associatedCategories;
+    @JsonProperty("associated_categories")
+    private List<AssociatedCategory> associatedCategories;
 
-  @JsonProperty("created_at")
-  private String createdAt;
+    @JsonProperty("created_at")
+    private String createdAt;
 
-  @JsonProperty("last_modified_at")
-  private String lastModifiedAt;
+    @JsonProperty("last_modified_at")
+    private String lastModifiedAt;
 
-  @JsonProperty("enabled_storefronts")
-  private List<String> enabledStorefronts;
+    @JsonProperty("enabled_storefronts")
+    private List<String> enabledStorefronts;
 
-  @JsonProperty("meta_data")
-  private MetaData metaData;
+    @JsonProperty("meta_data")
+    private MetaData metaData;
 
-  private Double rank;
+    private Double rank;
 
-  @JsonProperty("product_location")
-  private List<ProductLocation> productLocation;
+    @JsonProperty("product_location")
+    private List<ProductLocation> productLocation;
+
 }
+

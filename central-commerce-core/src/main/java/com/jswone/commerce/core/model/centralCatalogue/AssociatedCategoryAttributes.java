@@ -9,10 +9,11 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 public class AssociatedCategoryAttributes {
-  private String category_title;
+    private String category_title;
 
-  private String slug;
+    private String slug;
 
-  @JsonProperty("meta_title")
-  private String metaTitle;
+    @JsonProperty("meta_title")
+    private String metaTitle;
 }
+

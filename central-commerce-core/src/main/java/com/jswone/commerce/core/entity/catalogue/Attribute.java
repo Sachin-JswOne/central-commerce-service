@@ -16,6 +16,6 @@ import lombok.NoArgsConstructor;
 @JsonInclude(JsonInclude.Include.NON_NULL)
 @Entity
 public class Attribute {
-  private String name;
-  private Object value;
+    private String name;
+    private Object value;
 }

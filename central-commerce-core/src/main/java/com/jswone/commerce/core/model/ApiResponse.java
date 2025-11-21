@@ -1,5 +1,6 @@
 package com.jswone.commerce.core.model;
 
+
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -11,8 +12,8 @@ import org.springframework.http.HttpStatus;
 @NoArgsConstructor
 @AllArgsConstructor
 public class ApiResponse<T> {
-  private HttpStatus status;
-  private T data;
-  private ErrorResponse error;
-  private boolean success;
+    private HttpStatus status;
+    private T data;
+    private ErrorResponse error;
+    private boolean success;
 }

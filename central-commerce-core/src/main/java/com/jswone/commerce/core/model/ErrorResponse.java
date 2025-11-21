@@ -10,6 +10,6 @@ import lombok.RequiredArgsConstructor;
 @JsonInclude(JsonInclude.Include.NON_NULL)
 @Builder
 public class ErrorResponse {
-  private final int code;
-  private final String message;
+    private final int code;
+    private final String message;
 }

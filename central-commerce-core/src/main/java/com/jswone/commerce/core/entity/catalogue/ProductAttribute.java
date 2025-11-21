@@ -3,8 +3,9 @@ package com.jswone.commerce.core.entity.catalogue;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.google.cloud.spring.data.datastore.core.mapping.Entity;
-import java.util.List;
 import lombok.*;
+
+import java.util.List;
 
 @Data
 @Builder
@@ -15,7 +16,7 @@ import lombok.*;
 @Setter
 @Entity
 public class ProductAttribute {
-  private String displayName;
-  private String keyInCT;
-  private List<String> value;
+    private String displayName;
+    private String keyInCT;
+    private List<String> value;
 }

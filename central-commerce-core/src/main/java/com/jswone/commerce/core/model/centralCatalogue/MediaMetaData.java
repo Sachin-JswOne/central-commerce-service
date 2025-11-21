@@ -9,8 +9,9 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 public class MediaMetaData {
-  private String title;
+    private String title;
 
-  @JsonProperty("alt_text")
-  private String altText;
+    @JsonProperty("alt_text")
+    private String altText;
 }
+

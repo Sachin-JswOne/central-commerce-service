@@ -1,6 +1,5 @@
 package com.jswone.commerce.web.config.advice;
 
-import java.util.Arrays;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.exception.ExceptionUtils;
 import org.aspectj.lang.ProceedingJoinPoint;
@@ -9,31 +8,35 @@ import org.aspectj.lang.annotation.Aspect;
 import org.aspectj.lang.annotation.Pointcut;
 import org.springframework.stereotype.Component;
 
+import java.util.Arrays;
+
 @Aspect
 @Slf4j
 @Component
 public class RequestResponseAdvice {
 
-  /** Target only application controllers & services, but avoid Spring filters / infrastructure. */
-  @Pointcut(
-      "within(com.jswone.commerce.web.controllers..*) || "
-          + "within(com.jswone.commerce.core.service..*)")
-  public void applicationLayer() {}
+    /**
+     * Target only application controllers & services,
+     * but avoid Spring filters / infrastructure.
+     */
+    @Pointcut("within(com.jswone.commerce.web.controllers..*) || " +
+            "within(com.jswone.commerce.core.service..*)")
+    public void applicationLayer() {
+    }
 
-  @Around("applicationLayer()")
-  public Object logRequestResponse(ProceedingJoinPoint pjp) throws Throwable {
+    @Around("applicationLayer()")
+    public Object logRequestResponse(ProceedingJoinPoint pjp) throws Throwable {
 
-    long start = System.currentTimeMillis();
-    String className = pjp.getSignature().getDeclaringTypeName();
-    String methodName = pjp.getSignature().getName();
-    String arguments = Arrays.toString(pjp.getArgs());
+        long start = System.currentTimeMillis();
+        String className = pjp.getSignature().getDeclaringTypeName();
+        String methodName = pjp.getSignature().getName();
+        String arguments = Arrays.toString(pjp.getArgs());
 
-    try {
-      Object result = pjp.proceed();
+        try {
+            Object result = pjp.proceed();
 
-      log.info(
-          """
-
+            log.info("""
+                            
                     [REQUEST SUCCESS]
                     Class     : {}
                     Method    : {}
@@ -41,19 +44,19 @@ public class RequestResponseAdvice {
                     Result    : {}
                     TimeTaken : {} ms
                     """,
-          className,
-          methodName,
-          arguments,
-          result,
-          (System.currentTimeMillis() - start));
+                    className,
+                    methodName,
+                    arguments,
+                    result,
+                    (System.currentTimeMillis() - start)
+            );
 
-      return result;
+            return result;
 
-    } catch (Exception ex) {
+        } catch (Exception ex) {
 
-      log.error(
-          """
-
+            log.error("""
+                            
                     [REQUEST FAILED]
                     Class     : {}
                     Method    : {}
@@ -63,14 +66,15 @@ public class RequestResponseAdvice {
                     Stacktrace:
                     {}
                     """,
-          className,
-          methodName,
-          arguments,
-          ex.getMessage(),
-          (System.currentTimeMillis() - start),
-          ExceptionUtils.getStackTrace(ex));
+                    className,
+                    methodName,
+                    arguments,
+                    ex.getMessage(),
+                    (System.currentTimeMillis() - start),
+                    ExceptionUtils.getStackTrace(ex)
+            );
 
-      throw ex; // must rethrow so ControllerAdvice can handle it
+            throw ex; // must rethrow so ControllerAdvice can handle it
+        }
     }
-  }
 }

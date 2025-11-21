@@ -7,9 +7,9 @@ import org.springframework.stereotype.Repository;
 
 @Repository
 public interface ProductCatalogueStoreRepository
-    extends DatastoreRepository<ProductCatalogueStore, Key> {
-  ProductCatalogueStore findProductCatalogueStoresByProductKey(String productKey);
+        extends DatastoreRepository<ProductCatalogueStore, Key>{
+    ProductCatalogueStore findProductCatalogueStoresByProductKey(String productKey);
 
-  ProductCatalogueStore findProductCatalogueStoresByProductMaterialMasterId(
-      String productMaterialMasterId);
+    ProductCatalogueStore findProductCatalogueStoresByProductMaterialMasterId(String productMaterialMasterId);
+
 }

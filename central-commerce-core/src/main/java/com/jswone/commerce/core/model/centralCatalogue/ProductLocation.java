@@ -8,6 +8,6 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 public class ProductLocation {
-  private String state;
-  private String district;
+    private String state;
+    private String district;
 }

@@ -16,6 +16,6 @@ import lombok.NoArgsConstructor;
 @JsonInclude(JsonInclude.Include.NON_NULL)
 @Entity
 public class Image {
-  private String url;
-  private String altText;
+    private String url;
+    private String altText;
 }

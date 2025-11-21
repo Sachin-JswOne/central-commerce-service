@@ -10,12 +10,13 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class ProductOverview {
 
-  @JsonProperty("supply_condition")
-  private String supplyCondition;
+    @JsonProperty("supply_condition")
+    private String supplyCondition;
 
-  @JsonProperty("product_information")
-  private String productInformation;
+    @JsonProperty("product_information")
+    private String productInformation;
 
-  @JsonProperty("packaging_information")
-  private String packagingInformation;
+    @JsonProperty("packaging_information")
+    private String packagingInformation;
 }
+

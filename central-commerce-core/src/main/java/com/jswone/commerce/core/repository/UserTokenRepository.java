@@ -6,4 +6,6 @@ import com.jswone.commerce.core.entity.UserTokenEntity;
 import org.springframework.stereotype.Repository;
 
 @Repository
-public interface UserTokenRepository extends DatastoreRepository<UserTokenEntity, Key> {}
+public interface UserTokenRepository
+        extends DatastoreRepository<UserTokenEntity, Key> {
+}

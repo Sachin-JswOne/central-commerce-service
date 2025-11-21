@@ -17,11 +17,9 @@ import lombok.NoArgsConstructor;
 @JsonInclude(JsonInclude.Include.NON_NULL)
 @Entity
 public class CartOrderDisplayCardAttributesDto {
-  private String displayName;
-
-  @JsonProperty("attributeNameInCt")
-  private String attributeNameInCT;
-
-  private String displayType;
-  private String measureUnit;
+    private String displayName;
+    @JsonProperty("attributeNameInCt")
+    private String attributeNameInCT;
+    private String displayType;
+    private String measureUnit;
 }

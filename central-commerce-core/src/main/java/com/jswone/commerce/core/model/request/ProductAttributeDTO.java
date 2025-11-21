@@ -10,7 +10,7 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 public class ProductAttributeDTO {
-  private String key;
-  private Object value;
-  private String unit;
+    private String key;
+    private Object value;
+    private String unit;
 }

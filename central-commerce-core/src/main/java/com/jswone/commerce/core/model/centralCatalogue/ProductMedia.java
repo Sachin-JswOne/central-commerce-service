@@ -10,20 +10,21 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class ProductMedia {
 
-  @JsonProperty("public_url")
-  private String publicUrl;
+    @JsonProperty("public_url")
+    private String publicUrl;
 
-  @JsonProperty("content_type")
-  private String contentType;
+    @JsonProperty("content_type")
+    private String contentType;
 
-  @JsonProperty("file_name")
-  private String fileName;
+    @JsonProperty("file_name")
+    private String fileName;
 
-  @JsonProperty("asset_type")
-  private String assetType;
+    @JsonProperty("asset_type")
+    private String assetType;
 
-  @JsonProperty("meta_data")
-  private MediaMetaData metaData;
+    @JsonProperty("meta_data")
+    private MediaMetaData metaData;
 
-  private int rank;
+    private int rank;
 }
+
