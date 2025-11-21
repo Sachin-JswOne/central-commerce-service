@@ -22,4 +22,3 @@ public class CategoryAttributes {
     private List<AttributeDataDTO> mandatoryAttribute;
     private List<AttributeDataDTO> optionalAttribute;
 }
-
