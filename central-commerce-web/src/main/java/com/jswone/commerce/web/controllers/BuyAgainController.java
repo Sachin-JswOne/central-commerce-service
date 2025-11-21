@@ -30,7 +30,7 @@ public class BuyAgainController implements CentralBaseController {
                 HttpStatus.OK);
     }
 
-    @PostMapping("/buy-again/listing/cache/warmup")
+    @PostMapping("/buy-again/cache/warmup")
     public ApiResponse<String> buyAgainProductsWarmupCache() {
         try {
             buyAgainService.loadAllBuyAgainProductsForCustomersIntoCache();

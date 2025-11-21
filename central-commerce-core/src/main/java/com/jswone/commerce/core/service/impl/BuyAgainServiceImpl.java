@@ -1,5 +1,7 @@
 package com.jswone.commerce.core.service.impl;
 
+import com.commercetools.api.models.customer.Customer;
+import com.jswone.commerce.core.constants.CacheNames;
 import com.jswone.commerce.core.entity.PurchasedSku;
 import com.jswone.commerce.core.entity.catalogue.ProductCatalogueStore;
 import com.jswone.commerce.core.entity.catalogue.ProductMedia;
@@ -16,6 +18,7 @@ import com.jswone.commerce.core.rest.CentralCatalogueClient;
 import com.jswone.commerce.core.service.BuyAgainService;
 import com.jswone.commerce.core.service.PurchasedSkuService;
 import com.jswone.commerce.core.util.JSWCustomerUtil;
+import com.jswone.commons.util.JwtTokenUtil;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Value;
@@ -25,13 +28,10 @@ import org.springframework.stereotype.Service;
 
 import java.text.SimpleDateFormat;
 import java.util.*;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
-import static com.jswone.commerce.core.constants.BuyAgainConstants.BUY_AGAIN_PRODUCTS_CACHE;
+import static com.jswone.commerce.core.config.ProfileAwareCacheConfig.getCacheNameWithProfile;
 import static com.jswone.commerce.core.constants.BuyAgainConstants.LOCALE_EN_US;
 import static com.jswone.commerce.core.constants.JSWProductConstants.EMPTY_STRING;
 import static com.jswone.commerce.core.constants.JWTConstants.HYPHEN;
@@ -55,6 +55,9 @@ public class BuyAgainServiceImpl implements BuyAgainService {
 
     @Value("${buyagain.warmup.max-entries:10000}")
     private long warmupMaxEntries;
+
+    @Value("${redis.profile}")
+    private String cacheProfile;
 
     public BuyAgainServiceImpl(PurchasedSkuService purchasedSkuService, ProductCatalogueStoreRepository productCatalogueStoreRepository,
                                CentralCatalogueClient centralCatalogueClient, JSWCustomerUtil customerUtil, CacheManager cacheManager) {
@@ -108,58 +111,63 @@ public class BuyAgainServiceImpl implements BuyAgainService {
      * <p>Important: the underlying data source API may return a very large result set. To avoid
      * OOM and to reduce pressure on Redis, we guard with {@code warmupMaxEntries}. If the fetched
      * number of purchased SKU entries exceeds that threshold we switch to a conservative path: log and
-     * skip bulk caching (explicitly forcing operator attention). A real production deployment should
-     * provide a paged API for scanning customers from the DB.
+     * skip bulk caching (explicitly forcing operator attention).
      */
     public void loadAllBuyAgainProductsForCustomersIntoCache() {
-        log.info("Buy_Again - Cache warm-up started (threads={})", warmupThreadCount);
 
+        log.info("BUY_AGAIN — Cache warm-up started...");
 
-        List<PurchasedSku> purchasedSkuForAllCustomers = purchasedSkuService.fetchRecentlyPurchasedSkuForAllCustomers();
+        // Fetch all purchase data
+        List<PurchasedSku> purchasedSkuForAllCustomers =
+                purchasedSkuService.fetchRecentlyPurchasedSkuForAllCustomers();
+
         if (purchasedSkuForAllCustomers == null || purchasedSkuForAllCustomers.isEmpty()) {
-            log.info("Buy_Again - Cache warm-up: no purchase data found");
+            log.info("BUY_AGAIN — Warm-up skipped: No purchase data found");
             return;
         }
 
+        // Safety cap to avoid memory/Redis overload
         if (purchasedSkuForAllCustomers.size() > warmupMaxEntries) {
-            log.warn("Buy_Again - Cache warm-up aborted: fetched {} entries which exceeds configured max ({})",
+            log.warn("BUY_AGAIN — Warm-up aborted: {} entries exceed max limit ({})",
                     purchasedSkuForAllCustomers.size(), warmupMaxEntries);
             return;
         }
 
-        // Group by customer id and process in a bounded thread pool
-        Map<String, List<PurchasedSku>> grouped = purchasedSkuForAllCustomers.stream()
-                .filter(Objects::nonNull)
-                .collect(Collectors.groupingBy(PurchasedSku::getCustomerId));
+        // Group by customer ID
+        Map<String, List<PurchasedSku>> grouped =
+                purchasedSkuForAllCustomers.stream()
+                        .filter(Objects::nonNull)
+                        .collect(Collectors.groupingBy(PurchasedSku::getCustomerId));
 
+        Cache cache = getBuyAgainCache();
+        int success = 0;
+        int failed = 0;
 
-        ExecutorService pool = Executors.newFixedThreadPool(Math.max(1, warmupThreadCount));
-        try {
-            Cache cache = getCache();
-            for (Map.Entry<String, List<PurchasedSku>> entry : grouped.entrySet()) {
-                final String customerId = entry.getKey();
-                final List<PurchasedSku> skus = entry.getValue();
-                pool.submit(() -> {
-                    try {
-                        DistributedBuyAgainResponse resp = getRecentPurchasedDistributed(skus == null ? List.of() : skus);
-                        // Defensive immutable copy for cache
-                        cache.put(customerId, defensivelyCopyResponse(resp));
-                    } catch (Exception e) {
-                        log.error("Buy_Again - warm-up failed to build cache for customer={}", customerId, e);
-                    }
-                });
-            }
-        } finally {
-            pool.shutdown();
+        // Process each customer sequentially
+        for (Map.Entry<String, List<PurchasedSku>> entry : grouped.entrySet()) {
+            String customerId = entry.getKey();
+            List<PurchasedSku> skus = entry.getValue();
+
             try {
-                if (!pool.awaitTermination(60, TimeUnit.SECONDS)) {
-                    pool.shutdownNow();
-                }
-            } catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
-            }
+                // Build response for customer
+                DistributedBuyAgainResponse resp =
+                        getRecentPurchasedDistributed(skus == null ? List.of() : skus);
 
+                // Defensive copy of response for safety
+                DistributedBuyAgainResponse safeCopy = defensivelyCopyResponse(resp);
+
+                // Put into cache
+                cache.put(customerId, safeCopy);
+
+                success++;
+            } catch (Exception e) {
+                failed++;
+                log.error("BUY_AGAIN — Warm-up failed for customerId={}", customerId, e);
+            }
         }
+
+        log.info("BUY_AGAIN — Warm-up completed. Total customers={}, Success={}, Failed={}",
+                grouped.size(), success, failed);
     }
 
     /**
@@ -169,21 +177,21 @@ public class BuyAgainServiceImpl implements BuyAgainService {
 
     public DistributedBuyAgainResponse getRecentPurchasedDistributedOrdersHome(int offset, int limit) {
 
-//        String customerId = JwtTokenUtil.getUserIdForSession();
+        String customerId = JwtTokenUtil.getUserIdForSession();
 
-        String customerId = "6602c25d-d2d5-4d67-9166-0452d09e6994";
+//        String customerId = "6602c25d-d2d5-4d67-9166-0452d09e6994";
 
         log.info("Buy_Again - Fetching customer for customerId={}", customerId);
 
         // Fetch customer data
-//        Customer customer = customerUtil.getCustomerById(customerId);
-//        if (Objects.isNull(customer)) {
-//            log.error("Buy_Again - Customer not found for customerId={}", customerId);
-//            return buildDistributedBuyAgainResponse(lineItemResponseList);
-//        }
+        Customer customer = customerUtil.getCustomerById(customerId);
+        if (Objects.isNull(customer)) {
+            log.error("Buy_Again - Customer not found for customerId={}", customerId);
+            return buildDistributedBuyAgainResponse(Collections.emptyList());
+        }
 
         // Check cache
-        Cache cache = getCache();
+        Cache cache = getBuyAgainCache();
         Cache.ValueWrapper wrapper = cache.get(customerId);
 
         if (wrapper != null) {
@@ -435,11 +443,11 @@ public class BuyAgainServiceImpl implements BuyAgainService {
                 : Collections.emptyMap();
     }
 
-    private Cache getCache() {
-        Cache cache = cacheManager.getCache(BUY_AGAIN_PRODUCTS_CACHE);
+    private Cache getBuyAgainCache() {
+        Cache cache = cacheManager.getCache(getCacheNameWithProfile(cacheProfile, CacheNames.BUY_AGAIN_PRODUCTS));
         if (cache == null) {
-            log.error("Buy_Again - Cache '{}' not found in CacheConfig", BUY_AGAIN_PRODUCTS_CACHE);
-            throw new IllegalStateException("Cache not configured: " + BUY_AGAIN_PRODUCTS_CACHE);
+            log.error("Buy_Again - Cache '{}' not found in CacheConfig", CacheNames.BUY_AGAIN_PRODUCTS);
+            throw new IllegalStateException("Cache not configured: " + CacheNames.BUY_AGAIN_PRODUCTS);
         }
         return cache;
     }
