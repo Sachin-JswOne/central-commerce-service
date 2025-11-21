@@ -24,6 +24,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import static com.jswone.commerce.core.constants.GenericConstants.CENTRAL_CATALOGUE_SEARCH;
 import static com.jswone.commerce.core.constants.RestConstants.CLIENT_ID;
 import static com.jswone.commerce.core.constants.RestConstants.X_API_KEY;
 import static io.grpc.netty.shaded.io.netty.handler.codec.http.HttpHeaders.Values.APPLICATION_JSON;
@@ -75,7 +76,7 @@ public class CentralCatalogueClientImpl implements CentralCatalogueClient {
                     ),
                     0,
                     3,
-                    100
+                    100,CENTRAL_CATALOGUE_SEARCH
             );
 
             return response.getBody();
@@ -136,7 +137,7 @@ public class CentralCatalogueClientImpl implements CentralCatalogueClient {
                     headers
             ),0,
                     3,
-                    100);
+                    100,CENTRAL_CATALOGUE_SEARCH);
 
             return response.getBody();
 
