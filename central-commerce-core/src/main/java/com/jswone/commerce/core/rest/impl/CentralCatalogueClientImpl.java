@@ -4,6 +4,7 @@ import com.jswone.commerce.core.config.CommerceValueConfig;
 import com.jswone.commerce.core.exceptions.CentralCatalogueServiceException;
 import com.jswone.commerce.core.model.request.ProductBulkRequest;
 import com.jswone.commerce.core.model.request.Search.SearchRequest;
+import com.jswone.commerce.core.model.request.centralCatalogue.CentralCatalogueSearchRequest;
 import com.jswone.commerce.core.model.response.centralCatalogue.ProductBulkResponse;
 import com.jswone.commerce.core.model.response.centralCatalogue.ProductSearchResponse;
 import com.jswone.commerce.core.rest.CentralCatalogueClient;
@@ -18,10 +19,17 @@ import org.springframework.web.client.HttpClientErrorException;
 
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
+import static com.jswone.commerce.core.constants.GenericConstants.CENTRAL_CATALOGUE_SEARCH;
 import static com.jswone.commerce.core.constants.RestConstants.CLIENT_ID;
 import static com.jswone.commerce.core.constants.RestConstants.X_API_KEY;
+import static io.grpc.netty.shaded.io.netty.handler.codec.http.HttpHeaders.Values.APPLICATION_JSON;
+import static org.apache.http.HttpHeaders.CONTENT_TYPE;
+
 @Service
 @Slf4j
 public class CentralCatalogueClientImpl implements CentralCatalogueClient {
@@ -38,77 +46,77 @@ public class CentralCatalogueClientImpl implements CentralCatalogueClient {
     public ProductSearchResponse genericSearch(SearchRequest searchRequest) {
         try {
 
-            // Base URL
-            StringBuilder urlBuilder = new StringBuilder(
-                    String.format(
-                            "%s%s?query=%s&storefront=%s&size=%d&page=%d",
-                            commerceValueConfig.getCentralCatalogueBaseUrl(),
-                            commerceValueConfig.getCentralCatalogueGenericSearchEndpoint(),
-                            encode(searchRequest.getText()),
-                            encode(searchRequest.getStorefront()),
-                            searchRequest.getLimit(),
-                            searchRequest.getOffSet()
-                    )
-            );
+            CentralCatalogueSearchRequest ccRequest = CentralCatalogueSearchRequest.builder()
+                    .query(searchRequest.getText())
+                    .page(searchRequest.getOffSet())
+                    .size(searchRequest.getLimit())
+                    .storefront(searchRequest.getStorefront())
+                    .locale("en-US")
+                    .filters(extractFilters(searchRequest))  // method below
+                    .build();
 
-            // ================================
-            //   ADD FILTER CONDITIONS
-            // ================================
-            if (searchRequest.getFilterConditions() != null) {
-
-                searchRequest.getFilterConditions().forEach(filter -> {
-
-                    // Central Catalogue supports **only selection filters**
-                    if (!"selection".equalsIgnoreCase(filter.getType())) return;
-
-                    String key = filter.getId().toLowerCase(); // Example: GRADE -> grade
-
-                    if (filter.getSelectedValues() != null) {
-                        filter.getSelectedValues().forEach(selectedValue -> {
-                            if (selectedValue != null && !selectedValue.isBlank()) {
-
-                                urlBuilder.append("&")
-                                        .append(key)
-                                        .append("=")
-                                        .append(encode(selectedValue));
-                            }
-                        });
-                    }
-                });
-            }
-
-            String finalUrl = urlBuilder.toString();
-
-            log.info("Calling Central Catalogue Search URL: {}", finalUrl);
+            String url = commerceValueConfig.getCentralCatalogueBaseUrl()
+                    + commerceValueConfig.getCentralCatalogueGenericSearchEndpoint();
 
             Map<String, String> headers = Map.of(
                     X_API_KEY, commerceValueConfig.getCentralCatalogueApiKey(),
-                    CLIENT_ID, commerceValueConfig.getCentralCatalogueClientId()
+                    CLIENT_ID, commerceValueConfig.getCentralCatalogueClientId(),
+                    CONTENT_TYPE, APPLICATION_JSON
             );
 
-            ResponseEntity<ProductSearchResponse> response = RetryUtil.retryHttpCalls( () -> restUtil.makeRestCall(
-                    finalUrl,
-                    null,
-                    HttpMethod.GET,
-                    ProductSearchResponse.class,
-                    headers
-            ),0,
+            log.info("Calling Central Catalogue Search POST API: {}", url);
+
+            ResponseEntity<ProductSearchResponse> response = RetryUtil.retryHttpCalls(
+                    () -> restUtil.makeRestCall(
+                            url,
+                            ccRequest,
+                            HttpMethod.POST,
+                            ProductSearchResponse.class,
+                            headers
+                    ),
+                    0,
                     3,
-                    100);
+                    100,CENTRAL_CATALOGUE_SEARCH
+            );
 
             return response.getBody();
 
         } catch (HttpClientErrorException httpClientErrorException) {
-            log.error("HttpClientErrorException while calling central catalogue generic search: {}",
+            log.error("HttpClientErrorException while calling central catalogue search: {}",
                     httpClientErrorException.getMessage(), httpClientErrorException);
 
             throw new CentralCatalogueServiceException(
-                    "HttpClientErrorException while calling central catalogue generic search: "
+                    "HttpClientErrorException while calling central catalogue search: "
                             + httpClientErrorException.getMessage(),
                     HttpStatus.valueOf(httpClientErrorException.getStatusCode().value())
             );
         }
     }
+
+    private Map<String, List<String>> extractFilters(SearchRequest searchRequest) {
+
+        if (searchRequest.getFilterConditions() == null) {
+            return Collections.emptyMap();
+        }
+
+        Map<String, List<String>> filters = new HashMap<>();
+
+        searchRequest.getFilterConditions().forEach(filter -> {
+
+            if (!"selection".equalsIgnoreCase(filter.getType())) return;
+
+            List<String> values = filter.getSelectedValues();
+            if (values == null || values.isEmpty()) return;
+
+            filters.put(
+                    filter.getId().toLowerCase(),  // GRADE → grade
+                    values
+            );
+        });
+
+        return filters;
+    }
+
     @Override
     public ProductBulkResponse bulkMMIDResponse(ProductBulkRequest productBulkRequest) {
         try {
@@ -129,7 +137,7 @@ public class CentralCatalogueClientImpl implements CentralCatalogueClient {
                     headers
             ),0,
                     3,
-                    100);
+                    100,CENTRAL_CATALOGUE_SEARCH);
 
             return response.getBody();
 

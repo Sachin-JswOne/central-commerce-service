@@ -84,6 +84,8 @@ public class CommerceValueConfig {
     @Value("${central.catalogue.bulk.mmid.endpoint}")
     private String centralCatalogueBulkMmidEndpoint;
 
+    @Value("${catalogue.category.base.url}")
+    private String catalogueCategoryBaseUrl;
     @Value("${spring.redis.ttl-hours}")
     private long ttlHours;
 
@@ -96,4 +98,9 @@ public class CommerceValueConfig {
         return new HashMap<>();
     }
 
+    @Value("${catalogue.category.api.key}")
+    private String catalogueCategoryApiKey;
+
+    @Value("${catalogue.category.client.id}")
+    private String catalogueCategoryClientId;
 }

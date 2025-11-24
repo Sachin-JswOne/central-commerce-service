@@ -10,7 +10,6 @@ import com.jswone.commerce.core.model.response.plp.PLPCard;
 import com.jswone.commerce.core.model.response.plp.ProductFilterConditions;
 import com.jswone.commerce.core.model.response.search.SearchResponse;
 import com.jswone.commerce.core.model.response.search.SearchSuggestion;
-
 import com.jswone.commerce.core.util.CatalogueUtil;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
@@ -29,24 +28,23 @@ public class CatalogueConverter {
     public CatalogueConverter(CatalogueDynamicConfig catalogueDynamicConfig) {
         this.NON_ATTRIBUTE_KEYS = new HashSet<>(catalogueDynamicConfig.getExcludedAttributes());
         this.UNIT_MAP = new HashMap<>(catalogueDynamicConfig.getUnitMap());
-        ATTRIBUTE_KEYS = new HashSet<>(catalogueDynamicConfig.getIncludedAttributes());
+        this.ATTRIBUTE_KEYS = new HashSet<>(catalogueDynamicConfig.getIncludedAttributes());
     }
 
-    // MAIN CONVERTER
+    // MAIN CONVERTER ======================================================================================
     public SearchResponse convertGenericSearchToSearchResponse(
             ProductSearchResponse productSearchResponse, SearchRequest searchRequest) {
 
         try {
-            List<Product> products =
-                    Optional.ofNullable(productSearchResponse.getProducts())
-                            .orElse(Collections.emptyList());
+            List<Product> products = Optional.ofNullable(productSearchResponse.getProducts())
+                    .orElse(Collections.emptyList());
 
             SearchResponse response = new SearchResponse();
 
             // Dynamic Filters
-            response.setFilterConditions(buildDynamicFilters(products,searchRequest));
+            response.setFilterConditions(buildDynamicFilters(products, searchRequest));
 
-            // searchAction flag logic
+            // searchAction logic
             if (searchRequest.isSearchAction()) {
 
                 List<PLPCard> plpCards = products.stream()
@@ -60,14 +58,15 @@ public class CatalogueConverter {
 
             } else {
                 response.setProducts(Collections.emptyList());
-                List<SearchSuggestion> suggestionList = products.stream()
+
+                List<SearchSuggestion> suggestions = products.stream()
                         .map(this::convertToSuggestion)
                         .toList();
-                response.setCount((long) suggestionList.size());
-                response.setTotal(productSearchResponse.getTotalHits());
 
+                response.setCount((long) suggestions.size());
+                response.setTotal(productSearchResponse.getTotalHits());
                 response.setFilterConditions(Collections.emptyList());
-                response.setSuggestions(suggestionList);
+                response.setSuggestions(suggestions);
             }
 
             response.setQuery(searchRequest.getText());
@@ -77,13 +76,14 @@ public class CatalogueConverter {
             return response;
 
         } catch (Exception e) {
-            log.error("Exception while mapping central catalogue search response → PLP: {}", e.getMessage(), e);
+            log.error("Exception while mapping search response: {}", e.getMessage(), e);
             throw new CentralCommerceServiceException(
                     "Exception occurred while mapping central catalogue response: " + e.getMessage()
             );
         }
     }
 
+    // PLP CARD ============================================================================================
     private PLPCard convertToPLPCard(Product product) {
 
         Map<String, Object> attrs = product.getAttributes();
@@ -109,7 +109,6 @@ public class CatalogueConverter {
 
     private SearchSuggestion convertToSuggestion(Product product) {
         Map<String, Object> attrs = product.getAttributes();
-
         return SearchSuggestion.builder()
                 .suggestionText(CatalogueUtil.str(attrs.get("product_title")))
                 .productSlug(CatalogueUtil.str(attrs.get("slug")))
@@ -118,9 +117,7 @@ public class CatalogueConverter {
                 .build();
     }
 
-    // =======================
-    // UNIT-ONLY PLP ATTRIBUTES
-    // =======================
+    // PLP ATTRIBUTE BUILDING ==============================================================================
     private List<PLPAttribute> buildDynamicPLPAttributes(Map<String, Object> attrs) {
 
         List<PLPAttribute> finalList = new ArrayList<>();
@@ -135,17 +132,16 @@ public class CatalogueConverter {
             }
         });
 
-        // Add RANGE attributes (still allowed for PLP display)
+        // Range values
         for (String base : minMap.keySet()) {
             String unit = CatalogueUtil.getUnitFor(base, UNIT_MAP);
-
             finalList.add(PLPAttribute.builder()
                     .displayName(CatalogueUtil.formatName(base))
                     .value(CatalogueUtil.formatRange(minMap.get(base), maxMap.get(base), unit))
                     .build());
         }
 
-        // Add SINGLE numeric attributes only if unit exists
+        // Single numeric values
         attrs.forEach((key, val) -> {
 
             if (val == null) return;
@@ -166,7 +162,8 @@ public class CatalogueConverter {
 
         return finalList;
     }
-    // ONLY KEYS IN ATTRIBUTE_KEYS WILL BE USED
+
+    // FILTER BUILDER ======================================================================================
     private List<ProductFilterConditions> buildDynamicFilters(List<Product> products, SearchRequest searchRequest) {
 
         Map<String, Set<String>> selectionValues = new HashMap<>();
@@ -184,7 +181,13 @@ public class CatalogueConverter {
                 Object val = entry.getValue();
 
                 if (!ATTRIBUTE_KEYS.contains(key)) continue;
+
+                // Skip nulls
                 if (val == null) continue;
+
+                // STRINGIFY + SANITY CHECK
+                String strVal = String.valueOf(val).trim();
+                if (strVal.isBlank() || strVal.equalsIgnoreCase("null")) continue;
 
                 if (key.endsWith("_min")) {
                     minCollector.put(key.replace("_min", ""), CatalogueUtil.safeDouble(val));
@@ -195,48 +198,38 @@ public class CatalogueConverter {
                     continue;
                 }
 
-                // CCS-supported selection filters
+                // Valid values only
                 selectionValues
                         .computeIfAbsent(key, x -> new TreeSet<>())
-                        .add(String.valueOf(val));
+                        .add(strVal);
+            }
+        }
+
+        // READ SELECTED VALUES FROM FE
+        Map<String, List<String>> selectedFromRequestMap = new HashMap<>();
+
+        if (searchRequest.getFilterConditions() != null) {
+            for (ProductFilterConditions reqFilter : searchRequest.getFilterConditions()) {
+
+                if (!"selection".equalsIgnoreCase(reqFilter.getType())) continue;
+
+                List<String> selected = reqFilter.getSelectedValues() == null
+                        ? Collections.emptyList()
+                        : reqFilter.getSelectedValues();
+
+                selectedFromRequestMap.put(reqFilter.getId().toLowerCase(), selected);
             }
         }
 
         List<ProductFilterConditions> out = new ArrayList<>();
 
-        // RANGE FILTERS REMOVED — STILL COMMENTED
-    /*
-    for (String base : minCollector.keySet()) {
-        TreeSet<String> values = new TreeSet<>();
-        if (minCollector.get(base) != null) values.add(trim(minCollector.get(base)));
-        if (maxCollector.get(base) != null) values.add(trim(maxCollector.get(base)));
-
-        out.add(ProductFilterConditions.builder()
-                .id(base.toUpperCase())
-                .displayText(formatName(base))
-                .type("range")
-                .values(new ArrayList<>(values))
-                .selectedValues(new ArrayList<>())
-                .build());
-    }
-    */
-
-        Map<String, List<String>> selectedFromRequestMap = new HashMap<>();
-
-        if (searchRequest.getFilterConditions() != null) {
-            for (ProductFilterConditions reqFilter : searchRequest.getFilterConditions()) {
-                if (!"selection".equalsIgnoreCase(reqFilter.getType())) continue;
-
-                selectedFromRequestMap.put(
-                        reqFilter.getId().toLowerCase(),
-                        reqFilter.getSelectedValues() == null ? Collections.emptyList() : reqFilter.getSelectedValues()
-                );
-            }
-        }
-
+        // BUILD FINAL FILTERS
         selectionValues.forEach((key, values) -> {
 
-            List<String> selected = selectedFromRequestMap.getOrDefault(key.toLowerCase(), Collections.emptyList());
+            List<String> selected = selectedFromRequestMap.getOrDefault(
+                    key.toLowerCase(),
+                    Collections.emptyList()
+            );
 
             out.add(
                     ProductFilterConditions.builder()
