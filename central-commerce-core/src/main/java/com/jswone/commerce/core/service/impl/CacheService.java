@@ -5,6 +5,7 @@ import com.jswone.commerce.core.constants.CacheNames;
 import com.jswone.commerce.core.model.ApiResponse;
 import com.jswone.commerce.core.util.ApiResponseUtil;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.cache.CacheManager;
 import org.springframework.data.redis.connection.RedisConnection;
 import org.springframework.data.redis.connection.RedisConnectionFactory;
@@ -28,7 +29,7 @@ public class CacheService {
 
     private final CommerceValueConfig commerceValueConfig;
 
-    public CacheService(CacheManager cacheManager, RedisTemplate<String, Object> redisTemplate, CommerceValueConfig commerceValueConfig) {
+    public CacheService(CacheManager cacheManager, @Autowired(required = false) RedisTemplate<String, Object> redisTemplate, CommerceValueConfig commerceValueConfig) {
         this.cacheManager = cacheManager;
         this.redisTemplate = redisTemplate;
         this.commerceValueConfig = commerceValueConfig;
