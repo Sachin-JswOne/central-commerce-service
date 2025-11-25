@@ -1,6 +1,7 @@
 package com.jswone.commerce.core.service.impl;
 
 import com.commercetools.api.models.customer.Customer;
+import com.jswone.commerce.core.config.CommerceValueConfig;
 import com.jswone.commerce.core.constants.CacheNames;
 import com.jswone.commerce.core.entity.PurchasedSku;
 import com.jswone.commerce.core.entity.catalogue.ProductCatalogueStore;
@@ -21,7 +22,6 @@ import com.jswone.commerce.core.util.JSWCustomerUtil;
 import com.jswone.commons.util.JwtTokenUtil;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.cache.Cache;
 import org.springframework.cache.CacheManager;
 import org.springframework.stereotype.Service;
@@ -47,25 +47,16 @@ public class BuyAgainServiceImpl implements BuyAgainService {
     private final CentralCatalogueClient centralCatalogueClient;
     private final JSWCustomerUtil customerUtil;
     private final CacheManager cacheManager;
-    @Value("${pdp.journey.enabled}")
-    private boolean PDP_JOURNEY_ENABLED;
-
-    @Value("${buyagain.warmup.thread-count:4}")
-    private int warmupThreadCount;
-
-    @Value("${buyagain.warmup.max-entries:10000}")
-    private long warmupMaxEntries;
-
-    @Value("${redis.profile}")
-    private String cacheProfile;
+    private final CommerceValueConfig commerceValueConfig;
 
     public BuyAgainServiceImpl(PurchasedSkuService purchasedSkuService, ProductCatalogueStoreRepository productCatalogueStoreRepository,
-                               CentralCatalogueClient centralCatalogueClient, JSWCustomerUtil customerUtil, CacheManager cacheManager) {
+                               CentralCatalogueClient centralCatalogueClient, JSWCustomerUtil customerUtil, CacheManager cacheManager, CommerceValueConfig commerceValueConfig) {
         this.purchasedSkuService = purchasedSkuService;
         this.productCatalogueStoreRepository = productCatalogueStoreRepository;
         this.centralCatalogueClient = centralCatalogueClient;
         this.customerUtil = customerUtil;
         this.cacheManager = cacheManager;
+        this.commerceValueConfig = commerceValueConfig;
     }
 
     /**
@@ -83,27 +74,6 @@ public class BuyAgainServiceImpl implements BuyAgainService {
                 .getVariantList();
         return buildDistributedBuyAgainResponse(variantList);
     }
-
-    //    /**
-//     * Bulk load buy again products for all customers into Redis.
-//     */
-//    public void loadAllBuyAgainProductsForCustomersIntoCache() {
-//        log.info("Starting Redis warm-up for buy again products for all customers...");
-//        List<PurchasedSku> purchasedSkuForAllCustomers = purchasedSkuService.fetchRecentlyPurchasedSkuForAllCustomers();
-//
-//        Map<String, List<PurchasedSku>> groupedByCustomer =
-//                purchasedSkuForAllCustomers.stream().collect(Collectors.groupingBy(PurchasedSku::getCustomerId));
-//
-//        Map<String, DistributedBuyAgainResponse> groupedDistributedBuyAgainResponseByCustomer =
-//                groupedByCustomer.entrySet().stream()
-//                        .collect(Collectors.toMap(Map.Entry::getKey, entry ->
-//                                getRecentPurchasedDistributed(entry.getValue() == null ? List.of() : entry.getValue())));
-//
-//        Cache cache = getCache();
-//        groupedDistributedBuyAgainResponseByCustomer.forEach(cache::put);
-//
-//        log.info("Cached Buy Again Products For All Customers: {}", groupedByCustomer.size());
-//    }
 
     /**
      * Bulk warm-up: load buy-again products for customers into cache.
@@ -126,12 +96,13 @@ public class BuyAgainServiceImpl implements BuyAgainService {
             return;
         }
 
-        // Safety cap to avoid memory/Redis overload
-        if (purchasedSkuForAllCustomers.size() > warmupMaxEntries) {
-            log.warn("BUY_AGAIN — Warm-up aborted: {} entries exceed max limit ({})",
-                    purchasedSkuForAllCustomers.size(), warmupMaxEntries);
-            return;
-        }
+//        // Safety cap to avoid memory/Redis overload
+//        long warmupMaxEntries = commerceValueConfig.getBuyAgainWarmupMaxEntries();
+//        if (purchasedSkuForAllCustomers.size() > warmupMaxEntries) {
+//            log.warn("BUY_AGAIN — Warm-up aborted: {} entries exceed max limit ({})",
+//                    purchasedSkuForAllCustomers.size(), warmupMaxEntries);
+//            return;
+//        }
 
         // Group by customer ID
         Map<String, List<PurchasedSku>> grouped =
@@ -368,7 +339,7 @@ public class BuyAgainServiceImpl implements BuyAgainService {
     }
 
     private QuantityCard resolveQuantityCard(ProductCatalogueStore productCatalogueStore) {
-        return PDP_JOURNEY_ENABLED
+        return commerceValueConfig.isPdpJourneyEnabled()
                 ? productCatalogueStore.getPdpJourney().getQuantityCard()
                 : productCatalogueStore.getDistributedJourney().getQuantityCard();
     }
@@ -444,7 +415,7 @@ public class BuyAgainServiceImpl implements BuyAgainService {
     }
 
     private Cache getBuyAgainCache() {
-        Cache cache = cacheManager.getCache(getCacheNameWithProfile(cacheProfile, CacheNames.BUY_AGAIN_PRODUCTS));
+        Cache cache = cacheManager.getCache(getCacheNameWithProfile(commerceValueConfig.getRedisCacheProfile(), CacheNames.BUY_AGAIN_PRODUCTS));
         if (cache == null) {
             log.error("Buy_Again - Cache '{}' not found in CacheConfig", CacheNames.BUY_AGAIN_PRODUCTS);
             throw new IllegalStateException("Cache not configured: " + CacheNames.BUY_AGAIN_PRODUCTS);

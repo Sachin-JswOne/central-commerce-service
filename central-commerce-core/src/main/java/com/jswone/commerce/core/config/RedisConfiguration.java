@@ -6,7 +6,6 @@ import com.google.cloud.secretmanager.v1.SecretVersionName;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import redis.clients.jedis.ConnectionPoolConfig;
@@ -27,11 +26,7 @@ public class RedisConfiguration {
 
     private final RedisProperties redisProperties;
 
-    @Value("${spring.cloud.gcp.project-id}")
-    private String projectId;
-
-    @Value("${central.commerce.cloud.cache.certificate}")
-    private String cacheCertificateSecret;
+    private final CommerceValueConfig commerceValueConfig;
 
     @Bean
     public JedisPooled jedisPooled() {
@@ -59,12 +54,13 @@ public class RedisConfiguration {
     }
 
     String getPemContent() {
+        String cacheCertificateSecret = commerceValueConfig.getCacheCertificateSecret();
         if (StringUtils.isBlank(cacheCertificateSecret)) {
             log.error("Redis PEM certificate secret name is not configured.");
             throw new IllegalStateException("Missing PEM secret configuration.");
         }
         try (SecretManagerServiceClient client = SecretManagerServiceClient.create()) {
-            SecretVersionName secretVersionName = SecretVersionName.of(projectId, cacheCertificateSecret, "latest");
+            SecretVersionName secretVersionName = SecretVersionName.of(commerceValueConfig.getProjectId(), cacheCertificateSecret, "latest");
             AccessSecretVersionResponse response = client.accessSecretVersion(secretVersionName);
             String payload = response.getPayload().getData().toStringUtf8();
             if (!isValidPemCertificate(payload)) {

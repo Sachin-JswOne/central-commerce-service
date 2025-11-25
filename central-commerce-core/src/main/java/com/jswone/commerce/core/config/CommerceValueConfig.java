@@ -1,14 +1,8 @@
 package com.jswone.commerce.core.config;
 
-
 import lombok.Getter;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.boot.context.properties.ConfigurationProperties;
-import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-
-import java.util.HashMap;
-import java.util.Map;
 
 @Getter
 @Configuration
@@ -86,21 +80,25 @@ public class CommerceValueConfig {
 
     @Value("${catalogue.category.base.url}")
     private String catalogueCategoryBaseUrl;
-    @Value("${spring.redis.ttl-hours}")
-    private long ttlHours;
-
-    @Value("${spring.redis.prefix}")
-    private String prefix;
-
-    @ConfigurationProperties(prefix = "cache.expiry")
-    @Bean
-    public Map<String, Long> getCacheNameExpiryMap() {
-        return new HashMap<>();
-    }
 
     @Value("${catalogue.category.api.key}")
     private String catalogueCategoryApiKey;
 
     @Value("${catalogue.category.client.id}")
     private String catalogueCategoryClientId;
+
+    @Value("${redis.profile}")
+    private String redisCacheProfile;
+
+    @Value("${central.commerce.redis.cache_manager.enable}")
+    private boolean redisCacheManagerEnabled;
+
+    @Value("${central.commerce.cloud.cache.certificate}")
+    private String cacheCertificateSecret;
+
+    @Value("${pdp.journey.enabled}")
+    private boolean pdpJourneyEnabled;
+
+    @Value("${buy.again.warmup.max-entries}")
+    private long buyAgainWarmupMaxEntries;
 }

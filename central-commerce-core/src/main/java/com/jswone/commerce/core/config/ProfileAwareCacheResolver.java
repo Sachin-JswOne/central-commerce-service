@@ -14,11 +14,15 @@ import java.util.stream.Collectors;
 @Configuration
 @EnableCaching
 public class ProfileAwareCacheResolver extends SimpleCacheResolver {
+
+    private final CommerceValueConfig commerceValueConfig;
+
     @Value("${redis.profile}")
     private String cacheProfile;
 
-    public ProfileAwareCacheResolver(CacheManager cacheManager) {
+    public ProfileAwareCacheResolver(CacheManager cacheManager, CommerceValueConfig commerceValueConfig) {
         super(cacheManager);
+        this.commerceValueConfig = commerceValueConfig;
     }
 
     // @Cacheable attribute 'value' accepts constant data only, and we have multiple profiles, so we are
@@ -29,6 +33,7 @@ public class ProfileAwareCacheResolver extends SimpleCacheResolver {
         if (baseNames == null || baseNames.isEmpty()) {
             return Collections.emptyList();
         }
+        String cacheProfile = commerceValueConfig.getRedisCacheProfile();
         return baseNames.stream()
                 .map(name -> cacheProfile.isBlank() ? name : cacheProfile + ":" + name)
                 .collect(Collectors.toList());

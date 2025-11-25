@@ -7,7 +7,6 @@ import io.lettuce.core.protocol.ProtocolVersion;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.tuple.Pair;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.cache.CacheManager;
 import org.springframework.cache.annotation.EnableCaching;
@@ -39,13 +38,13 @@ import java.util.Set;
 @ConditionalOnProperty(name = "central.commerce.redis.cache_manager.enable", havingValue = "true")
 public class CacheConfig {
     private static final Set<Pair<String, Duration>> cache =
-            Set.of(
-                    Pair.of(CacheNames.BUY_AGAIN_PRODUCTS, duration(1440L)));
+            Set.of(Pair.of(CacheNames.BUY_AGAIN_PRODUCTS, duration(1440L)));
+
+    private final CommerceValueConfig commerceValueConfig;
+
     private final RedisProperties redisProperties;
 
     private final RedisConfiguration redisConfiguration;
-    @Value("${redis.profile}")
-    private String cacheProfile;
 
     private static Duration duration(long minutes) {
         return Duration.ofMinutes(minutes);
@@ -62,6 +61,7 @@ public class CacheConfig {
         Map<String, RedisCacheConfiguration> cacheConfigurations = new HashMap<>();
 
         // adding cacheProfile to every key of cache
+        String cacheProfile = commerceValueConfig.getRedisCacheProfile();
         String completeCacheName = cacheProfile.isBlank() ? cacheProfile : cacheProfile.concat(":");
         cache.stream()
                 .map(this::getRedisCacheConfigMap)
