@@ -4,9 +4,12 @@ import com.google.cloud.spring.data.datastore.repository.config.EnableDatastoreR
 import com.jswone.commerce.core.config.CatalogueDynamicConfig;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.boot.autoconfigure.data.redis.RedisAutoConfiguration;
+import org.springframework.boot.autoconfigure.data.redis.RedisRepositoriesAutoConfiguration;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 
-@SpringBootApplication(scanBasePackages = "com.jswone.commerce")
+@SpringBootApplication(exclude = {RedisAutoConfiguration.class, RedisRepositoriesAutoConfiguration.class},
+        scanBasePackages = "com.jswone.commerce")
 @EnableDatastoreRepositories(basePackages = "com.jswone.commerce")
 @EnableConfigurationProperties(CatalogueDynamicConfig.class)
 public class CentralCommerceServiceApplication {
