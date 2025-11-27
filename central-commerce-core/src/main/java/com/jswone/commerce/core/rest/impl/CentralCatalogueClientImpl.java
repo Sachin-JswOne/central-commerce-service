@@ -2,6 +2,11 @@ package com.jswone.commerce.core.rest.impl;
 
 import com.jswone.commerce.core.config.CommerceValueConfig;
 import com.jswone.commerce.core.exceptions.CentralCatalogueServiceException;
+import com.jswone.commerce.core.model.BulkImageResponse;
+import com.jswone.commerce.core.model.ImageMetadata;
+import com.jswone.commerce.core.model.centralCatalogue.MetaData;
+import com.jswone.commerce.core.model.centralCatalogue.Product;
+import com.jswone.commerce.core.model.centralCatalogue.ProductMedia;
 import com.jswone.commerce.core.model.request.ProductBulkRequest;
 import com.jswone.commerce.core.model.request.Search.SearchRequest;
 import com.jswone.commerce.core.model.request.centralCatalogue.CentralCatalogueSearchRequest;
@@ -19,10 +24,7 @@ import org.springframework.web.client.HttpClientErrorException;
 
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 import static com.jswone.commerce.core.constants.GenericConstants.CENTRAL_CATALOGUE_SEARCH;
 import static com.jswone.commerce.core.constants.RestConstants.CLIENT_ID;
@@ -155,6 +157,59 @@ public class CentralCatalogueClientImpl implements CentralCatalogueClient {
         }
     }
 
+    public BulkImageResponse fetchImagesForMmIds(ProductBulkRequest productBulkRequest) {
+        try {
+            String url = commerceValueConfig.getCentralCatalogueBaseUrl()
+                    + commerceValueConfig.getCentralCatalogueBulkMmidEndpoint();
+
+            Map<String, String> headers = Map.of(
+                    X_API_KEY, commerceValueConfig.getCentralCatalogueApiKey(),
+                    CLIENT_ID, commerceValueConfig.getCentralCatalogueClientId(),
+                    "Content-Type", "application/json"
+            );
+
+            ResponseEntity<ProductBulkResponse> response = RetryUtil.retryHttpCalls(
+                    () -> restUtil.makeRestCall(url, productBulkRequest, HttpMethod.POST,
+                            ProductBulkResponse.class, headers),
+                    0, 3, 100, CENTRAL_CATALOGUE_SEARCH
+            );
+
+            ProductBulkResponse catalogueResponse = response.getBody();
+            BulkImageResponse bulkImageResponse = new BulkImageResponse();
+            bulkImageResponse.setImageMap(new HashMap<>());
+
+            Optional.ofNullable(catalogueResponse)
+                    .map(ProductBulkResponse::getProducts)
+                    .orElse(Collections.emptyList())
+                    .forEach(product -> {
+                        String mmId = product.getProductMmid();
+                        String imageUrl = Optional.ofNullable(product.getMetaData())
+                                .map(MetaData::getProductMedia)
+                                .orElse(Collections.emptyList())
+                                .stream()
+                                .map(ProductMedia::getPublicUrl)
+                                .filter(Objects::nonNull)
+                                .findFirst()
+                                .orElse(null);
+
+                        ImageMetadata metadata = new ImageMetadata();
+                        metadata.setImageUrl(imageUrl);
+                        bulkImageResponse.getImageMap().put(mmId, metadata);
+                    });
+
+            return bulkImageResponse;
+
+        } catch (HttpClientErrorException ex) {
+            log.error("HttpClientErrorException while calling Central Catalogue bulk MMID API: {}",
+                    ex.getMessage(), ex);
+
+            throw new CentralCatalogueServiceException(
+                    String.format("HttpClientErrorException while calling Central Catalogue bulk MMID API: %s",
+                            ex.getMessage()),
+                    HttpStatus.valueOf(ex.getStatusCode().value())
+            );
+        }
+    }
 
     private String encode(String value) {
         return URLEncoder.encode(value, StandardCharsets.UTF_8);

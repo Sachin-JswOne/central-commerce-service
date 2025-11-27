@@ -1,6 +1,8 @@
 package com.jswone.commerce.core.service.impl;
 
 import com.jswone.commerce.core.converters.CatalogueConverter;
+import com.jswone.commerce.core.model.BulkImageResponse;
+import com.jswone.commerce.core.model.request.ProductBulkRequest;
 import com.jswone.commerce.core.model.request.Search.SearchRequest;
 import com.jswone.commerce.core.model.response.centralCatalogue.ProductSearchResponse;
 import com.jswone.commerce.core.model.response.search.SearchResponse;
@@ -27,5 +29,10 @@ public class CentralCatalogueServiceImpl implements CentralCatalogueService {
         catalogueValidator.validateSearchRequest(searchRequest);
         ProductSearchResponse productSearchResponse = centralCatalogueClient.genericSearch(searchRequest);
         return catalogueConverter.convertGenericSearchToSearchResponse(productSearchResponse,searchRequest);
+    }
+
+    @Override
+    public BulkImageResponse fetchImagesForMmIds(ProductBulkRequest productBulkRequest) {
+       return centralCatalogueClient.fetchImagesForMmIds(productBulkRequest);
     }
 }

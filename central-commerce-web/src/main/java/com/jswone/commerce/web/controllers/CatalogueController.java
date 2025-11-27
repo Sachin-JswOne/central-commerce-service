@@ -1,6 +1,8 @@
 package com.jswone.commerce.web.controllers;
 
 import com.jswone.commerce.core.model.ApiResponse;
+import com.jswone.commerce.core.model.BulkImageResponse;
+import com.jswone.commerce.core.model.request.ProductBulkRequest;
 import com.jswone.commerce.core.model.request.Search.SearchRequest;
 import com.jswone.commerce.core.model.response.search.SearchResponse;
 import com.jswone.commerce.core.service.CentralCatalogueService;
@@ -28,5 +30,11 @@ public class CatalogueController implements CentralBaseController{
     public ApiResponse<SearchResponse> searchCatalogue(@Valid @RequestBody SearchRequest searchRequest) {
         log.info("Received request for generic search :{} ", searchRequest.toString());
         return ApiResponseUtil.createSuccessResponse(centralCatalogueService.searchCatalogue(searchRequest), HttpStatus.OK);
+    }
+
+    @PostMapping("/catalogue/images/bulk")
+    public ApiResponse<BulkImageResponse> fetchBulkImages(@RequestBody ProductBulkRequest request) {
+        BulkImageResponse response = centralCatalogueService.fetchImagesForMmIds(request);
+        return ApiResponseUtil.createSuccessResponse(response, HttpStatus.OK);
     }
 }
