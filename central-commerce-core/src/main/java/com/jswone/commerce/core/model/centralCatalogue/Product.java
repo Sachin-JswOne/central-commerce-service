@@ -6,6 +6,8 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.util.List;
+import java.util.Map;
+import java.util.Objects;
 
 @Data
 @NoArgsConstructor
@@ -16,7 +18,7 @@ public class Product {
 
     private int version;
 
-    private ProductAttributes attributes;
+    private Map<String, Object> attributes;
 
     private List<Variant> variants;
 

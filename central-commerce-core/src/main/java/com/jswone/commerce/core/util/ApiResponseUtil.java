@@ -4,7 +4,9 @@ package com.jswone.commerce.core.util;
 import com.jswone.commerce.core.model.ApiResponse;
 import com.jswone.commerce.core.model.ErrorResponse;
 import org.springframework.http.HttpStatus;
+import org.springframework.stereotype.Component;
 
+@Component
 public class ApiResponseUtil {
 
     private ApiResponseUtil() {}

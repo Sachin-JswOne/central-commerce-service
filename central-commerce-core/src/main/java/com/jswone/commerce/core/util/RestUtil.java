@@ -1,6 +1,7 @@
 package com.jswone.commerce.core.util;
 
 import lombok.extern.log4j.Log4j2;
+import lombok.extern.slf4j.Slf4j;
 import org.slf4j.MDC;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.HttpEntity;
@@ -14,7 +15,7 @@ import org.springframework.web.client.RestTemplate;
 import java.util.Map;
 
 @Service
-@Log4j2
+@Slf4j
 public class RestUtil {
 
     private final RestTemplate commerceRestTemplate;
@@ -35,7 +36,7 @@ public class RestUtil {
             headers.setAll(headersMap);
         }
         headers.add("traceId", MDC.get("traceId"));
-        headers.add("appName", "cart-service");
+        headers.add("appName", "central-commerce-service");
 
         // Create the HttpEntity with request body and headers
         HttpEntity<Object> httpEntity = new HttpEntity<>(requestBody, headers);

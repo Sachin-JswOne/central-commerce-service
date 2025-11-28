@@ -63,4 +63,21 @@ public class CommerceValueConfig {
 
     @Value("${service.connection.readTimeout}")
     private long serviceReadTimeOut;
+
+    @Value("${central.catalogue.base.url}")
+    private String centralCatalogueBaseUrl;
+
+    @Value("${central.catalogue.generic.search.endpoint}")
+    private String centralCatalogueGenericSearchEndpoint;
+
+    @Value("${central.catalogue.api.key}")
+    private String centralCatalogueApiKey;
+
+    @Value("${central.catalogue.client.id}")
+    private String centralCatalogueClientId;
+
+    @Value("${central.catalogue.bulk.mmid.endpoint}")
+    private String centralCatalogueBulkMmidEndpoint;
+
+
 }
