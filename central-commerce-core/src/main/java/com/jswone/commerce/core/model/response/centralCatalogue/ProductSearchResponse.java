@@ -1,5 +1,6 @@
-package com.jswone.commerce.core.model.response;
+package com.jswone.commerce.core.model.response.centralCatalogue;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.jswone.commerce.core.model.centralCatalogue.Product;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -10,7 +11,8 @@ import java.util.List;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-public class ProductBulkResponse {
+public class ProductSearchResponse {
     private List<Product> products;
-    private int totalHits;
+    @JsonProperty("total_hits")
+    private long totalHits;
 }
