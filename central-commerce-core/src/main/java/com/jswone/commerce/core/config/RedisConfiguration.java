@@ -60,7 +60,7 @@ public class RedisConfiguration {
         return poolConfig;
     }
 
-    String getPemContent() {
+    public String getPemContent() {
         String cacheCertificateSecret = commerceValueConfig.getCacheCertificateSecret();
         if (StringUtils.isBlank(cacheCertificateSecret)) {
             log.error("Redis PEM certificate secret name is not configured.");
@@ -142,7 +142,7 @@ public class RedisConfiguration {
         throw new IllegalStateException("Redis connection could not be established.");
     }
 
-    private String getPemContentFromClassPath() {
+    public String getPemContentFromClassPath() {
         try {
             ClassPathResource resource = new ClassPathResource("redis_ca.pem");
             return StreamUtils.copyToString(resource.getInputStream(), StandardCharsets.UTF_8);

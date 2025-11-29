@@ -125,7 +125,8 @@ public class CacheConfig {
 
         SslOptions sslOptions = null;
         try {
-            sslOptions = SslOptions.builder().sslContext(CacheClientConfig.createTrustStoreSSLContext(redisConfiguration.getPemContent())).build();
+            sslOptions = SslOptions.builder().sslContext(CacheClientConfig.createTrustStoreSSLContext(commerceValueConfig.getRedisCacheProfile().equals("qa") ?
+                    redisConfiguration.getPemContentFromClassPath() : redisConfiguration.getPemContent())).build();
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
