@@ -8,12 +8,16 @@ import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.core.io.ClassPathResource;
+import org.springframework.util.StreamUtils;
 import redis.clients.jedis.ConnectionPoolConfig;
 import redis.clients.jedis.HostAndPort;
 import redis.clients.jedis.JedisClientConfig;
 import redis.clients.jedis.JedisPooled;
 
 import java.io.ByteArrayInputStream;
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.security.cert.CertificateFactory;
 import java.security.cert.X509Certificate;
 import java.time.Duration;
@@ -32,7 +36,10 @@ public class RedisConfiguration {
     public JedisPooled jedisPooled() {
         ConnectionPoolConfig poolConfig = createConnectionPoolConfig();
 
-        String pem = getPemContent();
+        String pem = commerceValueConfig.getRedisCacheProfile().equals("qa") ?
+                getPemContentFromClassPath() : getPemContent();
+
+//        String pem = getPemContent();
 
         HostAndPort address = new HostAndPort(redisProperties.getHost(), redisProperties.getPort());
         JedisClientConfig config = CacheClientConfig.createJedisClientConfiguration(
@@ -133,5 +140,14 @@ public class RedisConfiguration {
         }
 
         throw new IllegalStateException("Redis connection could not be established.");
+    }
+
+    private String getPemContentFromClassPath() {
+        try {
+            ClassPathResource resource = new ClassPathResource("redis_ca.pem");
+            return StreamUtils.copyToString(resource.getInputStream(), StandardCharsets.UTF_8);
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
     }
 }
