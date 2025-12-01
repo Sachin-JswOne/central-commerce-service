@@ -11,9 +11,9 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 public class ProductAttributeDTO {
-    @NotNull(message = "Product Attributes key cannot be null/blank")
+    @NotNull(message = "cannot be null/blank")
     private String key;
-    @NotNull(message = "Product Attributes value cannot be null/blank")
+    @NotNull(message = "cannot be null/blank")
     private Object value;
     private String unit;
 }

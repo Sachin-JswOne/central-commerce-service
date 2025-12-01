@@ -14,8 +14,8 @@ import java.util.List;
 @NoArgsConstructor
 @AllArgsConstructor
 public class ProductSkuRequest {
-    @NotNull(message = "Product Material Master Id cannot be null/blank")
+    @NotNull(message = "cannot be null/blank")
     private String productMaterialMasterId;
-    @NotNull(message = "Product Attributes cannot be null/blank")
+    @NotNull(message = "cannot be null/blank")
     private List<ProductAttributeDTO> productAttributes;
 }
