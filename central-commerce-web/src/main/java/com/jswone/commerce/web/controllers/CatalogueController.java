@@ -2,6 +2,7 @@ package com.jswone.commerce.web.controllers;
 
 import com.jswone.commerce.core.model.ApiResponse;
 import com.jswone.commerce.core.model.BulkImageResponse;
+import com.jswone.commerce.core.model.ImageMetadata;
 import com.jswone.commerce.core.model.request.ProductBulkRequest;
 import com.jswone.commerce.core.model.request.Search.SearchRequest;
 import com.jswone.commerce.core.model.response.search.SearchResponse;
@@ -15,6 +16,9 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+
+import java.util.List;
+import java.util.Map;
 
 @RestController
 @Slf4j
@@ -33,8 +37,8 @@ public class CatalogueController implements CentralBaseController{
     }
 
     @PostMapping("/catalogue/images/bulk")
-    public ApiResponse<BulkImageResponse> fetchBulkImages(@RequestBody ProductBulkRequest request) {
-        BulkImageResponse response = centralCatalogueService.fetchImagesForMmIds(request);
+    public ApiResponse<Map<String, ImageMetadata>> fetchBulkImages(@RequestBody List<String> productMmIds) {
+        Map<String, ImageMetadata> response = centralCatalogueService.fetchImagesForMmIds(productMmIds);
         return ApiResponseUtil.createSuccessResponse(response, HttpStatus.OK);
     }
 }

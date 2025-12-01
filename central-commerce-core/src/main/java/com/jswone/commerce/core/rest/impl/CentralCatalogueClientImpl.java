@@ -5,11 +5,11 @@ import com.jswone.commerce.core.exceptions.CentralCatalogueServiceException;
 import com.jswone.commerce.core.model.BulkImageResponse;
 import com.jswone.commerce.core.model.ImageMetadata;
 import com.jswone.commerce.core.model.centralCatalogue.MetaData;
-import com.jswone.commerce.core.model.centralCatalogue.Product;
 import com.jswone.commerce.core.model.centralCatalogue.ProductMedia;
 import com.jswone.commerce.core.model.request.ProductBulkRequest;
 import com.jswone.commerce.core.model.request.Search.SearchRequest;
 import com.jswone.commerce.core.model.request.centralCatalogue.CentralCatalogueSearchRequest;
+import com.jswone.commerce.core.model.request.centralCatalogue.ImageUrlBulkRequest;
 import com.jswone.commerce.core.model.response.centralCatalogue.ProductBulkResponse;
 import com.jswone.commerce.core.model.response.centralCatalogue.ProductSearchResponse;
 import com.jswone.commerce.core.rest.CentralCatalogueClient;
@@ -21,6 +21,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.HttpClientErrorException;
+import org.springframework.web.client.HttpServerErrorException;
 
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
@@ -78,7 +79,7 @@ public class CentralCatalogueClientImpl implements CentralCatalogueClient {
                     ),
                     0,
                     3,
-                    100,CENTRAL_CATALOGUE_SEARCH
+                    100, CENTRAL_CATALOGUE_SEARCH
             );
 
             return response.getBody();
@@ -131,15 +132,15 @@ public class CentralCatalogueClientImpl implements CentralCatalogueClient {
                     "Content-Type", "application/json"
             );
 
-            ResponseEntity<ProductBulkResponse> response = RetryUtil.retryHttpCalls( () ->restUtil.makeRestCall(
-                    url,
-                    productBulkRequest,
-                    HttpMethod.POST,
-                    ProductBulkResponse.class,
-                    headers
-            ),0,
+            ResponseEntity<ProductBulkResponse> response = RetryUtil.retryHttpCalls(() -> restUtil.makeRestCall(
+                            url,
+                            productBulkRequest,
+                            HttpMethod.POST,
+                            ProductBulkResponse.class,
+                            headers
+                    ), 0,
                     3,
-                    100,CENTRAL_CATALOGUE_SEARCH);
+                    100, CENTRAL_CATALOGUE_SEARCH);
 
             return response.getBody();
 
@@ -157,7 +158,7 @@ public class CentralCatalogueClientImpl implements CentralCatalogueClient {
         }
     }
 
-    public BulkImageResponse fetchImagesForMmIds(ProductBulkRequest productBulkRequest) {
+    public Map<String, ImageMetadata> fetchImagesForMmIds(List<String> productMmIds) {
         try {
             String url = commerceValueConfig.getCentralCatalogueBaseUrl()
                     + commerceValueConfig.getCentralCatalogueBulkMmidEndpoint();
@@ -168,21 +169,25 @@ public class CentralCatalogueClientImpl implements CentralCatalogueClient {
                     "Content-Type", "application/json"
             );
 
+            ProductBulkRequest productBulkRequest = new ProductBulkRequest();
+            productBulkRequest.setProductMMIDS(productMmIds);
+            productBulkRequest.setStorefront("msme");
+
             ResponseEntity<ProductBulkResponse> response = RetryUtil.retryHttpCalls(
                     () -> restUtil.makeRestCall(url, productBulkRequest, HttpMethod.POST,
                             ProductBulkResponse.class, headers),
                     0, 3, 100, CENTRAL_CATALOGUE_SEARCH
             );
 
-            ProductBulkResponse catalogueResponse = response.getBody();
-            BulkImageResponse bulkImageResponse = new BulkImageResponse();
-            bulkImageResponse.setImageMap(new HashMap<>());
+            ProductBulkResponse productBulkResponse = response.getBody();
+            Map<String, ImageMetadata> imageMap = new HashMap<>();
 
-            Optional.ofNullable(catalogueResponse)
+            Optional.ofNullable(productBulkResponse)
                     .map(ProductBulkResponse::getProducts)
                     .orElse(Collections.emptyList())
                     .forEach(product -> {
                         String mmId = product.getProductMmid();
+
                         String imageUrl = Optional.ofNullable(product.getMetaData())
                                 .map(MetaData::getProductMedia)
                                 .orElse(Collections.emptyList())
@@ -194,12 +199,12 @@ public class CentralCatalogueClientImpl implements CentralCatalogueClient {
 
                         ImageMetadata metadata = new ImageMetadata();
                         metadata.setImageUrl(imageUrl);
-                        bulkImageResponse.getImageMap().put(mmId, metadata);
+                        imageMap.put(mmId, metadata);
                     });
 
-            return bulkImageResponse;
+            return imageMap;
 
-        } catch (HttpClientErrorException ex) {
+        } catch (HttpClientErrorException | HttpServerErrorException ex) {
             log.error("HttpClientErrorException while calling Central Catalogue bulk MMID API: {}",
                     ex.getMessage(), ex);
 
@@ -207,6 +212,12 @@ public class CentralCatalogueClientImpl implements CentralCatalogueClient {
                     String.format("HttpClientErrorException while calling Central Catalogue bulk MMID API: %s",
                             ex.getMessage()),
                     HttpStatus.valueOf(ex.getStatusCode().value())
+            );
+        } catch (Exception ex) {
+            log.error("Exception occurred while calling Central Catalogue bulk MMID API: {}", ex.getMessage(), ex);
+            throw new CentralCatalogueServiceException(
+                    String.format("Exception occurred while calling Central Catalogue bulk MMID API: %s",
+                            HttpStatus.INTERNAL_SERVER_ERROR)
             );
         }
     }
