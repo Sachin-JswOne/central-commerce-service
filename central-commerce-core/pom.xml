@@ -112,6 +112,14 @@
 <!--            <artifactId>spring-cloud-gcp-starter-data-firestore</artifactId>-->
 <!--        </dependency>-->
         <dependency>
+            <groupId>com.jswone</groupId>
+            <artifactId>uom-convertor</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.jswone.measurement.common</groupId>
+            <artifactId>measurement_common_model</artifactId>
+        </dependency>
+        <dependency>
             <groupId>com.jswone.ordering.common</groupId>
             <artifactId>jsw_ordering_common_model</artifactId>
         </dependency>

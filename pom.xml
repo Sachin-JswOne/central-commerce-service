@@ -74,11 +74,12 @@
                 <artifactId>notification_common_model</artifactId>
                 <version>0.0.6</version>
             </dependency>
-<!--            <dependency>-->
-<!--                <groupId>com.jswone</groupId>-->
-<!--                <artifactId>jsw_measurement_util</artifactId>-->
-<!--                <version>0.0.11</version>-->
-<!--            </dependency>-->
+            <dependency>
+                <groupId>com.jswone</groupId>
+                <artifactId>uom-convertor</artifactId>
+                <version>2.0.1-RELEASE</version>
+            </dependency>
+
 <!--            <dependency>-->
 <!--                <groupId>com.jswone</groupId>-->
 <!--                <artifactId>auth-common-util</artifactId>-->

@@ -9,7 +9,7 @@ import org.springframework.boot.autoconfigure.data.redis.RedisRepositoriesAutoCo
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 
 @SpringBootApplication(exclude = {RedisAutoConfiguration.class, RedisRepositoriesAutoConfiguration.class},
-        scanBasePackages = "com.jswone.commerce")
+        scanBasePackages = {"com.jswone.commerce", "com.jswone.uom.convertor"})
 @EnableDatastoreRepositories(basePackages = "com.jswone.commerce")
 @EnableConfigurationProperties(CatalogueDynamicConfig.class)
 public class CentralCommerceServiceApplication {
