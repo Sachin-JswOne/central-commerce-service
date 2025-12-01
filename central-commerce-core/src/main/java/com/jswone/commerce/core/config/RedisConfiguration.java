@@ -36,10 +36,10 @@ public class RedisConfiguration {
     public JedisPooled jedisPooled() {
         ConnectionPoolConfig poolConfig = createConnectionPoolConfig();
 
-        String pem = commerceValueConfig.getRedisCacheProfile().equals("qa") ?
-                getPemContentFromClassPath() : getPemContent();
+//        String pem = commerceValueConfig.getRedisCacheProfile().equals("qa") ?
+//                getPemContentFromClassPath() : getPemContent();
 
-//        String pem = getPemContent();
+        String pem = getPemContent();
 
         HostAndPort address = new HostAndPort(redisProperties.getHost(), redisProperties.getPort());
         JedisClientConfig config = CacheClientConfig.createJedisClientConfiguration(
