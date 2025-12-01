@@ -22,7 +22,7 @@ public class BuyAgainController implements CentralBaseController {
         this.buyAgainService = buyAgainService;
     }
 
-    @GetMapping(value = "/buy-again/listing/v2", produces = MediaType.APPLICATION_JSON_VALUE)
+    @GetMapping(value = "/buy-again-list", produces = MediaType.APPLICATION_JSON_VALUE)
     public ApiResponse<DistributedBuyAgainResponse> getRecentPurchasedList(
             @RequestParam(defaultValue = "0", name = "offset") Integer offset,
             @RequestParam(defaultValue = "50", name = "limit") Integer limit) {
