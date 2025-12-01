@@ -18,6 +18,7 @@ import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 
+import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.servlet.resource.NoResourceFoundException;
@@ -158,6 +159,12 @@ public class GlobalExceptionHandler {
         log.error("Unhandled exception:", ex);
         return buildErrorResponse(HttpStatus.INTERNAL_SERVER_ERROR,
                 "Internal server error");
+    }
+
+    @ExceptionHandler(MissingServletRequestParameterException.class)
+    public ApiResponse<Object> handleMissingServletRequestParameterException(MissingServletRequestParameterException ex) {
+        log.error("MissingServletRequestParameterException:", ex);
+        return buildError(BAD_REQUEST, ex.getMessage());
     }
 
     // ================================================================

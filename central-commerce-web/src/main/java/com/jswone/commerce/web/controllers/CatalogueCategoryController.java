@@ -5,6 +5,8 @@ import com.jswone.commerce.core.model.BreadcrumbData;
 import com.jswone.commerce.core.model.CategoryTreeResponse;
 import com.jswone.commerce.core.service.impl.CatalogueCategoryServiceImpl;
 import com.jswone.commerce.core.util.ApiResponseUtil;
+import jakarta.annotation.Nonnull;
+import jakarta.validation.constraints.NotNull;
 import lombok.NonNull;
 import lombok.extern.log4j.Log4j2;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -28,7 +30,7 @@ public class CatalogueCategoryController implements CentralBaseController {
   }
 
   @GetMapping("/categories/breadcrumb")
-  public ApiResponse<BreadcrumbData> getBreadcrumb(@NonNull @RequestParam String categoryId) {
+  public ApiResponse<BreadcrumbData> getBreadcrumb(@NotNull @RequestParam String categoryId) {
     log.info("Received breadcrumb request for categoryId: {}", categoryId);
     BreadcrumbData breadcrumbData = categoryService.getBreadcrumbData(categoryId);
     log.info("Successfully fetched breadcrumb response for categoryId: {}", categoryId);
