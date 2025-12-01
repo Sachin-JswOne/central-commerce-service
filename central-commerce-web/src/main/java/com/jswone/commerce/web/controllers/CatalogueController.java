@@ -16,6 +16,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
@@ -40,7 +41,7 @@ public class CatalogueController implements CentralBaseController{
         log.info("Received request for bulk images API :{} ", productMmIds);
         if (productMmIds == null || productMmIds.isEmpty()) {
             log.info("Empty MMIDs list received for fetching bulk images API");
-            return ApiResponseUtil.createSuccessResponse(null, HttpStatus.OK);
+            return ApiResponseUtil.createSuccessResponse(Collections.emptyMap(), HttpStatus.OK);
         }
         Map<String, ImageMetadata> response = centralCatalogueService.fetchImagesForMmIds(productMmIds);
         return ApiResponseUtil.createSuccessResponse(response, HttpStatus.OK);
