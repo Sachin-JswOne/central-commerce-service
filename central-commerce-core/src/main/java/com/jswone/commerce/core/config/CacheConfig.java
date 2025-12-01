@@ -125,7 +125,15 @@ public class CacheConfig {
 
         SslOptions sslOptions = null;
         try {
-            sslOptions = SslOptions.builder().sslContext(CacheClientConfig.createTrustStoreSSLContext(redisConfiguration.getPemContent())).build();
+            String pem;
+            if (commerceValueConfig.getRedisCacheProfile().equals("local")) {
+                pem = redisConfiguration.getPemContentFromClassPath();
+                log.info("Fetched PEM certificate from class path for Redis connection.");
+            } else {
+                pem = redisConfiguration.getPemContent();
+                log.info("Fetched PEM certificate from secret manager for Redis connection.");
+            }
+            sslOptions = SslOptions.builder().sslContext(CacheClientConfig.createTrustStoreSSLContext(pem)).build();
 //            sslOptions = SslOptions.builder().sslContext(CacheClientConfig.createTrustStoreSSLContext(commerceValueConfig.getRedisCacheProfile().equals("qa") ?
 //                    redisConfiguration.getPemContentFromClassPath() : redisConfiguration.getPemContent())).build();
         } catch (Exception e) {

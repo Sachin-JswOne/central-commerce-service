@@ -36,10 +36,16 @@ public class RedisConfiguration {
     public JedisPooled jedisPooled() {
         ConnectionPoolConfig poolConfig = createConnectionPoolConfig();
 
-//        String pem = commerceValueConfig.getRedisCacheProfile().equals("qa") ?
-//                getPemContentFromClassPath() : getPemContent();
+        String pem;
+        if (commerceValueConfig.getRedisCacheProfile().equals("local")) {
+            pem = getPemContentFromClassPath();
+            log.info("Fetched PEM certificate from class path for Redis connection.");
+        } else {
+            pem = getPemContent();
+            log.info("Fetched PEM certificate from secret manager for Redis connection.");
+        }
 
-        String pem = getPemContent();
+//        String pem = getPemContent();
 
         HostAndPort address = new HostAndPort(redisProperties.getHost(), redisProperties.getPort());
         JedisClientConfig config = CacheClientConfig.createJedisClientConfiguration(
