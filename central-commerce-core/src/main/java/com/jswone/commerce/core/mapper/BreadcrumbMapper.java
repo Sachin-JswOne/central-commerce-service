@@ -17,7 +17,8 @@ public interface BreadcrumbMapper {
   @Mapping(source = "id", target = "categoryId")
   @Mapping(source = "key", target = "categoryKey")
   @Mapping(source = "attributes.slug", target = "slug")
-  @Mapping(source = "attributes.meta_description", target = "description")
+  @Mapping(source = "attributes.category_description", target = "description")
+  @Mapping(source = "attributes.category_detail_description", target = "detailDescription")
   @Mapping(source = "attributes.category_content_heading", target = "categoryContentHeading")
   @Mapping(
       source = "attributes.category_content_description",

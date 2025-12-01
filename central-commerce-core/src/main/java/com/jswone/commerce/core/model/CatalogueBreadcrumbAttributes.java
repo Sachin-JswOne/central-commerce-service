@@ -14,7 +14,8 @@ public class CatalogueBreadcrumbAttributes {
   private String seo_url;
   private String meta_title;
   private String category_title;
-  private String meta_description;
+  private String category_description;
+  private String category_detail_description;
   private String category_content_heading;
   private String category_content_description;
   private String category_faqs_heading;
