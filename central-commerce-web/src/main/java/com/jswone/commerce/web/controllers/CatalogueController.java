@@ -40,7 +40,7 @@ public class CatalogueController implements CentralBaseController{
     public ApiResponse<Map<String, ImageMetadata>> fetchBulkImages(@RequestBody List<String> productMmIds) {
         log.info("Received request for bulk images API :{} ", productMmIds);
         if (productMmIds == null || productMmIds.isEmpty()) {
-            log.info("Empty MMIDs list received for fetching bulk images API");
+            log.info("Empty MMIDs list received for fetching bulk images");
             return ApiResponseUtil.createSuccessResponse(Collections.emptyMap(), HttpStatus.OK);
         }
         Map<String, ImageMetadata> response = centralCatalogueService.fetchImagesForMmIds(productMmIds);
