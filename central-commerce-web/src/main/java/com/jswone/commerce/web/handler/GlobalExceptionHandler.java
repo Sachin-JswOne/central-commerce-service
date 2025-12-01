@@ -162,9 +162,9 @@ public class GlobalExceptionHandler {
     }
 
     @ExceptionHandler(MissingServletRequestParameterException.class)
-    public ApiResponse<Object> handleMissingServletRequestParameterException(MissingServletRequestParameterException ex) {
+    public ResponseEntity<ApiResponse<Object>> handleMissingServletRequestParameterException(MissingServletRequestParameterException ex) {
         log.error("MissingServletRequestParameterException:", ex);
-        return buildError(BAD_REQUEST, ex.getMessage());
+        return buildErrorResponse(BAD_REQUEST, ex.getMessage());
     }
 
     // ================================================================
