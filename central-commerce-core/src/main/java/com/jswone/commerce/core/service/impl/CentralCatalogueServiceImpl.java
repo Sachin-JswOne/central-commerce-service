@@ -37,6 +37,6 @@ public class CentralCatalogueServiceImpl implements CentralCatalogueService {
 
     @Override
     public Map<String, ImageMetadata> fetchImagesForMmIds(List<String> productMmIds) {
-       return centralCatalogueClient.fetchImagesForMmIds(productMmIds);
+        return centralCatalogueClient.fetchImagesForMmIds(productMmIds);
     }
 }

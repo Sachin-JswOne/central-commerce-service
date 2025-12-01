@@ -9,7 +9,6 @@ import com.jswone.commerce.core.model.centralCatalogue.ProductMedia;
 import com.jswone.commerce.core.model.request.ProductBulkRequest;
 import com.jswone.commerce.core.model.request.Search.SearchRequest;
 import com.jswone.commerce.core.model.request.centralCatalogue.CentralCatalogueSearchRequest;
-import com.jswone.commerce.core.model.request.centralCatalogue.ImageUrlBulkRequest;
 import com.jswone.commerce.core.model.response.centralCatalogue.ProductBulkResponse;
 import com.jswone.commerce.core.model.response.centralCatalogue.ProductSearchResponse;
 import com.jswone.commerce.core.rest.CentralCatalogueClient;
@@ -160,6 +159,9 @@ public class CentralCatalogueClientImpl implements CentralCatalogueClient {
 
     public Map<String, ImageMetadata> fetchImagesForMmIds(List<String> productMmIds) {
         try {
+
+            log.info("Fetching images for MMIDs: {}", productMmIds);
+
             String url = commerceValueConfig.getCentralCatalogueBaseUrl()
                     + commerceValueConfig.getCentralCatalogueBulkMmidEndpoint();
 
@@ -172,6 +174,8 @@ public class CentralCatalogueClientImpl implements CentralCatalogueClient {
             ProductBulkRequest productBulkRequest = new ProductBulkRequest();
             productBulkRequest.setProductMMIDS(productMmIds);
             productBulkRequest.setStorefront("msme");
+
+            log.info("Calling Central Catalogue bulk MMIDs API with url for images: {}", url);
 
             ResponseEntity<ProductBulkResponse> response = RetryUtil.retryHttpCalls(
                     () -> restUtil.makeRestCall(url, productBulkRequest, HttpMethod.POST,
@@ -202,6 +206,7 @@ public class CentralCatalogueClientImpl implements CentralCatalogueClient {
                         imageMap.put(mmId, metadata);
                     });
 
+            log.info("Successfully processed image data for {} MMIDs", imageMap.size());
             return imageMap;
 
         } catch (HttpClientErrorException | HttpServerErrorException ex) {

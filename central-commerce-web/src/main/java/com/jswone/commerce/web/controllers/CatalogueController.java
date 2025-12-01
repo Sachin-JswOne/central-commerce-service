@@ -14,7 +14,6 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
@@ -38,6 +37,11 @@ public class CatalogueController implements CentralBaseController{
 
     @PostMapping("/catalogue/images/bulk")
     public ApiResponse<Map<String, ImageMetadata>> fetchBulkImages(@RequestBody List<String> productMmIds) {
+        log.info("Received request for bulk images API :{} ", productMmIds);
+        if (productMmIds == null || productMmIds.isEmpty()) {
+            log.info("Empty MMIDs list received for fetching bulk images API");
+            return ApiResponseUtil.createSuccessResponse(null, HttpStatus.OK);
+        }
         Map<String, ImageMetadata> response = centralCatalogueService.fetchImagesForMmIds(productMmIds);
         return ApiResponseUtil.createSuccessResponse(response, HttpStatus.OK);
     }
