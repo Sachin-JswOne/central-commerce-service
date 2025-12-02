@@ -1,6 +1,7 @@
 package com.jswone.commerce.core.service.impl;
 
 import com.jswone.commerce.core.converters.CatalogueConverter;
+import com.jswone.commerce.core.model.ImageMetadata;
 import com.jswone.commerce.core.model.request.Search.SearchRequest;
 import com.jswone.commerce.core.model.response.centralCatalogue.ProductSearchResponse;
 import com.jswone.commerce.core.model.response.search.SearchResponse;
@@ -8,6 +9,10 @@ import com.jswone.commerce.core.rest.CentralCatalogueClient;
 import com.jswone.commerce.core.service.CentralCatalogueService;
 import com.jswone.commerce.core.validators.CatalogueValidator;
 import org.springframework.stereotype.Service;
+
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 @Service
 public class CentralCatalogueServiceImpl implements CentralCatalogueService {
@@ -26,6 +31,11 @@ public class CentralCatalogueServiceImpl implements CentralCatalogueService {
     public SearchResponse searchCatalogue(SearchRequest searchRequest) {
         catalogueValidator.validateSearchRequest(searchRequest);
         ProductSearchResponse productSearchResponse = centralCatalogueClient.genericSearch(searchRequest);
-        return catalogueConverter.convertGenericSearchToSearchResponse(productSearchResponse,searchRequest);
+        return catalogueConverter.convertGenericSearchToSearchResponse(productSearchResponse, searchRequest);
+    }
+
+    @Override
+    public Map<String, ImageMetadata> fetchImagesForMmIds(Set<String> productMmIds) {
+        return centralCatalogueClient.fetchImagesForMmIds(productMmIds);
     }
 }
