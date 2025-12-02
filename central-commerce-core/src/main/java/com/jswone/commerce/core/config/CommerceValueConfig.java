@@ -69,9 +69,6 @@ public class CommerceValueConfig {
     @Value("${central.catalogue.generic.search.endpoint}")
     private String centralCatalogueGenericSearchEndpoint;
 
-    @Value("${central.catalogue.bulk.typeid.endpoint}")
-    private String centralCatalogueBulkTypeIdEndpoint;
-
     @Value("${central.catalogue.api.key}")
     private String centralCatalogueApiKey;
 
@@ -80,6 +77,15 @@ public class CommerceValueConfig {
 
     @Value("${central.catalogue.bulk.mmid.endpoint}")
     private String centralCatalogueBulkMmidEndpoint;
+
+    @Value("${central.catalogue.admin.bulk.typeid.endpoint}")
+    private String centralCatalogueAdminBulkTypeIdEndpoint;
+
+    @Value("${central.catalogue.admin.api.key}")
+    private String centralCatalogueAdminApiKey;
+
+    @Value("${central.catalogue.admin.client.id}")
+    private String centralCatalogueAdminClientId;
 
     @Value("${catalogue.category.base.url}")
     private String catalogueCategoryBaseUrl;

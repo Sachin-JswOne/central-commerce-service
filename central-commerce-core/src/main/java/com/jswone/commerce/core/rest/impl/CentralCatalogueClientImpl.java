@@ -161,7 +161,7 @@ public class CentralCatalogueClientImpl implements CentralCatalogueClient {
     public ProductTypeBulkResponse bulkTypeIdResponse(ProductTypeBulkRequest productTypeBulkRequest) {
         try {
             String baseUrl = commerceValueConfig.getCentralCatalogueBaseUrl()
-                    + commerceValueConfig.getCentralCatalogueBulkTypeIdEndpoint();
+                    + commerceValueConfig.getCentralCatalogueAdminBulkTypeIdEndpoint();
 
             UriComponentsBuilder uriBuilder = UriComponentsBuilder.fromUriString(baseUrl);
 
@@ -180,12 +180,9 @@ public class CentralCatalogueClientImpl implements CentralCatalogueClient {
             String finalUrl = uriBuilder.toUriString();
 
             Map<String, String> headers = Map.of(
-                    X_API_KEY, "7cbfc9d1-027f-46cd-90b9-db1288ee8d85",
-                    CLIENT_ID, "69ab4721-0c01-475c-94bd-765f9beeb978",
-//                    X_API_KEY, commerceValueConfig.getCentralCatalogueApiKey(),
-//                    CLIENT_ID, commerceValueConfig.getCentralCatalogueClientId(),
-                    "Content-Type", "application/json"
-            );
+                    X_API_KEY, commerceValueConfig.getCentralCatalogueAdminApiKey(),
+                    CLIENT_ID, commerceValueConfig.getCentralCatalogueAdminClientId(),
+                    "Content-Type", "application/json");
 
             ResponseEntity<ProductTypeBulkResponse> response =
                     RetryUtil.retryHttpCalls(
