@@ -156,9 +156,8 @@ public class CentralCatalogueClientImpl implements CentralCatalogueClient {
         }
     }
 
-    public Map<String, ImageMetadata> fetchImagesForMmIds(List<String> productMmIds) {
+    public Map<String, ImageMetadata> fetchImagesForMmIds(Set<String> productMmIds) {
         try {
-
             log.info("Fetching images for MMIDs: {}", productMmIds);
 
             String url = commerceValueConfig.getCentralCatalogueBaseUrl()
@@ -170,8 +169,9 @@ public class CentralCatalogueClientImpl implements CentralCatalogueClient {
                     "Content-Type", "application/json"
             );
 
+            List<String> mmidList = new ArrayList<>(productMmIds);
             ProductBulkRequest productBulkRequest = new ProductBulkRequest();
-            productBulkRequest.setProductMMIDS(productMmIds);
+            productBulkRequest.setProductMMIDS(mmidList);
             productBulkRequest.setStorefront("msme");
 
             log.info("Calling Central Catalogue bulk MMIDs API with url for images: {}", url);

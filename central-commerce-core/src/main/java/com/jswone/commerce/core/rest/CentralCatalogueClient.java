@@ -8,9 +8,10 @@ import com.jswone.commerce.core.model.response.centralCatalogue.ProductSearchRes
 
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 public interface CentralCatalogueClient {
     ProductSearchResponse genericSearch(SearchRequest searchRequest);
     ProductBulkResponse bulkMMIDResponse(ProductBulkRequest productBulkRequest);
-    Map<String, ImageMetadata> fetchImagesForMmIds(List<String> productMmIds);
+    Map<String, ImageMetadata> fetchImagesForMmIds(Set<String> productMmIds);
 }

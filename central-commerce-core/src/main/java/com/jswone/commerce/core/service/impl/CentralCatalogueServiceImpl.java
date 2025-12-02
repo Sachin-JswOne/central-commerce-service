@@ -12,6 +12,7 @@ import org.springframework.stereotype.Service;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 @Service
 public class CentralCatalogueServiceImpl implements CentralCatalogueService {
@@ -34,7 +35,7 @@ public class CentralCatalogueServiceImpl implements CentralCatalogueService {
     }
 
     @Override
-    public Map<String, ImageMetadata> fetchImagesForMmIds(List<String> productMmIds) {
+    public Map<String, ImageMetadata> fetchImagesForMmIds(Set<String> productMmIds) {
         return centralCatalogueClient.fetchImagesForMmIds(productMmIds);
     }
 }
