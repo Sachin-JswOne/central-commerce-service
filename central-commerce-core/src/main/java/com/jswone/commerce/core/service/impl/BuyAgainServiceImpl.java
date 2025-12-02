@@ -80,11 +80,6 @@ public class BuyAgainServiceImpl implements BuyAgainService {
 
     /**
      * Bulk warm-up: load buy-again products for customers into cache.
-     *
-     * <p>Important: the underlying data source API may return a very large result set. To avoid
-     * OOM and to reduce pressure on Redis, we guard with {@code warmupMaxEntries}. If the fetched
-     * number of purchased SKU entries exceeds that threshold we switch to a conservative path: log and
-     * skip bulk caching (explicitly forcing operator attention).
      */
     public void loadAllBuyAgainProductsForCustomersIntoCache() {
 
@@ -123,9 +118,14 @@ public class BuyAgainServiceImpl implements BuyAgainService {
             List<PurchasedSku> skus = entry.getValue();
 
             try {
-                // Build response for customer
-                DistributedBuyAgainResponse resp =
-                        getRecentPurchasedDistributed(skus == null ? List.of() : skus);
+                List<PurchasedSku> sortedSkus = skus == null ?
+                        List.of() :
+                        skus.stream()
+                                .filter(Objects::nonNull)
+                                .sorted(Comparator.comparing(PurchasedSku::getOrderPlacedDate,
+                                        Comparator.nullsLast(Date::compareTo)).reversed())
+                                .toList();
+                DistributedBuyAgainResponse resp = getRecentPurchasedDistributed(sortedSkus);
 
                 // Defensive copy of response for safety
                 DistributedBuyAgainResponse safeCopy = defensivelyCopyResponse(resp);
@@ -212,7 +212,9 @@ public class BuyAgainServiceImpl implements BuyAgainService {
         List<PurchasedSku> purchasedSkus = Optional.ofNullable(purchasedSkuService.fetchRecentlyPurchasedSku(customerId))
                 .orElseGet(Collections::emptyList)
                 .stream()
-                .sorted(Comparator.comparing(PurchasedSku::getOrderPlacedDate).reversed())
+                .sorted(Comparator.comparing(
+                                PurchasedSku::getOrderPlacedDate,
+                                Comparator.nullsLast(Date::compareTo)).reversed())
                 .collect(Collectors.toList());
         log.info("Buy_Again - Fetched {} purchased skus for customerId={}", purchasedSkus.size(), customerId);
         return purchasedSkus;
@@ -369,11 +371,14 @@ public class BuyAgainServiceImpl implements BuyAgainService {
     }
 
     private QuantityCard resolveQuantityCard(com.jswone.commerce.core.model.centralCatalogue.QuantityCard centralCatalogueQuantityCard) {
+
+        com.jswone.commerce.core.model.centralCatalogue.Uom uom = centralCatalogueQuantityCard != null ? centralCatalogueQuantityCard.getUom() : null;
+
         return QuantityCard.builder()
-                .identifier(centralCatalogueQuantityCard.getUom().getUiLabelQuantity())
-                .displayName(centralCatalogueQuantityCard.getLabel())
-                .measureUnit(centralCatalogueQuantityCard.getUom().getUiLabelQuantity())
-                .hasDecimal(centralCatalogueQuantityCard.getUom().getQuantityPrecision() > 0)
+                .identifier(uom != null ? uom.getUiLabelQuantity() : "")
+                .displayName(centralCatalogueQuantityCard != null ? centralCatalogueQuantityCard.getLabel() : "")
+                .measureUnit(uom != null ? uom.getUiLabelQuantity() : "")
+                .hasDecimal(uom != null && uom.getQuantityPrecision() > 0)
                 .build();
     }
 
