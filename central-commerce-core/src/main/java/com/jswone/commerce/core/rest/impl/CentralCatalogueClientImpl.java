@@ -2,7 +2,6 @@ package com.jswone.commerce.core.rest.impl;
 
 import com.jswone.commerce.core.config.CommerceValueConfig;
 import com.jswone.commerce.core.exceptions.CentralCatalogueServiceException;
-import com.jswone.commerce.core.model.BulkImageResponse;
 import com.jswone.commerce.core.model.ImageMetadata;
 import com.jswone.commerce.core.model.centralCatalogue.MetaData;
 import com.jswone.commerce.core.model.centralCatalogue.ProductMedia;
@@ -78,7 +77,7 @@ public class CentralCatalogueClientImpl implements CentralCatalogueClient {
                     ),
                     0,
                     3,
-                    100, CENTRAL_CATALOGUE_SEARCH
+                    100,CENTRAL_CATALOGUE_SEARCH
             );
 
             return response.getBody();
@@ -131,15 +130,15 @@ public class CentralCatalogueClientImpl implements CentralCatalogueClient {
                     "Content-Type", "application/json"
             );
 
-            ResponseEntity<ProductBulkResponse> response = RetryUtil.retryHttpCalls(() -> restUtil.makeRestCall(
-                            url,
-                            productBulkRequest,
-                            HttpMethod.POST,
-                            ProductBulkResponse.class,
-                            headers
-                    ), 0,
+            ResponseEntity<ProductBulkResponse> response = RetryUtil.retryHttpCalls( () ->restUtil.makeRestCall(
+                    url,
+                    productBulkRequest,
+                    HttpMethod.POST,
+                    ProductBulkResponse.class,
+                    headers
+            ),0,
                     3,
-                    100, CENTRAL_CATALOGUE_SEARCH);
+                    100,CENTRAL_CATALOGUE_SEARCH);
 
             return response.getBody();
 

@@ -1,9 +1,7 @@
 package com.jswone.commerce.web.controllers;
 
 import com.jswone.commerce.core.model.ApiResponse;
-import com.jswone.commerce.core.model.BulkImageResponse;
 import com.jswone.commerce.core.model.ImageMetadata;
-import com.jswone.commerce.core.model.request.ProductBulkRequest;
 import com.jswone.commerce.core.model.request.Search.SearchRequest;
 import com.jswone.commerce.core.model.response.search.SearchResponse;
 import com.jswone.commerce.core.service.CentralCatalogueService;
