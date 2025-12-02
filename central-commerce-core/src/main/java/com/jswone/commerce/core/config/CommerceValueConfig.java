@@ -69,6 +69,9 @@ public class CommerceValueConfig {
     @Value("${central.catalogue.generic.search.endpoint}")
     private String centralCatalogueGenericSearchEndpoint;
 
+    @Value("${central.catalogue.bulk.typeid.endpoint}")
+    private String centralCatalogueBulkTypeIdEndpoint;
+
     @Value("${central.catalogue.api.key}")
     private String centralCatalogueApiKey;
 

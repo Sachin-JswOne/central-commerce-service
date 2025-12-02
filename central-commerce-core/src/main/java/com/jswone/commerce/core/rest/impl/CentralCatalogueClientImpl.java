@@ -3,10 +3,12 @@ package com.jswone.commerce.core.rest.impl;
 import com.jswone.commerce.core.config.CommerceValueConfig;
 import com.jswone.commerce.core.exceptions.CentralCatalogueServiceException;
 import com.jswone.commerce.core.model.request.ProductBulkRequest;
+import com.jswone.commerce.core.model.request.ProductTypeBulkRequest;
 import com.jswone.commerce.core.model.request.Search.SearchRequest;
 import com.jswone.commerce.core.model.request.centralCatalogue.CentralCatalogueSearchRequest;
 import com.jswone.commerce.core.model.response.centralCatalogue.ProductBulkResponse;
 import com.jswone.commerce.core.model.response.centralCatalogue.ProductSearchResponse;
+import com.jswone.commerce.core.model.response.centralCatalogue.ProductTypeBulkResponse;
 import com.jswone.commerce.core.rest.CentralCatalogueClient;
 import com.jswone.commerce.core.util.RestUtil;
 import com.jswone.commerce.core.util.RetryUtil;
@@ -16,6 +18,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.HttpClientErrorException;
+import org.springframework.web.util.UriComponentsBuilder;
 
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
@@ -24,7 +27,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import static com.jswone.commerce.core.constants.GenericConstants.CENTRAL_CATALOGUE_SEARCH;
+import static com.jswone.commerce.core.constants.GenericConstants.*;
 import static com.jswone.commerce.core.constants.RestConstants.CLIENT_ID;
 import static com.jswone.commerce.core.constants.RestConstants.X_API_KEY;
 import static io.grpc.netty.shaded.io.netty.handler.codec.http.HttpHeaders.Values.APPLICATION_JSON;
@@ -76,7 +79,7 @@ public class CentralCatalogueClientImpl implements CentralCatalogueClient {
                     ),
                     0,
                     3,
-                    100,CENTRAL_CATALOGUE_SEARCH
+                    100, CENTRAL_CATALOGUE_SEARCH
             );
 
             return response.getBody();
@@ -129,15 +132,15 @@ public class CentralCatalogueClientImpl implements CentralCatalogueClient {
                     "Content-Type", "application/json"
             );
 
-            ResponseEntity<ProductBulkResponse> response = RetryUtil.retryHttpCalls( () ->restUtil.makeRestCall(
-                    url,
-                    productBulkRequest,
-                    HttpMethod.POST,
-                    ProductBulkResponse.class,
-                    headers
-            ),0,
+            ResponseEntity<ProductBulkResponse> response = RetryUtil.retryHttpCalls(() -> restUtil.makeRestCall(
+                            url,
+                            productBulkRequest,
+                            HttpMethod.POST,
+                            ProductBulkResponse.class,
+                            headers
+                    ), 0,
                     3,
-                    100,CENTRAL_CATALOGUE_SEARCH);
+                    100, CENTRAL_CATALOGUE_BULK_MMID);
 
             return response.getBody();
 
@@ -155,6 +158,59 @@ public class CentralCatalogueClientImpl implements CentralCatalogueClient {
         }
     }
 
+    public ProductTypeBulkResponse bulkTypeIdResponse(ProductTypeBulkRequest productTypeBulkRequest) {
+        try {
+            String baseUrl = commerceValueConfig.getCentralCatalogueBaseUrl()
+                    + commerceValueConfig.getCentralCatalogueBulkTypeIdEndpoint();
+
+            UriComponentsBuilder uriBuilder = UriComponentsBuilder.fromUriString(baseUrl);
+
+            if (productTypeBulkRequest.getStorefront() != null) {
+                uriBuilder.queryParam("storefront", productTypeBulkRequest.getStorefront());
+            }
+
+            // ids=323,447,14,...  (comma-separated as required)
+            if (productTypeBulkRequest.getProductTypeIds() != null &&
+                    !productTypeBulkRequest.getProductTypeIds().isEmpty()) {
+
+                String commaSeparatedIds = String.join(",", productTypeBulkRequest.getProductTypeIds());
+                uriBuilder.queryParam("ids", commaSeparatedIds);
+            }
+
+            String finalUrl = uriBuilder.toUriString();
+
+            Map<String, String> headers = Map.of(
+                    X_API_KEY, "7cbfc9d1-027f-46cd-90b9-db1288ee8d85",
+                    CLIENT_ID, "69ab4721-0c01-475c-94bd-765f9beeb978",
+//                    X_API_KEY, commerceValueConfig.getCentralCatalogueApiKey(),
+//                    CLIENT_ID, commerceValueConfig.getCentralCatalogueClientId(),
+                    "Content-Type", "application/json"
+            );
+
+            ResponseEntity<ProductTypeBulkResponse> response =
+                    RetryUtil.retryHttpCalls(
+                            () -> restUtil.makeRestCall(
+                                    finalUrl,
+                                    null,
+                                    HttpMethod.GET,
+                                    ProductTypeBulkResponse.class,
+                                    headers), 0, 3, 100, CENTRAL_CATALOGUE_ADMIN_BULK_TYPEID);
+
+            return response.getBody();
+
+        } catch (HttpClientErrorException e) {
+            log.error("HttpClientErrorException calling Central Catalogue Admin bulk Product Type Id API: {}",
+                    e.getMessage(), e);
+
+            throw new CentralCatalogueServiceException(
+                    String.format(
+                            "HttpClientErrorException calling Central Catalogue Admin bulk Product Type Id API: %s",
+                            e.getMessage()
+                    ),
+                    HttpStatus.valueOf(e.getStatusCode().value())
+            );
+        }
+    }
 
     private String encode(String value) {
         return URLEncoder.encode(value, StandardCharsets.UTF_8);

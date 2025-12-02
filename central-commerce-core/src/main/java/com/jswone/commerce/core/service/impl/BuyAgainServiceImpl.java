@@ -5,15 +5,17 @@ import com.jswone.commerce.core.config.CommerceValueConfig;
 import com.jswone.commerce.core.constants.CacheNames;
 import com.jswone.commerce.core.entity.PurchasedSku;
 import com.jswone.commerce.core.entity.catalogue.ProductCatalogueStore;
-import com.jswone.commerce.core.entity.catalogue.ProductMedia;
 import com.jswone.commerce.core.entity.catalogue.QuantityCard;
 import com.jswone.commerce.core.model.DistributedBuyAgainResponse;
 import com.jswone.commerce.core.model.PurchasedLineItemResponse;
 import com.jswone.commerce.core.model.Uom;
 import com.jswone.commerce.core.model.centralCatalogue.Product;
+import com.jswone.commerce.core.model.centralCatalogue.ProductTypeData;
 import com.jswone.commerce.core.model.centralCatalogue.Variant;
 import com.jswone.commerce.core.model.request.ProductBulkRequest;
+import com.jswone.commerce.core.model.request.ProductTypeBulkRequest;
 import com.jswone.commerce.core.model.response.centralCatalogue.ProductBulkResponse;
+import com.jswone.commerce.core.model.response.centralCatalogue.ProductTypeBulkResponse;
 import com.jswone.commerce.core.repository.ProductCatalogueStoreRepository;
 import com.jswone.commerce.core.rest.CentralCatalogueClient;
 import com.jswone.commerce.core.service.BuyAgainService;
@@ -35,6 +37,7 @@ import static com.jswone.commerce.core.config.ProfileAwareCacheConfig.getCacheNa
 import static com.jswone.commerce.core.constants.BuyAgainConstants.LOCALE_EN_US;
 import static com.jswone.commerce.core.constants.JSWProductConstants.EMPTY_STRING;
 import static com.jswone.commerce.core.constants.JWTConstants.HYPHEN;
+import static com.jswone.commerce.core.util.CatalogueUtil.extractImage;
 import static com.jswone.commerce.core.util.CatalogueUtil.str;
 
 @Slf4j
@@ -150,8 +153,6 @@ public class BuyAgainServiceImpl implements BuyAgainService {
 
         String customerId = JwtTokenUtil.getUserIdForSession();
 
-//        String customerId = "6602c25d-d2d5-4d67-9166-0452d09e6994";
-
         log.info("Buy_Again - Fetching customer for customerId={}", customerId);
 
         // Fetch customer data
@@ -242,6 +243,14 @@ public class BuyAgainServiceImpl implements BuyAgainService {
         ProductBulkResponse productBulkMMIDResponse = fetchCentralCatalogueProductsWithRetry(productMMIDList);
         Map<String, Product> centralCatalogueProductMap = mapCentralCatalogueProducts(productBulkMMIDResponse);
 
+        Set<String> productTypeIds = productBulkMMIDResponse.getProducts().stream()
+                .map(Product::getProductTypeId)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toSet());
+        log.info("Buy_Again - Calling Cental Catalogue Admin Bulk API with Product Type Id Count={}", productTypeIds.size());
+        ProductTypeBulkResponse productTypeIdBulkResponse = fetchCentralCatalogueAdminProductsWithRetry(productTypeIds);
+        Map<String, com.jswone.commerce.core.model.centralCatalogue.QuantityCard> productQuantityCardMap = mapProductTypeIdToQuantityCard(productTypeIdBulkResponse);
+
         List<PurchasedLineItemResponse> lineItemResponseList = new ArrayList<>();
         log.info("Buy_Again - Preparing purchased line item response");
 
@@ -253,15 +262,15 @@ public class BuyAgainServiceImpl implements BuyAgainService {
             Product centralCatalogueProduct = centralCatalogueProductMap.get(productMMID);
 
             if (Objects.nonNull(centralCatalogueProduct)) {
-
-                lineItemResponseList.add(buildPurchasedLineItemResponse(purchasedSku, centralCatalogueProduct, productCatalogueStore));
+                com.jswone.commerce.core.model.centralCatalogue.QuantityCard centralCatalogueQuantityCard = productQuantityCardMap.get(centralCatalogueProduct.getProductTypeId());
+                lineItemResponseList.add(buildPurchasedLineItemResponse(purchasedSku, centralCatalogueProduct, productCatalogueStore, centralCatalogueQuantityCard));
                 log.info("Buy_Again - Prepared purchased line item response list of size={}", lineItemResponseList.size());
             }
         }
         return buildDistributedBuyAgainResponse(lineItemResponseList);
     }
 
-    private PurchasedLineItemResponse buildPurchasedLineItemResponse(PurchasedSku purchasedSku, Product centralProduct, ProductCatalogueStore productStore) {
+    private PurchasedLineItemResponse buildPurchasedLineItemResponse(PurchasedSku purchasedSku, Product centralProduct, ProductCatalogueStore productStore, com.jswone.commerce.core.model.centralCatalogue.QuantityCard centralCatalogueQuantityCard) {
         Variant matchVariant = validateVariant(purchasedSku.getVariantKey(), centralProduct);
 
         SimpleDateFormat sdf = new SimpleDateFormat(DATE_FORMAT);
@@ -275,7 +284,7 @@ public class BuyAgainServiceImpl implements BuyAgainService {
                         .orElse(purchasedSku.getSkuAttributes()))
                 .ctAttributes(purchasedSku.getCtSkuAttributes())
                 .variantKey(purchasedSku.getVariantKey())
-                .quantityCard(resolveQuantityCard(productStore))
+                .quantityCard(resolveQuantityCard(centralCatalogueQuantityCard))
                 .attributesMeta(purchasedSku.getCtSkuAttributes() == null ? Collections.emptySet() : purchasedSku.getCtSkuAttributes().keySet())
                 .sku(purchasedSku.getVariantName())
                 .primaryUom(purchasedSku.getPrimaryQuantity())
@@ -285,7 +294,7 @@ public class BuyAgainServiceImpl implements BuyAgainService {
                 .productMMID(centralProduct.getProductMmid())
                 .productTypeKey(productStore.getProductTypeKey())
                 .variantMMID(generateVariantMMID(centralProduct))
-                .imageUrl(resolveImageUrl(productStore))
+                .imageUrl(extractImage(centralProduct))
                 .build();
     }
 
@@ -338,19 +347,34 @@ public class BuyAgainServiceImpl implements BuyAgainService {
         }
     }
 
-    private QuantityCard resolveQuantityCard(ProductCatalogueStore productCatalogueStore) {
-        return commerceValueConfig.isPdpJourneyEnabled()
-                ? productCatalogueStore.getPdpJourney().getQuantityCard()
-                : productCatalogueStore.getDistributedJourney().getQuantityCard();
+    private ProductTypeBulkResponse fetchCentralCatalogueAdminProductsWithRetry(Set<String> productTypeIdList) {
+
+        if (productTypeIdList == null || productTypeIdList.isEmpty()) {
+            return new ProductTypeBulkResponse(200, "Success", Collections.emptyMap()
+            );
+        }
+
+        log.info("Buy_Again - Calling Central Catalogue Admin Product Bulk API with Product Type Id Count={}",
+                productTypeIdList.size());
+
+        try {
+            ProductTypeBulkRequest request = new ProductTypeBulkRequest(productTypeIdList, "msme");
+            return centralCatalogueClient.bulkTypeIdResponse(request);
+        } catch (Exception e) {
+            log.error("Buy_Again - Central catalogue call failed (client retries already attempted): {}",
+                    e.getMessage(), e);
+            return new ProductTypeBulkResponse(200, "Success", Collections.emptyMap()
+            );
+        }
     }
 
-    private String resolveImageUrl(ProductCatalogueStore productCatalogueStore) {
-        return Optional.ofNullable(productCatalogueStore)
-                .map(ProductCatalogueStore::getProductMedia)
-                .map(ProductMedia::getImages)
-                .filter(images -> !images.isEmpty())
-                .map(images -> images.getFirst().getUrl())
-                .orElse(EMPTY_STRING);
+    private QuantityCard resolveQuantityCard(com.jswone.commerce.core.model.centralCatalogue.QuantityCard centralCatalogueQuantityCard) {
+        return QuantityCard.builder()
+                .identifier(centralCatalogueQuantityCard.getUom().getUiLabelQuantity())
+                .displayName(centralCatalogueQuantityCard.getLabel())
+                .measureUnit(centralCatalogueQuantityCard.getUom().getUiLabelQuantity())
+                .hasDecimal(centralCatalogueQuantityCard.getUom().getQuantityPrecision() > 0)
+                .build();
     }
 
     private String generateVariantMMID(Product centralCatalogueProduct) {
@@ -412,6 +436,35 @@ public class BuyAgainServiceImpl implements BuyAgainService {
                 ? productBulkResponse.getProducts().stream().filter(Objects::nonNull)
                 .collect(Collectors.toMap(Product::getProductMmid, Function.identity(), (a, b) -> a))
                 : Collections.emptyMap();
+    }
+
+    private Map<String, com.jswone.commerce.core.model.centralCatalogue.QuantityCard> mapProductTypeIdToQuantityCard(ProductTypeBulkResponse productTypeBulkResponse) {
+
+        if (productTypeBulkResponse == null || productTypeBulkResponse.getData() == null || productTypeBulkResponse.getData().isEmpty()) {
+            return Collections.emptyMap();
+        }
+
+        return productTypeBulkResponse.getData()
+                .entrySet()
+                .stream()
+                .map(entry -> {
+                    String productTypeId = entry.getKey();
+                    ProductTypeData data = entry.getValue();
+
+                    if (data == null || data.getQuantityCards() == null) {
+                        return null;
+                    }
+
+                    // Find rank 0 card
+                    return data.getQuantityCards()
+                            .stream()
+                            .filter(card -> card.getRank() == 0)
+                            .findFirst()
+                            .map(card -> Map.entry(productTypeId, card))
+                            .orElse(null);
+                })
+                .filter(Objects::nonNull)
+                .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
     }
 
     private Cache getBuyAgainCache() {
