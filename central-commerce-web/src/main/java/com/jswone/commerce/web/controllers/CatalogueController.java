@@ -34,7 +34,7 @@ public class CatalogueController implements CentralBaseController{
         return ApiResponseUtil.createSuccessResponse(centralCatalogueService.searchCatalogue(searchRequest), HttpStatus.OK);
     }
 
-    @PostMapping("/catalogue/images/bulk")
+    @PostMapping("/catalogue/images")
     public ApiResponse<Map<String, ImageMetadata>> fetchBulkImages(@RequestBody List<String> productMmIds) {
         log.info("Received request for bulk images API :{} ", productMmIds);
         if (productMmIds == null || productMmIds.isEmpty()) {
