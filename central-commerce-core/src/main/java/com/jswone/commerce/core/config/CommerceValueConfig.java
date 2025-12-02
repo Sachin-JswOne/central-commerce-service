@@ -110,4 +110,16 @@ public class CommerceValueConfig {
 
     @Value("${buy.again.warmup.max-entries}")
     private long buyAgainWarmupMaxEntries;
+
+    @Value("${master.data.service.base.url}")
+    private String masterDataServiceBaseUrl;
+
+    @Value("${master.data.bulk.product.mmid.endpoint}")
+    private String bulkMasterDataProductMMIDEndpoint;
+
+    @Value("${master.data.bulk.product.mmid.api.key}")
+    private String bulkMasterDataProductMMIDApiKey;
+
+    @Value("${master.data.bulk.product.mmid.client.id}")
+    private String bulkMasterDataProductMMIDClientId;
 }

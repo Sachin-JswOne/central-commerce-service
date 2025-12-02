@@ -1,7 +1,6 @@
-package com.jswone.commerce.core.model.response;
+package com.jswone.commerce.core.model;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
-import com.jswone.commerce.core.model.Uom;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -12,9 +11,9 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 @NoArgsConstructor
 @JsonInclude(JsonInclude.Include.NON_NULL)
-public class UomConvertResponse {
+public class UomConvert {
 
     private String productMMID;
-    private Uom primaryUom;
-    private Uom secondaryUom;
+    private UomValueDetails<?> primaryUom;
+    private UomValueDetails<?> secondaryUom;
 }

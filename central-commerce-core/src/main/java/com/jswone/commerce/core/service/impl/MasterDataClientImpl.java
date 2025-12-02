@@ -1,11 +1,11 @@
 package com.jswone.commerce.core.service.impl;
 
+import com.jswone.commerce.core.config.CommerceValueConfig;
 import com.jswone.commerce.core.model.masters.Data;
 import com.jswone.commerce.core.model.masters.ProductDetailBulkResponse;
 import com.jswone.commerce.core.service.MasterDataClient;
 import com.jswone.commerce.core.util.RestUtil;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
@@ -15,23 +15,20 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+import static com.jswone.commerce.core.constants.RestConstants.CLIENT_ID;
+import static com.jswone.commerce.core.constants.RestConstants.X_API_KEY;
+
 @Service
 @Slf4j
 public class MasterDataClientImpl implements MasterDataClient {
 
     private final RestUtil restUtil;
 
-    @Value("${master.data.service.base.url}")
-    private String masterDataServiceBaseUrl;
+    private final CommerceValueConfig commerceValueConfig;
 
-    @Value("${product.catalogue.detail.bulk.url}")
-    private String bulkProductCatalogueDetailUrl;
-
-    @Value("${master.data.service.catalogue.detail.api.key}")
-    private String bulkProductCatalogueDetailApiKey;
-
-    public MasterDataClientImpl(RestUtil restUtil) {
+    public MasterDataClientImpl(RestUtil restUtil, CommerceValueConfig commerceValueConfig) {
         this.restUtil = restUtil;
+        this.commerceValueConfig = commerceValueConfig;
     }
 
     @Override
@@ -47,9 +44,13 @@ public class MasterDataClientImpl implements MasterDataClient {
     public Map<String, Data> getProductDetailsFromMasters(List<String> productMMIdList) {
 
         try {
-            String url = masterDataServiceBaseUrl + bulkProductCatalogueDetailUrl;
+            String url = commerceValueConfig.getMasterDataServiceBaseUrl() + commerceValueConfig.getBulkMasterDataProductMMIDEndpoint();
 
-            Map<String, String> headers = Map.of("X-API-KEY", bulkProductCatalogueDetailApiKey);
+            Map<String, String> headers = Map.of(
+                    X_API_KEY, commerceValueConfig.getBulkMasterDataProductMMIDApiKey(),
+                    CLIENT_ID, commerceValueConfig.getBulkMasterDataProductMMIDClientId(),
+                    "Content-Type", "application/json"
+            );
 
             Map<String, List<String>> body = Map.of("mmids", productMMIdList);
 

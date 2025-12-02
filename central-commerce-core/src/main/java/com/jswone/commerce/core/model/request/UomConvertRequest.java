@@ -1,25 +1,22 @@
 package com.jswone.commerce.core.model.request;
 
-import com.jswone.commerce.core.model.Attribute;
+import com.jswone.commerce.core.model.PurchasedUom;
+import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotEmpty;
-import jakarta.validation.constraints.NotNull;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-import java.util.Set;
+import java.util.List;
 
 @Data
+@Builder
 @AllArgsConstructor
 @NoArgsConstructor
-@Builder
 public class UomConvertRequest {
 
+    @Valid
     @NotEmpty
-    private String productMMID;
-    @NotNull
-    private Attribute customAttribute;
-    @NotNull
-    private Set<Attribute> productAttributes;
+    List<PurchasedUom> uomRequests;
 }
