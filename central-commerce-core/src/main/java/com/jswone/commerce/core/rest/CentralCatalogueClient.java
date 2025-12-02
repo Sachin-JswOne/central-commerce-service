@@ -8,7 +8,6 @@ import com.jswone.commerce.core.model.response.centralCatalogue.ProductBulkRespo
 import com.jswone.commerce.core.model.response.centralCatalogue.ProductSearchResponse;
 import com.jswone.commerce.core.model.response.centralCatalogue.ProductTypeBulkResponse;
 
-import java.util.List;
 import java.util.Map;
 import java.util.Set;
 

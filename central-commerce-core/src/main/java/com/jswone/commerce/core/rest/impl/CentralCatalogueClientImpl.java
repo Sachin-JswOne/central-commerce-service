@@ -26,7 +26,13 @@ import org.springframework.web.client.HttpServerErrorException;
 
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
-import java.util.*;
+import java.util.Map;
+import java.util.Set;
+import java.util.List;
+import java.util.Optional;
+import java.util.HashMap;
+import java.util.Collections;
+import java.util.Objects;
 
 import static com.jswone.commerce.core.constants.GenericConstants.*;
 import static com.jswone.commerce.core.constants.RestConstants.CLIENT_ID;
@@ -222,9 +228,8 @@ public class CentralCatalogueClientImpl implements CentralCatalogueClient {
                     "Content-Type", "application/json"
             );
 
-            List<String> mmidList = new ArrayList<>(productMmIds);
             ProductBulkRequest productBulkRequest = new ProductBulkRequest();
-            productBulkRequest.setProductMMIDS(mmidList);
+            productBulkRequest.setProductMMIDS(productMmIds);
             productBulkRequest.setStorefront("msme");
 
             log.info("Calling Central Catalogue bulk MMIDs API with url for images: {}", url);

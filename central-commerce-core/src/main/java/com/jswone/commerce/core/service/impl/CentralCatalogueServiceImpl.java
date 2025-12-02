@@ -10,7 +10,6 @@ import com.jswone.commerce.core.service.CentralCatalogueService;
 import com.jswone.commerce.core.validators.CatalogueValidator;
 import org.springframework.stereotype.Service;
 
-import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
