@@ -4,8 +4,8 @@ import com.jswone.commerce.core.exceptions.CentralCommerceServiceException;
 import com.jswone.commerce.core.mapper.BreadcrumbMapper;
 import com.jswone.commerce.core.mapper.CategoryMapper;
 import com.jswone.commerce.core.model.*;
+import com.jswone.commerce.core.rest.CentralCatalogueClient;
 import com.jswone.commerce.core.service.CatalogueCategoryService;
-import com.jswone.commerce.core.service.CentralCatalogueClient;
 import java.util.List;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -27,6 +27,7 @@ public class CatalogueCategoryServiceImpl implements CatalogueCategoryService {
     this.categoryMapper = categoryMapper;
   }
 
+  @Override
   public CategoryTreeResponse getCatalogueCategoryTree() {
 
     List<CatalogueCategoryTree> catalogueCategoryTree = centralCatalogueClient.getCategoryTree();
@@ -43,6 +44,7 @@ public class CatalogueCategoryServiceImpl implements CatalogueCategoryService {
     return categoryTreeResponse;
   }
 
+  @Override
   public BreadcrumbData getBreadcrumbData(String categoryId) {
     CatalogueBreadCrumbData catalogueBreadcrumbResponse =
         centralCatalogueClient.getBreadcrumb(categoryId);

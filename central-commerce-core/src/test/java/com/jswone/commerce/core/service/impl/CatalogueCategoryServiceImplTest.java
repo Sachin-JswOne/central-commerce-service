@@ -6,7 +6,7 @@ import com.jswone.commerce.core.exceptions.CentralCommerceServiceException;
 import com.jswone.commerce.core.mapper.CategoryMapper;
 import com.jswone.commerce.core.model.CatalogueCategoryTreeResponse;
 import com.jswone.commerce.core.model.CategoryTreeResponse;
-import com.jswone.commerce.core.service.CentralCatalogueClient;
+import com.jswone.commerce.core.rest.CentralCatalogueClient;
 import com.jswone.commerce.core.util.CatalogueTestUtilCore;
 import java.io.IOException;
 import org.junit.jupiter.api.Test;
@@ -22,7 +22,8 @@ class CatalogueCategoryServiceImplTest {
 
   @InjectMocks private CatalogueCategoryServiceImpl service;
 
-  @Mock CentralCatalogueClient centralCatalogueClient;
+  @Mock
+  CentralCatalogueClient centralCatalogueClient;
 
   @Mock CategoryMapper categoryMapper;
 

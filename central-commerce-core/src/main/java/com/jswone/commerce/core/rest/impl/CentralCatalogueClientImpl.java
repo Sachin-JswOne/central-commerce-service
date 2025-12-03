@@ -5,6 +5,11 @@ import com.jswone.commerce.core.exceptions.CentralCatalogueServiceException;
 import com.jswone.commerce.core.model.ImageMetadata;
 import com.jswone.commerce.core.model.centralCatalogue.MetaData;
 import com.jswone.commerce.core.model.centralCatalogue.ProductMedia;
+import com.jswone.commerce.core.exceptions.CentralCommerceServiceException;
+import com.jswone.commerce.core.model.CatalogueBreadCrumbData;
+import com.jswone.commerce.core.model.CatalogueBreadcrumbResponse;
+import com.jswone.commerce.core.model.CatalogueCategoryTree;
+import com.jswone.commerce.core.model.CatalogueCategoryTreeResponse;
 import com.jswone.commerce.core.model.request.ProductBulkRequest;
 import com.jswone.commerce.core.model.request.ProductTypeBulkRequest;
 import com.jswone.commerce.core.model.request.Search.SearchRequest;
@@ -16,12 +21,11 @@ import com.jswone.commerce.core.rest.CentralCatalogueClient;
 import com.jswone.commerce.core.util.RestUtil;
 import com.jswone.commerce.core.util.RetryUtil;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.http.HttpMethod;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
+import org.springframework.http.*;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.util.UriComponentsBuilder;
+import org.springframework.web.client.HttpServerErrorException;
 import org.springframework.web.client.HttpServerErrorException;
 
 import java.net.URLEncoder;
@@ -37,6 +41,7 @@ import java.util.Objects;
 import static com.jswone.commerce.core.constants.GenericConstants.*;
 import static com.jswone.commerce.core.constants.RestConstants.CLIENT_ID;
 import static com.jswone.commerce.core.constants.RestConstants.X_API_KEY;
+import static com.jswone.commerce.core.util.CatalogueUtil.extractErrorMessage;
 import static io.grpc.netty.shaded.io.netty.handler.codec.http.HttpHeaders.Values.APPLICATION_JSON;
 import static org.apache.http.HttpHeaders.CONTENT_TYPE;
 
@@ -165,6 +170,80 @@ public class CentralCatalogueClientImpl implements CentralCatalogueClient {
         }
     }
 
+    public List<CatalogueCategoryTree> getCategoryTree() {
+        try {
+            log.info(
+                    "Calling external central catalogue category tree API: {}",
+                    commerceValueConfig.getCatalogueCategoryBaseUrl());
+
+            Map<String, String> headers = Map.of(
+                    X_API_KEY, commerceValueConfig.getCatalogueCategoryApiKey(),
+                    CLIENT_ID, commerceValueConfig.getCatalogueCategoryClientId()
+            );
+
+            String url = commerceValueConfig.getCatalogueCategoryBaseUrl().concat("/category-tree");
+
+            ResponseEntity<CatalogueCategoryTreeResponse> response =
+                    restUtil.makeRestCall(url, null, HttpMethod.GET, CatalogueCategoryTreeResponse.class, headers);
+
+            if (response.getStatusCode() != HttpStatus.OK || response.getBody() == null) {
+                log.error("Failed to fetch catalogue category tree data: {}", response.getStatusCode());
+                throw new CentralCommerceServiceException(
+                        "Failed to fetch catalogue category tree ", (HttpStatus) response.getStatusCode());
+            }
+
+            log.info("Central catalogue tree API call successful");
+            return response.getBody() != null ? response.getBody().getData() : Collections.emptyList();
+
+        } catch (HttpClientErrorException | HttpServerErrorException ex) {
+            log.error("Error calling catalogue tree API: {}", ex.getMessage(), ex);
+            String errorMessage = extractErrorMessage(ex.getResponseBodyAsString());
+            throw new CentralCatalogueServiceException(errorMessage, (HttpStatus) ex.getStatusCode());
+
+        } catch (Exception ex) {
+            log.error("Error calling external Catalogue API: {}", ex.getMessage(), ex);
+            throw new CentralCommerceServiceException(
+                    "Error calling central catalogue category tree API: ",
+                    HttpStatus.INTERNAL_SERVER_ERROR,
+                    ex);
+        }
+    }
+
+    public CatalogueBreadCrumbData getBreadcrumb(String categoryId) {
+        String url =
+                commerceValueConfig.getCatalogueCategoryBaseUrl().concat("/category/").concat(categoryId);
+        log.info("Calling Central Catalogue breadcrumb API: {}", url);
+
+        try {
+
+            Map<String, String> headers = Map.of(
+                    X_API_KEY, commerceValueConfig.getCatalogueCategoryApiKey(),
+                    CLIENT_ID, commerceValueConfig.getCatalogueCategoryClientId()
+            );
+
+            ResponseEntity<CatalogueBreadcrumbResponse> response =
+                    restUtil.makeRestCall(url, categoryId, HttpMethod.GET, CatalogueBreadcrumbResponse.class, headers);
+
+            if (response.getStatusCode() != HttpStatus.OK || response.getBody() == null) {
+                log.error("Failed to fetch catalogue breadcrumb data: {}", response.getStatusCode());
+                throw new CentralCommerceServiceException(
+                        "Failed to fetch catalogue breadcrumb data", (HttpStatus) response.getStatusCode());
+            }
+
+            log.info("Central catalogue breadcrumb API call successful");
+            return response.getBody() != null ? response.getBody().getData() : null;
+
+        } catch (HttpClientErrorException | HttpServerErrorException ex) {
+            log.error("Error calling catalogue breadcrumb API: {}", ex.getMessage(), ex);
+            String errorMessage = extractErrorMessage(ex.getResponseBodyAsString());
+            throw new CentralCatalogueServiceException(errorMessage, (HttpStatus) ex.getStatusCode());
+
+        } catch (Exception ex) {
+            log.error("Error calling catalogue breadcrumb API: {}", ex.getMessage(), ex);
+            throw new CentralCommerceServiceException(
+                    "Error calling central catalogue breadcrumb API", HttpStatus.INTERNAL_SERVER_ERROR, ex);
+        }
+    }
     public ProductTypeBulkResponse bulkTypeIdResponse(ProductTypeBulkRequest productTypeBulkRequest) {
         try {
             String baseUrl = commerceValueConfig.getCentralCatalogueBaseUrl()
