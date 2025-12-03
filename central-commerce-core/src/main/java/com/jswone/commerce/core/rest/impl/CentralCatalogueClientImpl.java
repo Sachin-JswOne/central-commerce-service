@@ -21,11 +21,12 @@ import com.jswone.commerce.core.rest.CentralCatalogueClient;
 import com.jswone.commerce.core.util.RestUtil;
 import com.jswone.commerce.core.util.RetryUtil;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.http.*;
+import org.springframework.http.HttpMethod;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.util.UriComponentsBuilder;
-import org.springframework.web.client.HttpServerErrorException;
 import org.springframework.web.client.HttpServerErrorException;
 
 import java.net.URLEncoder;
@@ -244,6 +245,7 @@ public class CentralCatalogueClientImpl implements CentralCatalogueClient {
                     "Error calling central catalogue breadcrumb API", HttpStatus.INTERNAL_SERVER_ERROR, ex);
         }
     }
+
     public ProductTypeBulkResponse bulkTypeIdResponse(ProductTypeBulkRequest productTypeBulkRequest) {
         try {
             String baseUrl = commerceValueConfig.getCentralCatalogueBaseUrl()
