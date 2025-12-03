@@ -1,10 +1,13 @@
 package com.jswone.commerce.web.controllers;
 
 import com.jswone.commerce.core.model.ApiResponse;
-import com.jswone.commerce.core.service.impl.CacheService;
+import com.jswone.commerce.core.service.CacheService;
+import com.jswone.commerce.core.util.ApiResponseUtil;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.Map;
@@ -19,17 +22,28 @@ public class CacheController implements CentralBaseController {
         this.cacheService = cacheService;
     }
 
-    @GetMapping("/all/cache")
-    public ApiResponse<Map<String, Integer>> getAllCache() {
-        log.info("Request to get all redis cache");
-
-        return ApiResponse.<Map<String, Integer>>builder().data(cacheService.getAllCache()).build();
+    @GetMapping("/buy-again/cache/keys")
+    public ApiResponse<Map<String, Object>> getBuyAgainCacheKeys() {
+        log.info("Fetching all buy-again cache keys");
+        return cacheService.fetchBuyAgainKeys();
     }
 
     @DeleteMapping("/buy-again/cache/clear")
     public ApiResponse<Map<String, Object>> deleteBuyAgainCache() {
-        log.info("Request to clear buy-again cache");
+        log.info("Clearing buy-again cache");
+        return cacheService.deleteBuyAgainKeys();
+    }
 
-        return cacheService.deleteBuyAgainCache();
+    @PostMapping("/buy-again/cache/warmup")
+    public ApiResponse<String> buyAgainProductsWarmupCache() {
+        try {
+            cacheService.loadAllBuyAgainProductsForCustomersIntoCache();
+            return ApiResponseUtil.createSuccessResponse("Cache warm-up of buy again products for all customers completed!",
+                    HttpStatus.OK);
+        } catch (Exception e) {
+            log.error("Error during buy-again product cache warmup", e);
+            return ApiResponseUtil.createErrorResponse("Cache warm-up of buy again products for all customers failed: "
+                    + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
+        }
     }
 }
