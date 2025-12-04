@@ -4,11 +4,10 @@ public class NotificationConstants {
 
     public static final String TEAMS = "TEAMS";
 
-    public static final String BUY_AGAIN_CACHE_WARM_UP_FAILURE_MESSAGE =
-            "BUY-AGAIN Cache Warm-up Failed "
-                    + "Retries attempted: %s. "
-                    + "Total failed customer IDs: %s. "
-                    + "The following customer IDs could not be cached even after all retries: %s. "
-                    + "Please check the service logs for more details";
-
+    public static final String BUY_AGAIN_CACHE_WARM_UP_SUMMARY_MESSAGE =
+            "===== Buy-Again Cache Warm-up Summary =====\n"
+                    + "\nRetries Attempted: %s\n"
+                    + "\nTotal Failed Customer IDs: %s\n"
+                    + "\nCustomer IDs that could not be cached:\n%s\n"
+                    + "\nPlease check the Central Commerce Service logs for more details.";
 }

@@ -108,12 +108,6 @@ public class CommerceValueConfig {
     @Value("${central.commerce.cloud.cache.certificate}")
     private String cacheCertificateSecret;
 
-    @Value("${pdp.journey.enabled}")
-    private boolean pdpJourneyEnabled;
-
-    @Value("${buy.again.warmup.max-entries}")
-    private long buyAgainWarmupMaxEntries;
-
     @Value("${notification.service.v1.token}")
     private String notificationServiceToken;
 

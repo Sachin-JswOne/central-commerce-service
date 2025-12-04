@@ -182,14 +182,12 @@ public class BuyAgainServiceImpl implements BuyAgainService {
                                 : purchasedSku.getSkuAttributes())
                 .ctAttributes(purchasedSku.getCtSkuAttributes())
                 .variantKey(purchasedSku.getVariantKey())
-                .quantityCard(
-                        commerceValueConfig.isPdpJourneyEnabled()
-                                ? productCatalogueStore
-                                .getPdpJourney()
-                                .getQuantityCard()
-                                : productCatalogueStore
-                                .getDistributedJourney()
-                                .getQuantityCard())
+                .quantityCard(productCatalogueStore
+                        .getPdpJourney() == null || productCatalogueStore
+                        .getPdpJourney()
+                        .getQuantityCard() == null ? QuantityCard.builder().build() : productCatalogueStore
+                        .getPdpJourney()
+                        .getQuantityCard())
                 .attributesMeta(purchasedSku.getCtSkuAttributes().keySet())
                 .sku(purchasedSku.getVariantName())
                 .primaryUom(purchasedSku.getPrimaryQuantity())

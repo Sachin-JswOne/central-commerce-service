@@ -14,7 +14,6 @@ import com.jswone.commerce.core.service.NotificationService;
 import com.jswone.commerce.core.service.PurchasedSkuService;
 import com.jswone.commerce.core.util.ApiResponseUtil;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.cache.CacheManager;
 import org.springframework.data.redis.core.Cursor;
 import org.springframework.data.redis.core.RedisCallback;
 import org.springframework.data.redis.core.RedisTemplate;
@@ -28,7 +27,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
 import static com.jswone.commerce.core.config.ProfileAwareCacheConfig.getCacheNameWithProfile;
-import static com.jswone.commerce.core.constants.NotificationConstants.BUY_AGAIN_CACHE_WARM_UP_FAILURE_MESSAGE;
+import static com.jswone.commerce.core.constants.NotificationConstants.BUY_AGAIN_CACHE_WARM_UP_SUMMARY_MESSAGE;
 import static com.jswone.commerce.core.constants.NotificationConstants.TEAMS;
 
 @Slf4j
@@ -36,9 +35,8 @@ import static com.jswone.commerce.core.constants.NotificationConstants.TEAMS;
 public class CacheServiceImpl implements CacheService {
 
     private static final int CHUNK_SIZE = 500;
-    private static final int MAX_RETRIES = 2;
 
-    private final CacheManager cacheManager;
+    private static final int MAX_RETRIES = 3;
 
     private final RedisTemplate<String, Object> redisTemplate;
 
@@ -52,8 +50,7 @@ public class CacheServiceImpl implements CacheService {
 
     private final NotificationService notificationService;
 
-    public CacheServiceImpl(CacheManager cacheManager, RedisTemplate<String, Object> redisTemplate, CommerceValueConfig commerceValueConfig, PurchasedSkuService purchasedSkuService, BuyAgainServiceImplV2 buyAgainServiceV2, BuyAgainServiceImpl buyAgainService, NotificationService notificationService) {
-        this.cacheManager = cacheManager;
+    public CacheServiceImpl(RedisTemplate<String, Object> redisTemplate, CommerceValueConfig commerceValueConfig, PurchasedSkuService purchasedSkuService, BuyAgainServiceImplV2 buyAgainServiceV2, BuyAgainServiceImpl buyAgainService, NotificationService notificationService) {
         this.redisTemplate = redisTemplate;
         this.commerceValueConfig = commerceValueConfig;
         this.purchasedSkuService = purchasedSkuService;
@@ -139,7 +136,7 @@ public class CacheServiceImpl implements CacheService {
         log.info("BUY_AGAIN — Warm-up completed. Total={}, Success={}, Failed={}",
                 totalCustomers, totalSuccess, totalFailed);
 
-        // Send Teams alert if failures happened
+        // Send Teams alert if failed customer ids happened
         if (totalFailed > 0) {
             sendNotificationRequest(globalFailedCustomerIds);
         }
@@ -243,13 +240,10 @@ public class CacheServiceImpl implements CacheService {
     private void sendNotificationRequest(List<String> failedCustomerIds) {
         try {
             String message = String.format(
-                    BUY_AGAIN_CACHE_WARM_UP_FAILURE_MESSAGE,
+                    BUY_AGAIN_CACHE_WARM_UP_SUMMARY_MESSAGE,
                     MAX_RETRIES,
-//                    failedCustomerIds.size(),
-                    1,
-//                    String.join(", ", failedCustomerIds)
-                    String.join(", ", "test-customer-id")
-
+                    failedCustomerIds.size(),
+                    String.join(",\n", failedCustomerIds)
             );
 
             NotificationConfig config =
