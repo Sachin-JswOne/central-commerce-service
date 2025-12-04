@@ -25,13 +25,13 @@ public class PurchasedSkuServiceImpl implements PurchasedSkuService {
 
     @Override
     public List<PurchasedSku> fetchRecentlyPurchasedSku(String customerId) {
-        final String sql = "SELECT * FROM public.recent_purchase_vw where customer_id = ?";
+        final String sql = "SELECT * FROM public.recent_purchase_v2_vw where customer_id = ?";
         return jdbcTemplate.query(sql, purchasedSkuRowMapper, customerId);
     }
 
     @Override
     public List<PurchasedSku> fetchRecentlyPurchasedSkuForAllCustomers() {
-        final String sql = "SELECT * FROM public.recent_purchase_vw";
+        final String sql = "SELECT * FROM public.recent_purchase_v2_vw";
         return jdbcTemplate.query(sql, purchasedSkuRowMapper);
     }
 }
