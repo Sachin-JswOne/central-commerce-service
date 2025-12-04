@@ -122,4 +122,13 @@ public class CommerceValueConfig {
 
     @Value("${master.data.bulk.product.mmid.client.id}")
     private String bulkMasterDataProductMMIDClientId;
+
+    @Value("${pricing.service.base.url}")
+    private String pricingServiceBaseUrl;
+
+    @Value("${pricing.service.fetch.price.endpoint}")
+    private String priceFetchEndpoint;
+
+    @Value("${pricing.service.api.key}")
+    private String pricingXApiKey;
 }
