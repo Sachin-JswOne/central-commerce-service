@@ -4,29 +4,21 @@ import com.commercetools.api.models.customer.Customer;
 import com.jswone.commerce.core.config.CommerceValueConfig;
 import com.jswone.commerce.core.constants.CacheNames;
 import com.jswone.commerce.core.entity.PurchasedSku;
-import com.jswone.commerce.core.entity.catalogue.ProductCatalogueStore;
-import com.jswone.commerce.core.entity.catalogue.QuantityCard;
+import com.jswone.commerce.core.entity.catalogue.*;
 import com.jswone.commerce.core.model.DistributedBuyAgainResponse;
 import com.jswone.commerce.core.model.PurchasedLineItemResponse;
-import com.jswone.commerce.core.model.Uom;
-import com.jswone.commerce.core.model.centralCatalogue.Product;
-import com.jswone.commerce.core.model.centralCatalogue.ProductTypeData;
-import com.jswone.commerce.core.model.centralCatalogue.Variant;
-import com.jswone.commerce.core.model.request.ProductBulkRequest;
-import com.jswone.commerce.core.model.request.ProductTypeBulkRequest;
-import com.jswone.commerce.core.model.response.centralCatalogue.ProductBulkResponse;
-import com.jswone.commerce.core.model.response.centralCatalogue.ProductTypeBulkResponse;
 import com.jswone.commerce.core.repository.ProductCatalogueStoreRepository;
-import com.jswone.commerce.core.rest.CentralCatalogueClient;
 import com.jswone.commerce.core.service.BuyAgainService;
 import com.jswone.commerce.core.service.PurchasedSkuService;
 import com.jswone.commerce.core.util.JSWCustomerUtil;
+import com.jswone.commons.constants.JSWGenericConstants;
 import com.jswone.commons.util.JwtTokenUtil;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.cache.Cache;
 import org.springframework.cache.CacheManager;
 import org.springframework.stereotype.Service;
+import org.springframework.util.CollectionUtils;
 
 import java.text.SimpleDateFormat;
 import java.util.*;
@@ -34,11 +26,8 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import static com.jswone.commerce.core.config.ProfileAwareCacheConfig.getCacheNameWithProfile;
-import static com.jswone.commerce.core.constants.BuyAgainConstants.LOCALE_EN_US;
 import static com.jswone.commerce.core.constants.JSWProductConstants.EMPTY_STRING;
 import static com.jswone.commerce.core.constants.JWTConstants.HYPHEN;
-import static com.jswone.commerce.core.util.CatalogueUtil.extractImage;
-import static com.jswone.commerce.core.util.CatalogueUtil.str;
 
 @Slf4j
 @Service
@@ -47,107 +36,25 @@ public class BuyAgainServiceImpl implements BuyAgainService {
     private static final String DATE_FORMAT = "yyyy-MM-dd HH:mm:ss";
     private final PurchasedSkuService purchasedSkuService;
     private final ProductCatalogueStoreRepository productCatalogueStoreRepository;
-    private final CentralCatalogueClient centralCatalogueClient;
     private final JSWCustomerUtil customerUtil;
     private final CacheManager cacheManager;
     private final CommerceValueConfig commerceValueConfig;
 
     public BuyAgainServiceImpl(PurchasedSkuService purchasedSkuService, ProductCatalogueStoreRepository productCatalogueStoreRepository,
-                               CentralCatalogueClient centralCatalogueClient, JSWCustomerUtil customerUtil, CacheManager cacheManager, CommerceValueConfig commerceValueConfig) {
+                               JSWCustomerUtil customerUtil, CacheManager cacheManager, CommerceValueConfig commerceValueConfig) {
         this.purchasedSkuService = purchasedSkuService;
         this.productCatalogueStoreRepository = productCatalogueStoreRepository;
-        this.centralCatalogueClient = centralCatalogueClient;
         this.customerUtil = customerUtil;
         this.cacheManager = cacheManager;
         this.commerceValueConfig = commerceValueConfig;
     }
 
-    /**
-     * Returns a paged {@link DistributedBuyAgainResponse} for the current (session) user.
-     * This method enforces pagination bounds, reads from cache when possible and falls
-     * back to the database and central catalogue when the cache misses.
-     *
-     * @param offset zero-based start index
-     * @param limit  maximum number of items to return
-     * @return paged {@link DistributedBuyAgainResponse};
-     */
     @Override
     public DistributedBuyAgainResponse getRecentPurchasedDistributedOrdersList(int offset, int limit) {
         List<PurchasedLineItemResponse> variantList = getRecentPurchasedDistributedOrdersHome(offset, limit)
                 .getVariantList();
         return buildDistributedBuyAgainResponse(variantList);
     }
-
-    /**
-     * Bulk warm-up: load buy-again products for customers into cache.
-     */
-    public void loadAllBuyAgainProductsForCustomersIntoCache() {
-
-        log.info("BUY_AGAIN — Cache warm-up started...");
-
-        // Fetch all purchase data
-        List<PurchasedSku> purchasedSkuForAllCustomers =
-                purchasedSkuService.fetchRecentlyPurchasedSkuForAllCustomers();
-
-        if (purchasedSkuForAllCustomers == null || purchasedSkuForAllCustomers.isEmpty()) {
-            log.info("BUY_AGAIN — Warm-up skipped: No purchase data found");
-            return;
-        }
-
-//        // Safety cap to avoid memory/Redis overload
-//        long warmupMaxEntries = commerceValueConfig.getBuyAgainWarmupMaxEntries();
-//        if (purchasedSkuForAllCustomers.size() > warmupMaxEntries) {
-//            log.warn("BUY_AGAIN — Warm-up aborted: {} entries exceed max limit ({})",
-//                    purchasedSkuForAllCustomers.size(), warmupMaxEntries);
-//            return;
-//        }
-
-        // Group by customer ID
-        Map<String, List<PurchasedSku>> grouped =
-                purchasedSkuForAllCustomers.stream()
-                        .filter(Objects::nonNull)
-                        .collect(Collectors.groupingBy(PurchasedSku::getCustomerId));
-
-        Cache cache = getBuyAgainCache();
-        int success = 0;
-        int failed = 0;
-
-        // Process each customer sequentially
-        for (Map.Entry<String, List<PurchasedSku>> entry : grouped.entrySet()) {
-            String customerId = entry.getKey();
-            List<PurchasedSku> skus = entry.getValue();
-
-            try {
-                List<PurchasedSku> sortedSkus = skus == null ?
-                        List.of() :
-                        skus.stream()
-                                .filter(Objects::nonNull)
-                                .sorted(Comparator.comparing(PurchasedSku::getOrderPlacedDate,
-                                        Comparator.nullsLast(Date::compareTo)).reversed())
-                                .toList();
-                DistributedBuyAgainResponse resp = getRecentPurchasedDistributed(sortedSkus);
-
-                // Defensive copy of response for safety
-                DistributedBuyAgainResponse safeCopy = defensivelyCopyResponse(resp);
-
-                // Put into cache
-                cache.put(customerId, safeCopy);
-
-                success++;
-            } catch (Exception e) {
-                failed++;
-                log.error("BUY_AGAIN — Warm-up failed for customerId={}", customerId, e);
-            }
-        }
-
-        log.info("BUY_AGAIN — Warm-up completed. Total customers={}, Success={}, Failed={}",
-                grouped.size(), success, failed);
-    }
-
-    /**
-     * Main entry used by controller flows: checks cache and falls back to DB + remote calls on miss.
-     * This method returns a paged response.
-     */
 
     public DistributedBuyAgainResponse getRecentPurchasedDistributedOrdersHome(int offset, int limit) {
 
@@ -181,7 +88,7 @@ public class BuyAgainServiceImpl implements BuyAgainService {
         DistributedBuyAgainResponse distributedBuyAgainResponse = getRecentPurchasedDistributed(purchasedSkus);
 
         // Cache a defensive copy
-        cache.put(customerId, defensivelyCopyResponse(distributedBuyAgainResponse)); // Cache the response
+        cache.put(customerId, defensivelyCopyBuyAgainResponse(distributedBuyAgainResponse)); // Cache the response
         log.info("Buy_Again - Cached Buy Again Response for customerId={}", customerId);
 
         return getPagedDistributedBuyAgainResponse(offset, limit, distributedBuyAgainResponse.getVariantList());
@@ -192,7 +99,7 @@ public class BuyAgainServiceImpl implements BuyAgainService {
      * Builds an immutable copy of the response so cached entries are not accidentally mutated by
      * callers.
      */
-    private DistributedBuyAgainResponse defensivelyCopyResponse(DistributedBuyAgainResponse src) {
+    public DistributedBuyAgainResponse defensivelyCopyBuyAgainResponse(DistributedBuyAgainResponse src) {
         if (src == null) return buildDistributedBuyAgainResponse(Collections.emptyList());
         List<PurchasedLineItemResponse> list = Optional.ofNullable(src.getVariantList())
                 .map(ArrayList::new)
@@ -213,8 +120,8 @@ public class BuyAgainServiceImpl implements BuyAgainService {
                 .orElseGet(Collections::emptyList)
                 .stream()
                 .sorted(Comparator.comparing(
-                                PurchasedSku::getOrderPlacedDate,
-                                Comparator.nullsLast(Date::compareTo)).reversed())
+                        PurchasedSku::getOrderPlacedDate,
+                        Comparator.nullsLast(Date::compareTo)).reversed())
                 .collect(Collectors.toList());
         log.info("Buy_Again - Fetched {} purchased skus for customerId={}", purchasedSkus.size(), customerId);
         return purchasedSkus;
@@ -239,64 +146,73 @@ public class BuyAgainServiceImpl implements BuyAgainService {
         log.info("Buy_Again - Fetched Product Catalogue Store for ProductKeyCount={}", productKeys.size());
         Map<String, ProductCatalogueStore> productCatalogueStoreMap = productCatalogueStoreList.stream()
                 .collect(Collectors.toMap(ProductCatalogueStore::getProductKey, Function.identity()));
-
-        Set<String> productMMIDList = getProductMMIDList(purchasedSkus, productCatalogueStoreMap);
-        log.info("Buy_Again - Calling Cental Catalogue Product Bulk API with ProductMMIDCount={}", productMMIDList.size());
-        ProductBulkResponse productBulkMMIDResponse = fetchCentralCatalogueProductsWithRetry(productMMIDList);
-        Map<String, Product> centralCatalogueProductMap = mapCentralCatalogueProducts(productBulkMMIDResponse);
-
-        Set<String> productTypeIds = productBulkMMIDResponse.getProducts().stream()
-                .map(Product::getProductTypeId)
-                .filter(Objects::nonNull)
-                .collect(Collectors.toSet());
-        log.info("Buy_Again - Calling Cental Catalogue Admin Bulk API with Product Type Id Count={}", productTypeIds.size());
-        ProductTypeBulkResponse productTypeIdBulkResponse = fetchCentralCatalogueAdminProductsWithRetry(productTypeIds);
-        Map<String, com.jswone.commerce.core.model.centralCatalogue.QuantityCard> productQuantityCardMap = mapProductTypeIdToQuantityCard(productTypeIdBulkResponse);
-
         List<PurchasedLineItemResponse> lineItemResponseList = new ArrayList<>();
         log.info("Buy_Again - Preparing purchased line item response");
 
         for (PurchasedSku purchasedSku : purchasedSkus) {
             log.info("Buy_Again - Preparing purchased line item response for Purchased SKU={} ", purchasedSku);
             ProductCatalogueStore productCatalogueStore = productCatalogueStoreMap.get(purchasedSku.getProductKey());
-            String productMMID = resolveProductMMID(purchasedSku, productCatalogueStore);
 
-            Product centralCatalogueProduct = centralCatalogueProductMap.get(productMMID);
-
-            if (Objects.nonNull(centralCatalogueProduct)) {
-                com.jswone.commerce.core.model.centralCatalogue.QuantityCard centralCatalogueQuantityCard = productQuantityCardMap.get(centralCatalogueProduct.getProductTypeId());
-                lineItemResponseList.add(buildPurchasedLineItemResponse(purchasedSku, centralCatalogueProduct, productCatalogueStore, centralCatalogueQuantityCard));
+            if (Objects.nonNull(productCatalogueStore)) {
+                lineItemResponseList.add(buildPurchasedLineItemResponse(purchasedSku, productCatalogueStore));
                 log.info("Buy_Again - Prepared purchased line item response list of size={}", lineItemResponseList.size());
             }
         }
         return buildDistributedBuyAgainResponse(lineItemResponseList);
     }
 
-    private PurchasedLineItemResponse buildPurchasedLineItemResponse(PurchasedSku purchasedSku, Product centralProduct, ProductCatalogueStore productStore, com.jswone.commerce.core.model.centralCatalogue.QuantityCard centralCatalogueQuantityCard) {
-        Variant matchVariant = validateVariant(purchasedSku.getVariantKey(), centralProduct);
+    private PurchasedLineItemResponse buildPurchasedLineItemResponse(PurchasedSku purchasedSku, ProductCatalogueStore productCatalogueStore) {
+        com.jswone.commerce.core.entity.catalogue.Variant matchVariant = validateVariant(purchasedSku.getVariantKey(), productCatalogueStore);
 
         SimpleDateFormat sdf = new SimpleDateFormat(DATE_FORMAT);
         String orderPlacedDate = purchasedSku.getOrderPlacedDate() == null ? EMPTY_STRING : sdf.format(purchasedSku.getOrderPlacedDate());
 
         return PurchasedLineItemResponse.builder()
-                .name(str(centralProduct.getAttributes().get("product_title")))
-                .productSlug(str(centralProduct.getAttributes().get("slug")))
-                .attributes(Optional.ofNullable(matchVariant)
-                        .map(Variant::getAttributes)
-                        .orElse(purchasedSku.getSkuAttributes()))
+                .name(productCatalogueStore.getProductTitle())
+                .productKey(productCatalogueStore.getProductKey())
+                .productSlug(productCatalogueStore.getProductSlug())
+                .attributes(
+                        matchVariant != null
+                                && !matchVariant
+                                .getAttributes()
+                                .isEmpty()
+                                ? transformPurchaseSkuAttributes(
+                                matchVariant.getAttributes(),
+                                purchasedSku.getSkuAttributes())
+                                : purchasedSku.getSkuAttributes())
                 .ctAttributes(purchasedSku.getCtSkuAttributes())
                 .variantKey(purchasedSku.getVariantKey())
-                .quantityCard(resolveQuantityCard(centralCatalogueQuantityCard))
-                .attributesMeta(purchasedSku.getCtSkuAttributes() == null ? Collections.emptySet() : purchasedSku.getCtSkuAttributes().keySet())
+                .quantityCard(productCatalogueStore
+                        .getPdpJourney() == null || productCatalogueStore
+                        .getPdpJourney()
+                        .getQuantityCard() == null ? QuantityCard.builder().build() : productCatalogueStore
+                        .getPdpJourney()
+                        .getQuantityCard())
+                .attributesMeta(purchasedSku.getCtSkuAttributes().keySet())
                 .sku(purchasedSku.getVariantName())
                 .primaryUom(purchasedSku.getPrimaryQuantity())
-                .secondaryUom(generateSecondaryUom(purchasedSku))
+                .secondaryUom(purchasedSku.getSecondaryQuantity())
                 .ctUom(purchasedSku.getCtUom())
                 .orderPlacedDate(orderPlacedDate)
-                .productMMID(centralProduct.getProductMmid())
-                .productTypeKey(productStore.getProductTypeKey())
-                .variantMMID(generateVariantMMID(centralProduct))
-                .imageUrl(extractImage(centralProduct))
+                .productMMID(productCatalogueStore.getProductMaterialMasterId())
+                .productTypeKey(productCatalogueStore.getProductTypeKey())
+                .variantMMID(
+                        StringUtils.isEmpty(
+                                productCatalogueStore
+                                        .getProductMaterialMasterId())
+                                ? JSWGenericConstants.EMPTY_STRING
+                                : productCatalogueStore
+                                .getProductMaterialMasterId()
+                                .concat(HYPHEN)
+                                .concat("10000000"))
+                .imageUrl(
+                        Optional.of(productCatalogueStore)
+                                .map(ProductCatalogueStore::getProductMedia)
+                                .map(ProductMedia::getImages)
+                                .filter(list -> !list.isEmpty())
+                                .map(list -> list.get(0))
+                                .map(Image::getUrl)
+                                .orElse(EMPTY_STRING))
                 .build();
     }
 
@@ -321,105 +237,69 @@ public class BuyAgainServiceImpl implements BuyAgainService {
         return buildDistributedBuyAgainResponse(pagedPurchasedLineItems);
     }
 
-    private Set<String> getProductMMIDList(List<PurchasedSku> purchasedSkus, Map<String, ProductCatalogueStore> productCatalogueStoreMap) {
-        return purchasedSkus.stream()
-                .map(purchasedSku ->
-                        resolveProductMMID(purchasedSku, productCatalogueStoreMap.get(purchasedSku.getProductKey())))
-                .filter(Objects::nonNull)
-                .collect(Collectors.toSet());
+    private Map<String, String> transformPurchaseSkuAttributes(
+            List<Attribute> attributeList, Map<String, String> ctSkuAttributes) {
+        return attributeList.stream()
+                .collect(
+                        Collectors.toMap(
+                                attribute -> getAttributeName(
+                                        attribute.getName(), ctSkuAttributes),
+                                attribute ->
+                                        getAttributeValue(
+                                                attribute.getValue(),
+                                                attribute.getName(),
+                                                ctSkuAttributes),
+                                (e1, e2) -> e2,
+                                LinkedHashMap::new));
     }
 
-    private ProductBulkResponse fetchCentralCatalogueProductsWithRetry(Set<String> productMMIDList) {
-
-        if (productMMIDList == null || productMMIDList.isEmpty()) {
-            return new ProductBulkResponse(Collections.emptyList(), 0);
-        }
-
-        log.info("Buy_Again - Calling Central Catalogue Product Bulk API with ProductMMID Count={}",
-                productMMIDList.size());
-
-        try {
-            ProductBulkRequest request =
-                    new ProductBulkRequest(productMMIDList, "msme", LOCALE_EN_US);
-            return centralCatalogueClient.bulkMMIDResponse(request);
-        } catch (Exception e) {
-            log.error("Buy_Again - Central catalogue call failed (client retries already attempted): {}",
-                    e.getMessage(), e);
-            return new ProductBulkResponse(Collections.emptyList(), 0);
-        }
+    public String getAttributeName(
+            String ctAttributeName, Map<String, String> ctSkuAttributes) {
+        Map.Entry<String, String> values = getAttributeMap(ctAttributeName, ctSkuAttributes);
+        return values != null ? values.getKey() : ctAttributeName;
     }
 
-    private ProductTypeBulkResponse fetchCentralCatalogueAdminProductsWithRetry(Set<String> productTypeIdList) {
-
-        if (productTypeIdList == null || productTypeIdList.isEmpty()) {
-            return new ProductTypeBulkResponse(200, "Success", Collections.emptyMap()
-            );
-        }
-
-        log.info("Buy_Again - Calling Central Catalogue Admin Product Bulk API with Product Type Id Count={}",
-                productTypeIdList.size());
-
-        try {
-            ProductTypeBulkRequest request = new ProductTypeBulkRequest(productTypeIdList, "msme");
-            return centralCatalogueClient.bulkTypeIdResponse(request);
-        } catch (Exception e) {
-            log.error("Buy_Again - Central catalogue call failed (client retries already attempted): {}",
-                    e.getMessage(), e);
-            return new ProductTypeBulkResponse(200, "Success", Collections.emptyMap()
-            );
-        }
+    public String getAttributeValue(
+            Object mainAttributeValue,
+            String ctAttributeName,
+            Map<String, String> ctSkuAttributes) {
+        Map.Entry<String, String> values = getAttributeMap(ctAttributeName, ctSkuAttributes);
+        return values != null ? values.getValue() : String.valueOf(mainAttributeValue);
     }
 
-    private QuantityCard resolveQuantityCard(com.jswone.commerce.core.model.centralCatalogue.QuantityCard centralCatalogueQuantityCard) {
-
-        com.jswone.commerce.core.model.centralCatalogue.Uom uom = centralCatalogueQuantityCard != null ? centralCatalogueQuantityCard.getUom() : null;
-
-        return QuantityCard.builder()
-                .identifier(uom != null ? uom.getUiLabelQuantity() : "")
-                .displayName(centralCatalogueQuantityCard != null ? centralCatalogueQuantityCard.getLabel() : "")
-                .measureUnit(uom != null ? uom.getUiLabelQuantity() : "")
-                .hasDecimal(uom != null && uom.getQuantityPrecision() > 0)
-                .build();
-    }
-
-    private String generateVariantMMID(Product centralCatalogueProduct) {
-        if (centralCatalogueProduct == null) {
-            return EMPTY_STRING;
-        }
-        return StringUtils.isEmpty(centralCatalogueProduct.getProductMmid())
-                ? EMPTY_STRING
-                : centralCatalogueProduct.getProductMmid() + HYPHEN + "10000000";
-    }
-
-    private String resolveProductMMID(PurchasedSku purchasedSku, ProductCatalogueStore productCatalogueStore) {
-        if (purchasedSku == null) return null;
-        if (!StringUtils.isEmpty(purchasedSku.getProductMMID())) {
-            return purchasedSku.getProductMMID();
-        }
-        return productCatalogueStore == null ? null : productCatalogueStore.getProductMaterialMasterId();
-    }
-
-    public Variant validateVariant(String variantKey, Product centralCatalogueProduct) {
-        if (centralCatalogueProduct == null || centralCatalogueProduct.getVariants() == null)
-            return null;
-        return centralCatalogueProduct.getVariants().stream()
-                .filter(variant -> variantKey != null && variantKey.equals(variant.getVariantMmid()))
-                .findAny()
+    public Map.Entry<String, String> getAttributeMap(
+            String ctAttributeName, Map<String, String> ctSkuAttributes) {
+        return ctSkuAttributes.entrySet().stream()
+                .filter(
+                        stringStringEntry -> {
+                            String[] splitAttrVal = stringStringEntry.getKey().split(" ");
+                            return Arrays.stream(splitAttrVal)
+                                    .anyMatch(
+                                            key ->
+                                                    ctAttributeName
+                                                            .toLowerCase()
+                                                            .contains(key.toLowerCase()));
+                        })
+                .findFirst()
                 .orElse(null);
     }
 
-    private Uom generateSecondaryUom(PurchasedSku purchasedSku) {
-        if (purchasedSku == null || purchasedSku.getSecondaryQuantity() == null) return null;
-        Uom uom = purchasedSku.getSecondaryQuantity();
-        int value = Optional.of(uom.getValue()).map(Double::intValue).orElse(0);
-        return Uom.builder()
-                .unit(uom.getUnit())
-                .label(uom.getLabel())
-                .priceLabel(uom.getPriceLabel())
-                .value(value)
-                .build();
-    }
+    public Variant validateVariant(String variantKey, ProductCatalogueStore productCatalogueStore) {
 
+        if (CollectionUtils.isEmpty(productCatalogueStore.getVariants())
+                && !productCatalogueStore.getHasVariant()
+                && Objects.nonNull(productCatalogueStore.getMasterVariant())) {
+            return variantKey.equalsIgnoreCase(
+                    productCatalogueStore.getMasterVariant().getVariantKey())
+                    ? productCatalogueStore.getMasterVariant()
+                    : null;
+        }
+
+        return productCatalogueStore.getVariants().stream()
+                .filter(variant -> variant.getVariantKey().equals(variantKey))
+                .findAny()
+                .orElse(null);
+    }
 
     public List<ProductCatalogueStore> getProductDataStoreInBatches(Set<String> productKeys) {
         int batchSize = 30;
@@ -436,47 +316,11 @@ public class BuyAgainServiceImpl implements BuyAgainService {
         return productStoreList;
     }
 
-    private Map<String, Product> mapCentralCatalogueProducts(ProductBulkResponse productBulkResponse) {
-        return productBulkResponse != null
-                ? productBulkResponse.getProducts().stream().filter(Objects::nonNull)
-                .collect(Collectors.toMap(Product::getProductMmid, Function.identity(), (a, b) -> a))
-                : Collections.emptyMap();
-    }
-
-    private Map<String, com.jswone.commerce.core.model.centralCatalogue.QuantityCard> mapProductTypeIdToQuantityCard(ProductTypeBulkResponse productTypeBulkResponse) {
-
-        if (productTypeBulkResponse == null || productTypeBulkResponse.getData() == null || productTypeBulkResponse.getData().isEmpty()) {
-            return Collections.emptyMap();
-        }
-
-        return productTypeBulkResponse.getData()
-                .entrySet()
-                .stream()
-                .map(entry -> {
-                    String productTypeId = entry.getKey();
-                    ProductTypeData data = entry.getValue();
-
-                    if (data == null || data.getQuantityCards() == null) {
-                        return null;
-                    }
-
-                    // Find rank 0 card
-                    return data.getQuantityCards()
-                            .stream()
-                            .filter(card -> card.getRank() == 0)
-                            .findFirst()
-                            .map(card -> Map.entry(productTypeId, card))
-                            .orElse(null);
-                })
-                .filter(Objects::nonNull)
-                .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
-    }
-
-    private Cache getBuyAgainCache() {
-        Cache cache = cacheManager.getCache(getCacheNameWithProfile(commerceValueConfig.getRedisCacheProfile(), CacheNames.BUY_AGAIN_PRODUCTS));
+    public Cache getBuyAgainCache() {
+        Cache cache = cacheManager.getCache(getCacheNameWithProfile(commerceValueConfig.getRedisCacheProfile(), CacheNames.BUY_AGAIN_PRODUCTS_CACHE_PREFIX));
         if (cache == null) {
-            log.error("Buy_Again - Cache '{}' not found in CacheConfig", CacheNames.BUY_AGAIN_PRODUCTS);
-            throw new IllegalStateException("Cache not configured: " + CacheNames.BUY_AGAIN_PRODUCTS);
+            log.error("Buy_Again - Cache '{}' not found in CacheConfig", CacheNames.BUY_AGAIN_PRODUCTS_CACHE_PREFIX);
+            throw new IllegalStateException("Cache not configured: " + CacheNames.BUY_AGAIN_PRODUCTS_CACHE_PREFIX);
         }
         return cache;
     }

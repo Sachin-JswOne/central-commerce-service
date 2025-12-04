@@ -120,6 +120,10 @@
             <artifactId>measurement_common_model</artifactId>
         </dependency>
         <dependency>
+            <groupId>com.jsw</groupId>
+            <artifactId>notification_common_model</artifactId>
+        </dependency>
+        <dependency>
             <groupId>com.jswone.ordering.common</groupId>
             <artifactId>jsw_ordering_common_model</artifactId>
         </dependency>
