@@ -63,6 +63,9 @@ public class CommerceValueConfig {
     @Value("${service.connection.readTimeout}")
     private long serviceReadTimeOut;
 
+    @Value("${central.catalogue.service.enabled}")
+    private boolean centralCatalogueServiceEnabled;
+
     @Value("${central.catalogue.base.url}")
     private String centralCatalogueBaseUrl;
 
@@ -105,11 +108,17 @@ public class CommerceValueConfig {
     @Value("${central.commerce.cloud.cache.certificate}")
     private String cacheCertificateSecret;
 
-    @Value("${pdp.journey.enabled}")
-    private boolean pdpJourneyEnabled;
+    @Value("${notification.service.v1.token}")
+    private String notificationServiceToken;
 
-    @Value("${buy.again.warmup.max-entries}")
-    private long buyAgainWarmupMaxEntries;
+    @Value("${notification.v1.internal.url}")
+    private String notificationV1InternalUrl;
+
+    @Value("${notification.v1.endpoint}")
+    private String notificationV1Endpoint;
+
+    @Value("${buy.again.cache.warm.up.teams.workflow.url}")
+    private String buyAgainCacheWarmUpTeamsWorkflowUrl;
 
     @Value("${master.data.service.base.url}")
     private String masterDataServiceBaseUrl;

@@ -13,6 +13,7 @@ import org.springframework.cache.annotation.EnableCaching;
 import org.springframework.cache.interceptor.CacheErrorHandler;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Primary;
 import org.springframework.data.redis.cache.RedisCacheConfiguration;
 import org.springframework.data.redis.cache.RedisCacheManager;
 import org.springframework.data.redis.cache.RedisCacheWriter;
@@ -35,10 +36,10 @@ import java.util.Set;
 @EnableCaching
 @Configuration
 @RequiredArgsConstructor
-@ConditionalOnProperty(name = "central.commerce.redis.cache_manager.enable", havingValue = "true")
 public class CacheConfig {
     private static final Set<Pair<String, Duration>> cache =
-            Set.of(Pair.of(CacheNames.BUY_AGAIN_PRODUCTS, duration(1440L)));
+            Set.of(Pair.of(CacheNames.BUY_AGAIN_PRODUCTS_CACHE_PREFIX_V2, duration(1440L)),
+                    Pair.of(CacheNames.BUY_AGAIN_PRODUCTS_CACHE_PREFIX, duration(1440L)));
 
     private final CommerceValueConfig commerceValueConfig;
 
@@ -83,11 +84,16 @@ public class CacheConfig {
     }
 
     @Bean
+    @Primary
     public RedisTemplate<String, Object> redisTemplate(RedisConnectionFactory redisConnectionFactory) {
         RedisTemplate<String, Object> redisTemplate = new RedisTemplate<>();
         redisTemplate.setConnectionFactory(redisConnectionFactory);
         redisTemplate.setKeySerializer(new StringRedisSerializer());
         redisTemplate.setValueSerializer(new GenericJackson2JsonRedisSerializer());
+        redisTemplate.setHashKeySerializer(new StringRedisSerializer());
+        redisTemplate.setHashValueSerializer(new GenericJackson2JsonRedisSerializer());
+
+        redisTemplate.afterPropertiesSet(); // IMPORTANT
 
         return redisTemplate;
     }
@@ -112,7 +118,6 @@ public class CacheConfig {
     }
 
     @Bean
-    @ConditionalOnProperty(name = "central.commerce.redis.cache_manager.enable", havingValue = "true")
     public RedisConnectionFactory redisConnectionFactory() {
         RedisStandaloneConfiguration redisConfig = new RedisStandaloneConfiguration();
         redisConfig.setHostName(redisProperties.getHost());
