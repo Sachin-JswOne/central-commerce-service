@@ -14,4 +14,5 @@ public class GenericConstants {
     public static final String FREIGHT_CHARGE = "freightCharge";
     public static final String EMPTY_STRING = "";
     public static final String MMID_SUFFIX = "-10000000";
+    public static final int BULK_IMAGE_CHUNK_SIZE = 100;
 }
