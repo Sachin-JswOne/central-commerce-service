@@ -43,6 +43,20 @@ public class UomConvertServiceImpl implements UomConvertService {
             return new UomConvertResponse(Collections.emptyList());
         }
 
+        requests.forEach(uom -> {
+
+            Optional.ofNullable(uom.getPurchasedUom())
+                    .map(Attribute::getName)
+                    .ifPresent(name -> uom.getPurchasedUom().setName(name.toLowerCase()));
+
+            Optional.ofNullable(uom.getProductAttributes())
+                    .ifPresent(attrs -> attrs.forEach(attr -> {
+                        if (attr.getName() != null) {
+                            attr.setName(attr.getName().toLowerCase());
+                        }
+                    }));
+        });
+
         // Extract all MMIDs
         List<String> variantMMIDList = requests.stream()
                 .map(req -> Optional.ofNullable(req.getVariantMMID())
