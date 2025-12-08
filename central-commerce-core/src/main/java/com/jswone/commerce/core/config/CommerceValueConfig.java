@@ -36,6 +36,7 @@ public class CommerceValueConfig {
 
     @Value("${ctp.anon.scopes}")
     private String anonScopes;
+
     @Value("${ct.connection.timeout.seconds}")
     private int ctConnectionTimeout;
 
@@ -119,6 +120,9 @@ public class CommerceValueConfig {
 
     @Value("${buy.again.cache.warm.up.teams.workflow.url}")
     private String buyAgainCacheWarmUpTeamsWorkflowUrl;
+
+    @Value("${buy.again.cache.chunk.size}")
+    private int buyAgainCacheChunkSize;
 
     @Value("${master.data.service.base.url}")
     private String masterDataServiceBaseUrl;

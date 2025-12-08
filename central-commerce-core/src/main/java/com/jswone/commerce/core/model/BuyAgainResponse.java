@@ -11,7 +11,7 @@ import java.util.List;
 @NoArgsConstructor
 @Builder
 @Data
-public class DistributedBuyAgainResponse {
+public class BuyAgainResponse {
     int skuSize;
     List<PurchasedLineItemResponse> variantList;
 }

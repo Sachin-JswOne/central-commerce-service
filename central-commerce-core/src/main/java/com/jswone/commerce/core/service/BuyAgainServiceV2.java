@@ -1,9 +1,9 @@
 package com.jswone.commerce.core.service;
 
-import com.jswone.commerce.core.model.DistributedBuyAgainResponse;
+import com.jswone.commerce.core.model.BuyAgainResponse;
 
 public interface BuyAgainServiceV2 {
 
-    DistributedBuyAgainResponse getRecentPurchasedDistributedOrdersList(int offset, int limit);
+    BuyAgainResponse getRecentPurchasedOrdersList(int offset, int limit);
 
 }
