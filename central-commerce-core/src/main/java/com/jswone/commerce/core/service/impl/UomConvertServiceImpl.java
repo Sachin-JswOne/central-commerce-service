@@ -36,14 +36,16 @@ public class UomConvertServiceImpl implements UomConvertService {
     }
 
     @Override
-    public UomConvertResponse convertUom(List<PurchasedUom> requests) {
+    public UomConvertResponse convertUom(List<PurchasedUom> purchasedUomList) {
 
-        if (requests == null || requests.isEmpty()) {
+        List<UomConvert> uomConvertList = new ArrayList<>();
+
+        if (purchasedUomList == null || purchasedUomList.isEmpty()) {
             log.error("UOM conversion request list cannot be null or empty");
-            return new UomConvertResponse(Collections.emptyList());
+            return UomConvertResponse.builder().uomConvertedProducts(Collections.emptyList()).build();
         }
 
-        requests.forEach(uom -> {
+        purchasedUomList.forEach(uom -> {
 
             Optional.ofNullable(uom.getPurchasedUom())
                     .map(Attribute::getName)
@@ -57,43 +59,50 @@ public class UomConvertServiceImpl implements UomConvertService {
                     }));
         });
 
-        // Extract all MMIDs
-        List<String> variantMMIDList = requests.stream()
+        List<String> variantMMIDList = purchasedUomList.stream()
                 .map(req -> Optional.ofNullable(req.getVariantMMID())
                         .filter(v -> !v.isEmpty())
                         .orElse(req.getProductMMID() + DEFAULT_VARIANT_SUFFIX))
                 .toList();
 
-        // Call master data for all MMIDs at once
-        Map<String, Data> masterProductMap = masterDataClient.fetchProductDetails(variantMMIDList);
+        Map<String, Data> masterProductMap = Optional.ofNullable(masterDataClient.fetchProductDetails(variantMMIDList))
+                .orElse(Collections.emptyMap());
 
-        if (masterProductMap == null) masterProductMap = Collections.emptyMap();
-
-        List<UomConvert> uomConvertList = new ArrayList<>();
-
-        for (PurchasedUom req : requests) {
+        for (PurchasedUom purchasedUom : purchasedUomList) {
 
             String variantOrDefault =
-                    (req.getVariantMMID() == null || req.getVariantMMID().isEmpty())
-                            ? req.getProductMMID() + DEFAULT_VARIANT_SUFFIX
-                            : req.getVariantMMID();
-
-            Data productData = masterProductMap.get(variantOrDefault);
-
-            if (productData == null) {
-                log.error("Product not found in master catalogue for mmid={}", req.getProductMMID());
-                throw new CentralCommerceServiceException(
-                        "Product not found in catalogue: " + req.getProductMMID(),
-                        HttpStatus.NOT_FOUND);
-            }
+                    (purchasedUom.getVariantMMID() == null || purchasedUom.getVariantMMID().isEmpty())
+                            ? purchasedUom.getProductMMID() + DEFAULT_VARIANT_SUFFIX
+                            : purchasedUom.getVariantMMID();
             try {
-                uomConvertList.add(processUom(productData, req));
+                Data productData = masterProductMap.get(variantOrDefault);
+
+                if (productData == null) {
+                    throw new CentralCommerceServiceException(
+                            "Product not found in Master Data with productMMID: " + purchasedUom.getProductMMID(),
+                            HttpStatus.NOT_FOUND);
+                }
+
+                UomConvert uomConverted = processUom(productData, purchasedUom);
+                uomConverted.setSuccess(true);
+                uomConverted.setErrorMessage(null);
+
+                uomConvertList.add(uomConverted);
+
             } catch (CentralCommerceServiceException e) {
-                log.error("UOM conversion failed for product={}, reason={}", req.getProductMMID(), e.getMessage(), e);
-                throw e;
+                log.error("UOM conversion failed for productMMID={}", purchasedUom.getProductMMID(), e);
+                uomConvertList.add(UomConvert.builder()
+                        .productMMID(purchasedUom.getProductMMID())
+                        .success(false)
+                        .errorMessage(e.getMessage())
+                        .build());
             } catch (Exception e) {
-                log.error("Unexpected error while converting UOM for product={}", req.getProductMMID(), e);
-                throw new CentralCommerceServiceException("Unexpected error converting UOM for " + req.getProductMMID(), HttpStatus.INTERNAL_SERVER_ERROR, e);
+                log.error("Unexpected error while converting UOM for productMMID={}", purchasedUom.getProductMMID(), e);
+                uomConvertList.add(UomConvert.builder()
+                        .productMMID(purchasedUom.getProductMMID())
+                        .success(false)
+                        .errorMessage("Unexpected Internal Error")
+                        .build());
             }
         }
 

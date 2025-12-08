@@ -40,6 +40,11 @@ public class PricingServiceImpl implements PricingService {
     @Override
     public List<LineItemPrice> getPrice(PriceRequest priceRequest){
         try{
+            Set<String> seen = new HashSet<>();
+
+            priceRequest.getItems().removeIf(item ->
+                    !seen.add(item.getProductMMID())
+            );
             List<LineItemPrice> lineItemPrices = new ArrayList<>();
             List<PurchasedUom> purchasedUoms = priceRequest.getItems().stream()
                     .map(price -> PurchasedUom.builder()

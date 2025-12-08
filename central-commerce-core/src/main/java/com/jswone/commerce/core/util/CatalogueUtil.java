@@ -5,6 +5,10 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
 import java.util.Map;
+import java.util.Set;
+import java.util.List;
+import java.util.ArrayList;
+import java.util.HashSet;
 
 @Component
 @Slf4j
@@ -89,4 +93,23 @@ public class CatalogueUtil {
     }
     return "Unexpected error occurred";
   }
+
+    /**
+     * Splits a Set into chunks of specified size.
+     *
+     * @param inputSet  The original set to split
+     * @param chunkSize The size of each chunk
+     * @param <T>       The type of elements in the set
+     * @return List of chunks (each chunk is a Set)
+     */
+    public static <T> List<Set<T>> chunkSet(Set<T> inputSet, int chunkSize) {
+        List<Set<T>> chunks = new ArrayList<>();
+        List<T> list = new ArrayList<>(inputSet);
+
+        for (int i = 0; i < list.size(); i += chunkSize) {
+            Set<T> chunk = new HashSet<>(list.subList(i, Math.min(i + chunkSize, list.size())));
+            chunks.add(chunk);
+        }
+        return chunks;
+    }
 }
