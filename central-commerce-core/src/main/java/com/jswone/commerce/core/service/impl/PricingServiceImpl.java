@@ -40,11 +40,6 @@ public class PricingServiceImpl implements PricingService {
     @Override
     public List<LineItemPrice> getPrice(PriceRequest priceRequest){
         try{
-            Set<String> seen = new HashSet<>();
-
-            priceRequest.getItems().removeIf(item ->
-                    !seen.add(item.getProductMMID())
-            );
             List<LineItemPrice> lineItemPrices = new ArrayList<>();
             List<PurchasedUom> purchasedUoms = priceRequest.getItems().stream()
                     .map(price -> PurchasedUom.builder()
@@ -85,7 +80,8 @@ public class PricingServiceImpl implements PricingService {
             Map<String, Vendor> priceVendor = getPriceVendorMap(priceServiceResponse);
 
             priceRequest.getItems().forEach(item -> {
-                Vendor vendor = priceVendor.get(item.getProductMMID().concat(MMID_SUFFIX));
+                String variantString = getVariantString(item);
+                Vendor vendor = priceVendor.get(item.getProductMMID().concat(MMID_SUFFIX).concat("_").concat(variantString));
                 if (Objects.isNull(vendor) || StringUtils.isNotEmpty(vendor.getError_message())) {
                     throw new CentralCommerceServiceException("Price Not Available", HttpStatus.BAD_REQUEST);
                 }
@@ -123,8 +119,8 @@ public class PricingServiceImpl implements PricingService {
                         "freight charge for product MMID:{} is :{}",
                         item.getProductMMID(),
                         freightCharge);
-
-                lineItemPrices.add(prepareLineItemPrice(vendor,productUomMap.get(item.getProductMMID()),pricingMode, item.getProductAttributes()));
+                UomConvert convert = productUomMap.get(item.getProductMMID().concat("_").concat(variantString));
+                lineItemPrices.add(prepareLineItemPrice(vendor, convert, pricingMode, item.getProductAttributes()));
             });
 
             return lineItemPrices;
@@ -174,7 +170,7 @@ public class PricingServiceImpl implements PricingService {
     public List<ProductVariantPricingRequest> buildPricingProductVariantRequest(
             PriceRequest priceRequest,
             Map<String, UomConvert> productUomMap,
-            List<Item> items) {
+            Set<Item> items) {
         List<ProductVariantPricingRequest> productVariantPricingRequests = new ArrayList<>();
         items.forEach(item -> {
             Map<String, Object> variantMap = item.getProductAttributes().stream()
@@ -182,14 +178,16 @@ public class PricingServiceImpl implements PricingService {
                             Attribute::getName,
                             Attribute::getValue
                     ));
+            String variantString = getVariantString(item);
+            UomConvert convert = productUomMap.get(item.getProductMMID().concat("_").concat(variantString));
             ProductVariantPricingRequest productVariantPricingRequest = ProductVariantPricingRequest.builder()
                     .mmid(item.getProductMMID().concat(MMID_SUFFIX))
                     .variant_attributes(variantMap)
                     .material_data(
                             PricingMaterialData.builder()
-                                    .uom(productUomMap.get(item.getProductMMID()).getPrimaryUom().getUnit())
+                                    .uom(convert.getPrimaryUom().getUnit())
                                     .pricing_mode(null)
-                                    .order_quantity(Double.parseDouble(productUomMap.get(item.getProductMMID()).getPrimaryUom().getValue().toString()))
+                                    .order_quantity(Double.parseDouble(convert.getPrimaryUom().getValue().toString()))
                                     .ship_to_location(Integer.valueOf(priceRequest.getPinCode()))
                                     .reference_id(PricingUtil.generateRandomText(16))
                                     .build())
@@ -294,13 +292,18 @@ public class PricingServiceImpl implements PricingService {
     private Map<String, UomConvert> getProductUomMap(PriceRequest priceRequest, UomConvertResponse uomConvertResponse){
         Map<String, UomConvert> productUomMap = new HashMap<>();
         priceRequest.getItems().forEach(item -> {
-            Map<String, UomConvert> filteredMap =
-                    uomConvertResponse.getUomConvertedProducts().stream().filter(
-                            uomConvert -> uomConvert.getProductMMID().equalsIgnoreCase(item.getProductMMID())).collect(Collectors.toMap(
-                            UomConvert::getProductMMID,
-                            u -> u));
+            String mmid = item.getProductMMID();
+            String variantString = getVariantString(item);
+            double qty = Double.parseDouble(item.getPurchasedQuantity().getValue());
 
-            productUomMap.putAll(filteredMap);
+            UomConvert matchedUom = uomConvertResponse.getUomConvertedProducts()
+                    .stream()
+                    .filter(uom -> uom.getProductMMID().equalsIgnoreCase(mmid))
+                    .filter(uom -> uom.getPrimaryUom().getValue().equals(qty))
+                    .findFirst()
+                    .orElse(null);
+
+            productUomMap.put(item.getProductMMID().concat("_").concat(variantString), matchedUom);
 
         });
 
@@ -312,8 +315,32 @@ public class PricingServiceImpl implements PricingService {
                 .stream()
                 .filter(item -> Objects.nonNull(item.getVendors()))
                 .collect(Collectors.toMap(
-                        PriceResponse::getMmId,
-                        priceResponse ->
-                                priceResponse.getVendors().stream().findFirst().orElse(new Vendor())));
+                        item -> {
+                            String variantString = (item.getVariantAttributes() == null)
+                                    ? ""
+                                    : item.getVariantAttributes()
+                                    .entrySet()
+                                    .stream()
+                                    .map(entry -> entry.getKey() + "_" + entry.getValue())
+                                    .collect(Collectors.joining("_"));
+
+                            return item.getMmId() + "_" + variantString;
+                        },
+                        priceResponse -> priceResponse.getVendors()
+                                .stream()
+                                .findFirst()
+                                .orElse(new Vendor())
+                ));
+    }
+
+    private String getVariantString(Item item){
+        return item.getProductAttributes().stream()
+                .map(
+                        attribute ->
+                                attribute
+                                        .getName()
+                                        .concat("_")
+                                        .concat(String.valueOf(attribute.getValue())))
+                .collect(Collectors.joining("_"));
     }
 }

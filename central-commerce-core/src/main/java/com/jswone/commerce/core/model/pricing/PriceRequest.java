@@ -7,7 +7,7 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-import java.util.List;
+import java.util.Set;
 
 @Builder
 @Data
@@ -18,5 +18,5 @@ public class PriceRequest {
     @NotNull(message = "cannot be null/blank")
     private String pinCode;
     @NotNull(message = "cannot be null/blank")
-    private List<Item> items;
+    private Set<Item> items;
 }
