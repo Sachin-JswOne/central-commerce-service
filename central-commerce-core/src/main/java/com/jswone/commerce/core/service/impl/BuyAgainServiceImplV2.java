@@ -6,7 +6,7 @@ import com.jswone.commerce.core.constants.CacheNames;
 import com.jswone.commerce.core.entity.PurchasedSku;
 import com.jswone.commerce.core.entity.catalogue.ProductCatalogueStore;
 import com.jswone.commerce.core.entity.catalogue.QuantityCard;
-import com.jswone.commerce.core.model.DistributedBuyAgainResponse;
+import com.jswone.commerce.core.model.BuyAgainResponse;
 import com.jswone.commerce.core.model.PurchasedLineItemResponse;
 import com.jswone.commerce.core.model.Uom;
 import com.jswone.commerce.core.model.centralCatalogue.Product;
@@ -63,27 +63,26 @@ public class BuyAgainServiceImplV2 implements BuyAgainServiceV2 {
     }
 
     /**
-     * Returns a paged {@link DistributedBuyAgainResponse} for the current (session) user.
+     * Returns a paged {@link BuyAgainResponse} for the current (session) user.
      * This method enforces pagination bounds, reads from cache when possible and falls
      * back to the database and central catalogue when the cache misses.
      *
      * @param offset zero-based start index
      * @param limit  maximum number of items to return
-     * @return paged {@link DistributedBuyAgainResponse};
+     * @return paged {@link BuyAgainResponse};
      */
     @Override
-    public DistributedBuyAgainResponse getRecentPurchasedDistributedOrdersList(int offset, int limit) {
-        List<PurchasedLineItemResponse> variantList = getRecentPurchasedDistributedOrdersHome(offset, limit)
+    public BuyAgainResponse getRecentPurchasedOrdersList(int offset, int limit) {
+        List<PurchasedLineItemResponse> variantList = getRecentPurchasedOrders(offset, limit)
                 .getVariantList();
-        return buildDistributedBuyAgainResponse(variantList);
+        return buildBuyAgainResponse(variantList);
     }
 
     /**
      * Main entry used by controller flows: checks cache and falls back to DB + remote calls on miss.
      * This method returns a paged response.
      */
-
-    public DistributedBuyAgainResponse getRecentPurchasedDistributedOrdersHome(int offset, int limit) {
+    public BuyAgainResponse getRecentPurchasedOrders(int offset, int limit) {
 
         String customerId = JwtTokenUtil.getUserIdForSession();
 
@@ -93,7 +92,7 @@ public class BuyAgainServiceImplV2 implements BuyAgainServiceV2 {
         Customer customer = customerUtil.getCustomerById(customerId);
         if (Objects.isNull(customer)) {
             log.error("Buy_Again - Customer not found for customerId={}", customerId);
-            return buildDistributedBuyAgainResponse(Collections.emptyList());
+            return buildBuyAgainResponse(Collections.emptyList());
         }
 
         // Check cache
@@ -102,23 +101,23 @@ public class BuyAgainServiceImplV2 implements BuyAgainServiceV2 {
 
         if (wrapper != null) {
             log.info("Buy_Again - Cache HIT for customerId={}", customerId);
-            DistributedBuyAgainResponse cachedDistributedBuyAgainResponse = (DistributedBuyAgainResponse) wrapper.get();
-            if (cachedDistributedBuyAgainResponse != null && cachedDistributedBuyAgainResponse.getVariantList() != null) {
-                return getPagedDistributedBuyAgainResponse(offset, limit, cachedDistributedBuyAgainResponse.getVariantList());
+            BuyAgainResponse cachedBuyAgainResponse = (BuyAgainResponse) wrapper.get();
+            if (cachedBuyAgainResponse != null && cachedBuyAgainResponse.getVariantList() != null) {
+                return getPagedBuyAgainResponse(offset, limit, cachedBuyAgainResponse.getVariantList());
             }
-            return buildDistributedBuyAgainResponse(Collections.emptyList());
+            return buildBuyAgainResponse(Collections.emptyList());
         }
 
         // Cache miss
         log.info("Buy_Again - Cache MISS for customerId={}, fetching from DB", customerId);
         List<PurchasedSku> purchasedSkus = fetchAndSortPurchasedSkus(customerId);
-        DistributedBuyAgainResponse distributedBuyAgainResponse = getRecentPurchasedDistributed(purchasedSkus);
+        BuyAgainResponse buyAgainResponse = getRecentPurchased(purchasedSkus);
 
         // Cache a defensive copy
-        cache.put(customerId, defensivelyCopyBuyAgainResponse(distributedBuyAgainResponse)); // Cache the response
+        cache.put(customerId, defensivelyCopyBuyAgainResponse(buyAgainResponse)); // Cache the response
         log.info("Buy_Again - Cached Buy Again Response for customerId={}", customerId);
 
-        return getPagedDistributedBuyAgainResponse(offset, limit, distributedBuyAgainResponse.getVariantList());
+        return getPagedBuyAgainResponse(offset, limit, buyAgainResponse.getVariantList());
     }
 
 
@@ -126,13 +125,13 @@ public class BuyAgainServiceImplV2 implements BuyAgainServiceV2 {
      * Builds an immutable copy of the response so cached entries are not accidentally mutated by
      * callers.
      */
-    public DistributedBuyAgainResponse defensivelyCopyBuyAgainResponse(DistributedBuyAgainResponse src) {
-        if (src == null) return buildDistributedBuyAgainResponse(Collections.emptyList());
+    public BuyAgainResponse defensivelyCopyBuyAgainResponse(BuyAgainResponse src) {
+        if (src == null) return buildBuyAgainResponse(Collections.emptyList());
         List<PurchasedLineItemResponse> list = Optional.ofNullable(src.getVariantList())
                 .map(ArrayList::new)
                 .map(Collections::unmodifiableList)
                 .orElse(Collections.emptyList());
-        return DistributedBuyAgainResponse.builder()
+        return BuyAgainResponse.builder()
                 .skuSize(list.size())
                 .variantList(list)
                 .build();
@@ -158,9 +157,9 @@ public class BuyAgainServiceImplV2 implements BuyAgainServiceV2 {
      * Main builder that resolves product store data and central catalogue products and then
      * constructs the final list of {@link PurchasedLineItemResponse}.
      */
-    public DistributedBuyAgainResponse getRecentPurchasedDistributed(List<PurchasedSku> purchasedSkus) {
+    public BuyAgainResponse getRecentPurchased(List<PurchasedSku> purchasedSkus) {
         if (purchasedSkus == null || purchasedSkus.isEmpty()) {
-            return buildDistributedBuyAgainResponse(Collections.emptyList());
+            return buildBuyAgainResponse(Collections.emptyList());
         }
 
         Set<String> productKeys = purchasedSkus.stream()
@@ -203,7 +202,7 @@ public class BuyAgainServiceImplV2 implements BuyAgainServiceV2 {
                 log.info("Buy_Again - Prepared purchased line item response list of size={}", lineItemResponseList.size());
             }
         }
-        return buildDistributedBuyAgainResponse(lineItemResponseList);
+        return buildBuyAgainResponse(lineItemResponseList);
     }
 
     private PurchasedLineItemResponse buildPurchasedLineItemResponse(PurchasedSku purchasedSku, Product centralProduct, ProductCatalogueStore productStore, com.jswone.commerce.core.model.centralCatalogue.QuantityCard centralCatalogueQuantityCard) {
@@ -234,25 +233,25 @@ public class BuyAgainServiceImplV2 implements BuyAgainServiceV2 {
                 .build();
     }
 
-    private DistributedBuyAgainResponse buildDistributedBuyAgainResponse(List<PurchasedLineItemResponse> variantList) {
+    private BuyAgainResponse buildBuyAgainResponse(List<PurchasedLineItemResponse> variantList) {
         List<PurchasedLineItemResponse> purchasedLineItemResponseList = variantList == null ? Collections.emptyList() : List.copyOf(variantList);
-        return DistributedBuyAgainResponse.builder()
+        return BuyAgainResponse.builder()
                 .skuSize(purchasedLineItemResponseList.size())
                 .variantList(purchasedLineItemResponseList)
                 .build();
     }
 
-    private DistributedBuyAgainResponse getPagedDistributedBuyAgainResponse(int offset, int limit,
-                                                                            List<PurchasedLineItemResponse> purchasedLineItems) {
+    private BuyAgainResponse getPagedBuyAgainResponse(int offset, int limit,
+                                                      List<PurchasedLineItemResponse> purchasedLineItems) {
         if (purchasedLineItems == null || purchasedLineItems.isEmpty())
-            return buildDistributedBuyAgainResponse(Collections.emptyList());
+            return buildBuyAgainResponse(Collections.emptyList());
 
         int start = Math.min(offset, purchasedLineItems.size());
         int end = Math.min(start + limit, purchasedLineItems.size());
 
         List<PurchasedLineItemResponse> pagedPurchasedLineItems = purchasedLineItems.subList(start, end);
 
-        return buildDistributedBuyAgainResponse(pagedPurchasedLineItems);
+        return buildBuyAgainResponse(pagedPurchasedLineItems);
     }
 
     private Set<String> getProductMMIDList(List<PurchasedSku> purchasedSkus, Map<String, ProductCatalogueStore> productCatalogueStoreMap) {

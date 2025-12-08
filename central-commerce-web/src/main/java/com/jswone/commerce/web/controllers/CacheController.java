@@ -1,6 +1,7 @@
 package com.jswone.commerce.web.controllers;
 
 import com.jswone.commerce.core.model.ApiResponse;
+import com.jswone.commerce.core.service.AsyncExecutor;
 import com.jswone.commerce.core.service.CacheService;
 import com.jswone.commerce.core.util.ApiResponseUtil;
 import lombok.extern.slf4j.Slf4j;
@@ -18,8 +19,11 @@ public class CacheController implements CentralBaseController {
 
     private final CacheService cacheService;
 
-    public CacheController(CacheService cacheService) {
+    private final AsyncExecutor asyncExecutor;
+
+    public CacheController(CacheService cacheService, AsyncExecutor asyncExecutor) {
         this.cacheService = cacheService;
+        this.asyncExecutor = asyncExecutor;
     }
 
     @GetMapping("/buy-again/cache/keys")
@@ -37,8 +41,8 @@ public class CacheController implements CentralBaseController {
     @PostMapping("/buy-again/cache/warmup")
     public ApiResponse<String> buyAgainProductsWarmupCache() {
         try {
-            cacheService.loadAllBuyAgainProductsForCustomersIntoCache();
-            return ApiResponseUtil.createSuccessResponse("Cache warm-up of buy again products for all customers completed!",
+            asyncExecutor.triggerBuyAgainWarmupAsync();
+            return ApiResponseUtil.createSuccessResponse("Cache warm-up of buy again products for all customers started!",
                     HttpStatus.OK);
         } catch (Exception e) {
             log.error("Error during buy-again product cache warmup", e);

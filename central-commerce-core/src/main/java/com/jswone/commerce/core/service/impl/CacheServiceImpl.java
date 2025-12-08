@@ -7,7 +7,7 @@ import com.jswone.commerce.core.config.CommerceValueConfig;
 import com.jswone.commerce.core.constants.CacheNames;
 import com.jswone.commerce.core.entity.PurchasedSku;
 import com.jswone.commerce.core.model.ApiResponse;
-import com.jswone.commerce.core.model.DistributedBuyAgainResponse;
+import com.jswone.commerce.core.model.BuyAgainResponse;
 import com.jswone.commerce.core.model.PipelineResult;
 import com.jswone.commerce.core.service.CacheService;
 import com.jswone.commerce.core.service.NotificationService;
@@ -136,10 +136,7 @@ public class CacheServiceImpl implements CacheService {
         log.info("BUY_AGAIN — Warm-up completed. Total={}, Success={}, Failed={}",
                 totalCustomers, totalSuccess, totalFailed);
 
-        // Send Teams alert if failed customer ids happened
-        if (totalFailed > 0) {
-            sendNotificationRequest(globalFailedCustomerIds);
-        }
+        sendNotificationRequest(totalCustomers, totalSuccess, globalFailedCustomerIds);
     }
 
     private PipelineResult executePipeline(List<Map.Entry<String, List<PurchasedSku>>> purchasedSkus) {
@@ -163,13 +160,13 @@ public class CacheServiceImpl implements CacheService {
                                             Comparator.nullsLast(Date::compareTo)).reversed())
                                     .toList();
 
-                    DistributedBuyAgainResponse distributedBuyAgainResponse = commerceValueConfig.isCentralCatalogueServiceEnabled() ?
-                            buyAgainServiceV2.getRecentPurchasedDistributed(sortedPurchasedSkus) :
+                    BuyAgainResponse buyAgainResponse = commerceValueConfig.isCentralCatalogueServiceEnabled() ?
+                            buyAgainServiceV2.getRecentPurchased(sortedPurchasedSkus) :
                             buyAgainService.getRecentPurchasedDistributed(sortedPurchasedSkus);
 
-                    DistributedBuyAgainResponse safeCopy = commerceValueConfig.isCentralCatalogueServiceEnabled() ?
-                            buyAgainServiceV2.defensivelyCopyBuyAgainResponse(distributedBuyAgainResponse) :
-                            buyAgainService.defensivelyCopyBuyAgainResponse(distributedBuyAgainResponse);
+                    BuyAgainResponse safeCopy = commerceValueConfig.isCentralCatalogueServiceEnabled() ?
+                            buyAgainServiceV2.defensivelyCopyBuyAgainResponse(buyAgainResponse) :
+                            buyAgainService.defensivelyCopyBuyAgainResponse(buyAgainResponse);
 
                     RedisSerializer<String> keySerializer =
                             (RedisSerializer<String>) redisTemplate.getKeySerializer();
@@ -237,13 +234,14 @@ public class CacheServiceImpl implements CacheService {
         return chunks;
     }
 
-    private void sendNotificationRequest(List<String> failedCustomerIds) {
+    private void sendNotificationRequest(int totalCustomers, int success, List<String> failedCustomerIds) {
         try {
             String message = String.format(
                     BUY_AGAIN_CACHE_WARM_UP_SUMMARY_MESSAGE,
-                    MAX_RETRIES,
+                    totalCustomers,
+                    success,
                     failedCustomerIds.size(),
-                    String.join(",\n", failedCustomerIds)
+                    String.join(",\n", failedCustomerIds.isEmpty() ? List.of("None") : failedCustomerIds)
             );
 
             NotificationConfig config =

@@ -2,7 +2,7 @@ package com.jswone.commerce.web.controllers;
 
 import com.jswone.commerce.core.config.CommerceValueConfig;
 import com.jswone.commerce.core.model.ApiResponse;
-import com.jswone.commerce.core.model.DistributedBuyAgainResponse;
+import com.jswone.commerce.core.model.BuyAgainResponse;
 import com.jswone.commerce.core.service.BuyAgainService;
 import com.jswone.commerce.core.service.BuyAgainServiceV2;
 import com.jswone.commerce.core.util.ApiResponseUtil;
@@ -30,13 +30,13 @@ public class BuyAgainController implements CentralBaseController {
     }
 
     @GetMapping(value = "/buy-again-list", produces = MediaType.APPLICATION_JSON_VALUE)
-    public ApiResponse<DistributedBuyAgainResponse> getRecentPurchasedList(
+    public ApiResponse<BuyAgainResponse> getRecentPurchasedList(
             @RequestParam(defaultValue = "0", name = "offset") Integer offset,
             @RequestParam(defaultValue = "50", name = "limit") Integer limit) {
 
         if (commerceValueConfig.isCentralCatalogueServiceEnabled()) {
             log.info("Central Catalogue Service is enabled. Using buy again service V2.");
-            return ApiResponseUtil.createSuccessResponse(buyAgainServiceV2.getRecentPurchasedDistributedOrdersList(offset, limit),
+            return ApiResponseUtil.createSuccessResponse(buyAgainServiceV2.getRecentPurchasedOrdersList(offset, limit),
                     HttpStatus.OK);
         }
         log.info("Central Catalogue Service is disabled. Using legacy buy again service.");
