@@ -34,8 +34,6 @@ import static com.jswone.commerce.core.constants.NotificationConstants.TEAMS;
 @Service
 public class CacheServiceImpl implements CacheService {
 
-    private static final int CHUNK_SIZE = 500;
-
     private static final int MAX_RETRIES = 3;
 
     private final RedisTemplate<String, Object> redisTemplate;
@@ -67,6 +65,8 @@ public class CacheServiceImpl implements CacheService {
 
         log.info("BUY_AGAIN — Cache warm-up started...");
 
+        int chunkSize = commerceValueConfig.getBuyAgainCacheChunkSize();
+
         List<PurchasedSku> purchasedSkuForAllCustomers =
                 purchasedSkuService.fetchRecentlyPurchasedSkuForAllCustomers();
 
@@ -85,10 +85,10 @@ public class CacheServiceImpl implements CacheService {
 
         List<Map.Entry<String, List<PurchasedSku>>> purchasedSkuList = new ArrayList<>(groupedSkusByCustomerId.entrySet());
 
-        List<List<Map.Entry<String, List<PurchasedSku>>>> purchasedSkuChunks = chunkPurchasedSkus(purchasedSkuList);
+        List<List<Map.Entry<String, List<PurchasedSku>>>> purchasedSkuChunks = chunkPurchasedSkus(purchasedSkuList, chunkSize);
 
         log.info("BUY_AGAIN — Processing {} customers in {} batches (chunkSize={})",
-                totalCustomers, purchasedSkuChunks.size(), CHUNK_SIZE);
+                totalCustomers, purchasedSkuChunks.size(), chunkSize);
 
         List<String> globalFailedCustomerIds = new ArrayList<>();
 
@@ -226,10 +226,10 @@ public class CacheServiceImpl implements CacheService {
                 res.toString().toLowerCase().contains("error");
     }
 
-    private <T> List<List<T>> chunkPurchasedSkus(List<T> list) {
+    private <T> List<List<T>> chunkPurchasedSkus(List<T> list, int chunkSize) {
         List<List<T>> chunks = new ArrayList<>();
-        for (int i = 0; i < list.size(); i += CacheServiceImpl.CHUNK_SIZE) {
-            chunks.add(list.subList(i, Math.min(list.size(), i + CacheServiceImpl.CHUNK_SIZE)));
+        for (int i = 0; i < list.size(); i += chunkSize) {
+            chunks.add(list.subList(i, Math.min(list.size(), i + chunkSize)));
         }
         return chunks;
     }
