@@ -27,8 +27,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
 import static com.jswone.commerce.core.config.ProfileAwareCacheConfig.getCacheNameWithProfile;
-import static com.jswone.commerce.core.constants.NotificationConstants.BUY_AGAIN_CACHE_WARM_UP_SUMMARY_MESSAGE;
-import static com.jswone.commerce.core.constants.NotificationConstants.TEAMS;
+import static com.jswone.commerce.core.constants.NotificationConstants.*;
 
 @Slf4j
 @Service
@@ -237,7 +236,8 @@ public class CacheServiceImpl implements CacheService {
     private void sendNotificationRequest(int totalCustomers, int success, List<String> failedCustomerIds) {
         try {
             String message = String.format(
-                    BUY_AGAIN_CACHE_WARM_UP_SUMMARY_MESSAGE,
+                    commerceValueConfig.isCentralCatalogueServiceEnabled() ?
+                            BUY_AGAIN_CACHE_WARM_UP_SUMMARY_MESSAGE : BUY_AGAIN_CT_CACHE_WARM_UP_SUMMARY_MESSAGE,
                     totalCustomers,
                     success,
                     failedCustomerIds.size(),
