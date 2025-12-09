@@ -14,6 +14,8 @@ import com.jswone.commerce.core.service.NotificationService;
 import com.jswone.commerce.core.service.PurchasedSkuService;
 import com.jswone.commerce.core.util.ApiResponseUtil;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.cache.Cache;
+import org.springframework.cache.CacheManager;
 import org.springframework.data.redis.core.Cursor;
 import org.springframework.data.redis.core.RedisCallback;
 import org.springframework.data.redis.core.RedisTemplate;
@@ -47,13 +49,20 @@ public class CacheServiceImpl implements CacheService {
 
     private final NotificationService notificationService;
 
-    public CacheServiceImpl(RedisTemplate<String, Object> redisTemplate, CommerceValueConfig commerceValueConfig, PurchasedSkuService purchasedSkuService, BuyAgainServiceImplV2 buyAgainServiceV2, BuyAgainServiceImpl buyAgainService, NotificationService notificationService) {
+    private final CacheManager cacheManager;
+
+    public CacheServiceImpl(RedisTemplate<String, Object> redisTemplate, CommerceValueConfig commerceValueConfig, PurchasedSkuService purchasedSkuService, BuyAgainServiceImplV2 buyAgainServiceV2, BuyAgainServiceImpl buyAgainService, NotificationService notificationService, CacheManager cacheManager) {
         this.redisTemplate = redisTemplate;
         this.commerceValueConfig = commerceValueConfig;
         this.purchasedSkuService = purchasedSkuService;
         this.buyAgainServiceV2 = buyAgainServiceV2;
         this.buyAgainService = buyAgainService;
         this.notificationService = notificationService;
+        this.cacheManager = cacheManager;
+    }
+
+    private boolean isRedisEnabled() {
+        return commerceValueConfig.isRedisEnabled();
     }
 
     /**
@@ -100,7 +109,7 @@ public class CacheServiceImpl implements CacheService {
             List<Map.Entry<String, List<PurchasedSku>>> remainingPurchasedSkus = new ArrayList<>(purchasedSkuBatch);
             int attempt = 0;
 
-            // Retry failed keys only
+            // Retry failed keys
             while (!remainingPurchasedSkus.isEmpty() && attempt <= MAX_RETRIES) {
                 attempt++;
 
@@ -140,10 +149,14 @@ public class CacheServiceImpl implements CacheService {
 
     private PipelineResult executePipeline(List<Map.Entry<String, List<PurchasedSku>>> purchasedSkus) {
 
+        if (!isRedisEnabled()) {
+            log.info("BUY_AGAIN — Caffeine cache enabled, skipping Redis pipeline");
+            return executeCaffeineCache(purchasedSkus);
+        }
+
         List<String> orderedCustomerIds = new ArrayList<>();
         List<Map.Entry<String, List<PurchasedSku>>> entryList = new ArrayList<>();
 
-        // PIPELINE EXECUTION
         List<Object> results = redisTemplate.executePipelined((RedisCallback<Object>) connection -> {
 
             for (Map.Entry<String, List<PurchasedSku>> entry : purchasedSkus) {
@@ -163,7 +176,7 @@ public class CacheServiceImpl implements CacheService {
                             buyAgainServiceV2.getRecentPurchased(sortedPurchasedSkus) :
                             buyAgainService.getRecentPurchasedDistributed(sortedPurchasedSkus);
 
-                    BuyAgainResponse safeCopy = commerceValueConfig.isCentralCatalogueServiceEnabled() ?
+                    BuyAgainResponse defensiveBuyAgainResponse = commerceValueConfig.isCentralCatalogueServiceEnabled() ?
                             buyAgainServiceV2.defensivelyCopyBuyAgainResponse(buyAgainResponse) :
                             buyAgainService.defensivelyCopyBuyAgainResponse(buyAgainResponse);
 
@@ -178,7 +191,7 @@ public class CacheServiceImpl implements CacheService {
                     String buyAgainKey = getCacheNameWithProfile(profile, getCacheName()).concat(":" + customerId);
 
                     byte[] key = keySerializer.serialize(buyAgainKey);
-                    byte[] val = valueSerializer.serialize(safeCopy);
+                    byte[] val = valueSerializer.serialize(defensiveBuyAgainResponse);
 
                     // add order tracking
                     orderedCustomerIds.add(customerId);
@@ -187,7 +200,7 @@ public class CacheServiceImpl implements CacheService {
                     connection.stringCommands().set(key, val);
 
                 } catch (Exception e) {
-                    log.error("BUY_AGAIN — Pre-pipeline failure for customer {}: {}", customerId, e.getMessage());
+                    log.error("BUY_AGAIN — Pre-pipeline failure for customerId: {} with message: {}", customerId, e.getMessage());
                 }
             }
             return null;
@@ -199,18 +212,68 @@ public class CacheServiceImpl implements CacheService {
         for (int i = 0; i < count; i++) {
 
             Object res = results.get(i);
-            String cid = orderedCustomerIds.get(i);
+            String customerId = orderedCustomerIds.get(i);
             Map.Entry<String, List<PurchasedSku>> entry = entryList.get(i);
 
             if (isRedisError(res)) {
-                log.error("BUY_AGAIN — Redis pipeline error for {}: {}", cid, res);
+                log.error("BUY_AGAIN — Redis pipeline error for customerId: {} with res:{}", customerId, res);
                 pipelineResult.failedEntries.add(entry);
             } else {
-                pipelineResult.successCustomerIds.add(cid);
+                pipelineResult.successCustomerIds.add(customerId);
             }
         }
         return pipelineResult;
     }
+
+    private PipelineResult executeCaffeineCache(List<Map.Entry<String, List<PurchasedSku>>> purchasedSkus) {
+
+        PipelineResult pipelineResult = new PipelineResult();
+
+        String profile = commerceValueConfig.getRedisCacheProfile();
+        String cacheName = getCacheNameWithProfile(profile, getCacheName());
+
+        Cache cache = cacheManager.getCache(cacheName);
+        if (cache == null) {
+            log.error("BUY_AGAIN — Caffeine cache not found for name={}", cacheName);
+            pipelineResult.failedEntries.addAll(purchasedSkus);
+            return pipelineResult;
+        }
+
+        for (Map.Entry<String, List<PurchasedSku>> entry : purchasedSkus) {
+
+            String customerId = entry.getKey();
+            List<PurchasedSku> skus = entry.getValue();
+
+            try {
+                List<PurchasedSku> sortedPurchasedSkus = skus == null ? List.of() :
+                        skus.stream()
+                                .filter(Objects::nonNull)
+                                .sorted(Comparator.comparing(PurchasedSku::getOrderPlacedDate,
+                                        Comparator.nullsLast(Date::compareTo)).reversed())
+                                .toList();
+
+                BuyAgainResponse buyAgainResponse = commerceValueConfig.isCentralCatalogueServiceEnabled() ?
+                        buyAgainServiceV2.getRecentPurchased(sortedPurchasedSkus) :
+                        buyAgainService.getRecentPurchasedDistributed(sortedPurchasedSkus);
+
+                BuyAgainResponse defensiveBuyAgainResponse = commerceValueConfig.isCentralCatalogueServiceEnabled() ?
+                        buyAgainServiceV2.defensivelyCopyBuyAgainResponse(buyAgainResponse) :
+                        buyAgainService.defensivelyCopyBuyAgainResponse(buyAgainResponse);
+
+                String buyAgainCacheKey = cacheName.concat(":" + customerId);
+
+                cache.put(buyAgainCacheKey, defensiveBuyAgainResponse);
+                pipelineResult.successCustomerIds.add(customerId);
+
+            } catch (Exception e) {
+                log.error("BUY_AGAIN — Caffeine cache failure for customerId: {} with message: {}", customerId, e.getMessage());
+                pipelineResult.failedEntries.add(entry);
+            }
+        }
+
+        return pipelineResult;
+    }
+
 
     private String getCacheName() {
         return commerceValueConfig.isCentralCatalogueServiceEnabled() ?
@@ -267,6 +330,10 @@ public class CacheServiceImpl implements CacheService {
         String buyAgainKeyPrefix = getCacheNameWithProfile(commerceValueConfig.getRedisCacheProfile(), getCacheName()).concat("*");
         log.info("Fetching Buy Again Redis keys with pattern: {}", buyAgainKeyPrefix);
 
+        if (!isRedisEnabled()) {
+            return fetchKeysFromCaffeineCache();
+        }
+
         Set<String> keys = new HashSet<>();
 
         try {
@@ -298,10 +365,60 @@ public class CacheServiceImpl implements CacheService {
         return ApiResponseUtil.createSuccessResponse(result, HttpStatus.OK);
     }
 
+    private ApiResponse<Map<String, Object>> fetchKeysFromCaffeineCache() {
+        log.info("Caffeine cache enabled, fetching keys from Caffeine cache");
+
+        String cacheNameWithProfile =
+                getCacheNameWithProfile(commerceValueConfig.getRedisCacheProfile(), getCacheName());
+        Cache cache = cacheManager.getCache(cacheNameWithProfile);
+        if (cache == null) {
+            log.error("Caffeine cache not found for name={}", cacheNameWithProfile);
+            return ApiResponseUtil.createErrorResponse(
+                    "Caffeine cache not found for Buy-Again",
+                    HttpStatus.INTERNAL_SERVER_ERROR
+            );
+        }
+
+        Map<String, Object> result = new HashMap<>();
+        Set<String> keys = new HashSet<>();
+
+        Object nativeCache = cache.getNativeCache();
+        try {
+            if (nativeCache instanceof com.github.benmanes.caffeine.cache.Cache<?, ?> caffeineCache) {
+                Map<?, ?> map = caffeineCache.asMap();
+                for (Object key : map.keySet()) {
+                    keys.add(String.valueOf(key));
+                }
+            } else if (nativeCache instanceof Map<?, ?> map) {
+                for (Object key : map.keySet()) {
+                    keys.add(String.valueOf(key));
+                }
+            } else {
+                log.warn("Unsupported native cache type for Caffeine: {}", nativeCache.getClass());
+            }
+        } catch (Exception e) {
+            log.error("Error while reading Caffeine cache keys", e);
+            return ApiResponseUtil.createErrorResponse(
+                    "Unable to fetch Caffeine Buy-Again keys",
+                    HttpStatus.INTERNAL_SERVER_ERROR
+            );
+        }
+
+        result.put("count", keys.size());
+        result.put("keys", keys);
+
+        return ApiResponseUtil.createSuccessResponse(result, HttpStatus.OK);
+    }
+
     @Override
     public ApiResponse<Map<String, Object>> deleteBuyAgainKeys() {
         String buyAgainKeyPrefix = getCacheNameWithProfile(commerceValueConfig.getRedisCacheProfile(), getCacheName()).concat("*");
         log.info("Deleting Buy Again Redis keys with pattern: {}", buyAgainKeyPrefix);
+
+        if (!isRedisEnabled()) {
+            log.info("Caffeine cache enabled, deleting keys from Caffeine cache");
+            return deleteKeysFromCaffiene(buyAgainKeyPrefix);
+        }
 
         AtomicInteger deleted = new AtomicInteger(0);
 
@@ -332,6 +449,49 @@ public class CacheServiceImpl implements CacheService {
         Map<String, Object> response = new HashMap<>();
         response.put("deletedKeysPattern", buyAgainKeyPrefix);
         response.put("deletedKeyCount", deleted.get());
+
+        return ApiResponseUtil.createSuccessResponse(response, HttpStatus.OK);
+    }
+
+    private ApiResponse<Map<String, Object>> deleteKeysFromCaffiene(String buyAgainKeyPrefix) {
+        String cacheNameWithProfile =
+                getCacheNameWithProfile(commerceValueConfig.getRedisCacheProfile(), getCacheName());
+
+        Cache cache = cacheManager.getCache(cacheNameWithProfile);
+        if (cache == null) {
+            log.error("Caffeine cache not found for name={}", cacheNameWithProfile);
+            return ApiResponseUtil.createErrorResponse(
+                    "Caffeine cache not found for Buy-Again",
+                    HttpStatus.INTERNAL_SERVER_ERROR
+            );
+        }
+
+        int deletedCount = 0;
+
+        Object nativeCache = cache.getNativeCache();
+        try {
+            if (nativeCache instanceof com.github.benmanes.caffeine.cache.Cache<?, ?> caffeineCache) {
+                Map<?, ?> map = caffeineCache.asMap();
+                deletedCount = map.size();
+                cache.clear(); // clears all entries
+            } else if (nativeCache instanceof Map<?, ?> map) {
+                deletedCount = map.size();
+                cache.clear();
+            } else {
+                log.warn("Unsupported native cache type for Caffeine during delete: {}", nativeCache.getClass());
+                cache.clear();
+            }
+        } catch (Exception e) {
+            log.error("Error while deleting Caffeine cache keys", e);
+            return ApiResponseUtil.createErrorResponse(
+                    "Unable to delete Caffeine Buy-Again keys",
+                    HttpStatus.INTERNAL_SERVER_ERROR
+            );
+        }
+
+        Map<String, Object> response = new HashMap<>();
+        response.put("deletedKeysPattern", buyAgainKeyPrefix);
+        response.put("deletedKeyCount", deletedCount);
 
         return ApiResponseUtil.createSuccessResponse(response, HttpStatus.OK);
     }
