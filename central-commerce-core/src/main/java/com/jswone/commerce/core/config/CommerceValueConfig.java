@@ -106,6 +106,9 @@ public class CommerceValueConfig {
     @Value("${central.commerce.redis.cache_manager.enable}")
     private boolean redisCacheManagerEnabled;
 
+    @Value("${central.commerce.redis.cache.enable}")
+    private boolean redisEnabled;
+
     @Value("${central.commerce.cloud.cache.certificate}")
     private String cacheCertificateSecret;
 
