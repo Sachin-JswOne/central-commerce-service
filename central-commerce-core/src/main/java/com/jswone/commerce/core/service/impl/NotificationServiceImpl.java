@@ -50,7 +50,7 @@ public class NotificationServiceImpl implements NotificationService {
             log.error("HTTP error while sending notification request with StatusCode: {} and Exception: {}",
                     ex.getStatusCode(), ex.getMessage());
         } catch (Exception e) {
-            log.error("Exception occured while sending notification request: {}", e.getMessage());
+            log.error("Exception occurred while sending notification request: {}", e.getMessage());
         }
     }
 }
