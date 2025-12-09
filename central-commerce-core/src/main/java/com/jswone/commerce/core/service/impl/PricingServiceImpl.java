@@ -58,6 +58,14 @@ public class PricingServiceImpl implements PricingService {
                 throw new CentralCommerceServiceException("UOM conversion failed", HttpStatus.BAD_REQUEST);
             }
 
+            Set<String> incorrectMMIDs = getIncorrectMMIDs(uomConvertResponse);
+
+            log.info("MMID's with no UOM : "+incorrectMMIDs);
+
+            if(Objects.nonNull(incorrectMMIDs) && !incorrectMMIDs.isEmpty()){
+                priceRequest.getItems().removeIf(item -> incorrectMMIDs.contains(item.getProductMMID()));
+            }
+
             Map<String, UomConvert> productUomMap = getProductUomMap(priceRequest, uomConvertResponse);
 
             if(productUomMap.size() != priceRequest.getItems().size()){
@@ -300,6 +308,7 @@ public class PricingServiceImpl implements PricingService {
                     .stream()
                     .filter(uom -> uom.getProductMMID().equalsIgnoreCase(mmid))
                     .filter(uom -> uom.getPrimaryUom().getValue().equals(qty))
+                    .filter(UomConvert::isSuccess)
                     .findFirst()
                     .orElse(null);
 
@@ -342,5 +351,13 @@ public class PricingServiceImpl implements PricingService {
                                         .concat("_")
                                         .concat(String.valueOf(attribute.getValue())))
                 .collect(Collectors.joining("_"));
+    }
+
+    private Set<String> getIncorrectMMIDs(UomConvertResponse uomConvertResponse){
+        return uomConvertResponse.getUomConvertedProducts()
+                .stream()
+                .filter(uomConvert -> !uomConvert.isSuccess())
+                .map(UomConvert::getProductMMID)
+                .collect(Collectors.toSet());
     }
 }
