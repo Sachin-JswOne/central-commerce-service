@@ -163,6 +163,7 @@ public class GlobalExceptionHandler {
         return buildErrorResponse(HttpStatus.INTERNAL_SERVER_ERROR,
                 "Internal server error");
     }
+
     // ================================================================
     // Common Error builder (now returns ResponseEntity)
     // ================================================================
