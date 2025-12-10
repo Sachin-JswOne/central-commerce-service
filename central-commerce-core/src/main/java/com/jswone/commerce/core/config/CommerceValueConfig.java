@@ -91,15 +91,6 @@ public class CommerceValueConfig {
     @Value("${central.catalogue.admin.client.id}")
     private String centralCatalogueAdminClientId;
 
-    @Value("${catalogue.category.base.url}")
-    private String catalogueCategoryBaseUrl;
-
-    @Value("${catalogue.category.api.key}")
-    private String catalogueCategoryApiKey;
-
-    @Value("${catalogue.category.client.id}")
-    private String catalogueCategoryClientId;
-
     @Value("${redis.profile}")
     private String redisCacheProfile;
 

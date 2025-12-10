@@ -56,7 +56,9 @@ public class CatalogueUtil {
         return Character.toUpperCase(raw.charAt(0)) + raw.substring(1);
     }
 
-    public static String unitSuffix(String u) { return u.isBlank() ? "" : " " + u; }
+    public static String unitSuffix(String u) {
+        return u.isBlank() ? "" : " " + u;
+    }
 
     // SMART UNIT DETECTION
     public static String getUnitFor(String base, Map<String, String> UNIT_MAP) {
@@ -71,22 +73,6 @@ public class CatalogueUtil {
         if (key.contains("thickness")) return "mm";
         if (key.contains("length")) return "mm";
 
-    return "";
-  }
-
-  public static String extractErrorMessage(String responseBody) {
-    if (responseBody == null || !responseBody.contains("\"message\"")) {
-      return "Unexpected error occurred";
+        return "";
     }
-    try {
-      int startIndex = responseBody.indexOf("\"message\"") + 10; // after "message":
-      int endIndex = responseBody.indexOf("\"", startIndex + 1);
-      if (endIndex > startIndex) {
-        return responseBody.substring(startIndex + 1, endIndex);
-      }
-    } catch (Exception ex) {
-      log.error("Failed to extract error message: {}", ex.getMessage(), ex);
-    }
-    return "Unexpected error occurred";
-  }
 }

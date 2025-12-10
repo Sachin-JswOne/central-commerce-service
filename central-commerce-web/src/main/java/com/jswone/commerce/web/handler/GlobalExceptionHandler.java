@@ -163,28 +163,6 @@ public class GlobalExceptionHandler {
         return buildErrorResponse(HttpStatus.INTERNAL_SERVER_ERROR,
                 "Internal server error");
     }
-
-    @ExceptionHandler(MissingServletRequestParameterException.class)
-    public ResponseEntity<ApiResponse<Object>> handleMissingServletRequestParameterException(MissingServletRequestParameterException ex) {
-        log.error("MissingServletRequestParameterException:", ex);
-        return buildErrorResponse(BAD_REQUEST, ex.getMessage());
-    }
-
-    @ExceptionHandler(HandlerMethodValidationException.class)
-    public ResponseEntity<ApiResponse<Object>> handleHandlerMethodValidationException(HandlerMethodValidationException ex) {
-        log.error("Validation error:", ex);
-
-        // Extract custom messages from errors
-        String errorMessage = ex.getAllErrors().stream()
-                .map(MessageSourceResolvable::getDefaultMessage)
-                .filter(Objects::nonNull)
-                .findFirst()
-                .orElse("Validation failed");
-
-        return buildErrorResponse(BAD_REQUEST, errorMessage);
-    }
-
-
     // ================================================================
     // Common Error builder (now returns ResponseEntity)
     // ================================================================
