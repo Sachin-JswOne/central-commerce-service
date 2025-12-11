@@ -10,12 +10,11 @@ import java.util.Set;
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
-public class ProductBulkRequest {
+public class ProductTypeBulkRequest {
 
-    @JsonProperty("product_mmids")
-    private Set<String> productMMIDS;
+    @JsonProperty("ids")
+    private Set<String> productTypeIds;
 
     private String storefront;
 
-    private String locale;
 }

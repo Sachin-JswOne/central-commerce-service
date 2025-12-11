@@ -1,12 +1,11 @@
 package com.jswone.commerce.core.config;
 
-
 import lombok.Getter;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.stereotype.Component;
+import org.springframework.context.annotation.Configuration;
 
 @Getter
-@Component
+@Configuration
 public class CommerceValueConfig {
     /*
     Commercetools values.
@@ -37,6 +36,7 @@ public class CommerceValueConfig {
 
     @Value("${ctp.anon.scopes}")
     private String anonScopes;
+
     @Value("${ct.connection.timeout.seconds}")
     private int ctConnectionTimeout;
 
@@ -64,6 +64,9 @@ public class CommerceValueConfig {
     @Value("${service.connection.readTimeout}")
     private long serviceReadTimeOut;
 
+    @Value("${central.catalogue.service.enabled}")
+    private boolean centralCatalogueServiceEnabled;
+
     @Value("${central.catalogue.base.url}")
     private String centralCatalogueBaseUrl;
 
@@ -79,5 +82,40 @@ public class CommerceValueConfig {
     @Value("${central.catalogue.bulk.mmid.endpoint}")
     private String centralCatalogueBulkMmidEndpoint;
 
+    @Value("${central.catalogue.admin.bulk.typeid.endpoint}")
+    private String centralCatalogueAdminBulkTypeIdEndpoint;
+
+    @Value("${central.catalogue.admin.api.key}")
+    private String centralCatalogueAdminApiKey;
+
+    @Value("${central.catalogue.admin.client.id}")
+    private String centralCatalogueAdminClientId;
+
+    @Value("${redis.profile}")
+    private String redisCacheProfile;
+
+    @Value("${central.commerce.redis.cache_manager.enable}")
+    private boolean redisCacheManagerEnabled;
+
+    @Value("${central.commerce.redis.cache.enable}")
+    private boolean redisEnabled;
+
+    @Value("${central.commerce.cloud.cache.certificate}")
+    private String cacheCertificateSecret;
+
+    @Value("${notification.service.v1.token}")
+    private String notificationServiceToken;
+
+    @Value("${notification.v1.internal.url}")
+    private String notificationV1InternalUrl;
+
+    @Value("${notification.v1.endpoint}")
+    private String notificationV1Endpoint;
+
+    @Value("${buy.again.cache.warm.up.teams.workflow.url}")
+    private String buyAgainCacheWarmUpTeamsWorkflowUrl;
+
+    @Value("${buy.again.cache.chunk.size}")
+    private int buyAgainCacheChunkSize;
 
 }

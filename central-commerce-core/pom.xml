@@ -20,6 +20,16 @@
     <dependencies>
         <dependency>
             <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter</artifactId>
+            <exclusions>
+                <exclusion>
+                    <groupId>org.springframework.boot</groupId>
+                    <artifactId>spring-boot-starter-logging</artifactId>
+                </exclusion>
+            </exclusions>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-security</artifactId>
             <exclusions>
                 <exclusion>
@@ -102,6 +112,10 @@
 <!--            <artifactId>spring-cloud-gcp-starter-data-firestore</artifactId>-->
 <!--        </dependency>-->
         <dependency>
+            <groupId>com.jsw</groupId>
+            <artifactId>notification_common_model</artifactId>
+        </dependency>
+        <dependency>
             <groupId>com.jswone.ordering.common</groupId>
             <artifactId>jsw_ordering_common_model</artifactId>
         </dependency>
@@ -117,6 +131,46 @@
             <groupId>com.google.cloud</groupId>
             <artifactId>spring-cloud-gcp-starter-data-datastore</artifactId>
             <version>4.9.2</version> <!-- Latest stable compatible with Spring Boot 3 -->
+        </dependency>
+        <dependency>
+            <groupId>com.jswonemsme</groupId>
+            <artifactId>catalogue_common_model</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-data-redis</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>redis.clients</groupId>
+            <artifactId>jedis</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-cache</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.github.ben-manes.caffeine</groupId>
+            <artifactId>caffeine</artifactId>
+        </dependency>
+
+        <!-- JUnit 5 Engine -->
+        <dependency>
+            <groupId>org.mockito</groupId>
+            <artifactId>mockito-junit-jupiter</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <!-- JUnit 5 Engine -->
+        <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter-engine</artifactId>
+            <scope>test</scope>
+        </dependency>
+
+        <!-- Mockito for mocking -->
+        <dependency>
+            <groupId>org.mockito</groupId>
+            <artifactId>mockito-core</artifactId>
+            <scope>test</scope>
         </dependency>
         <dependency>
             <groupId>org.springframework.boot</groupId>

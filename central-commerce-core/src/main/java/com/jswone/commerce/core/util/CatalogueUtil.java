@@ -1,12 +1,13 @@
 package com.jswone.commerce.core.util;
 
 import com.jswone.commerce.core.model.centralCatalogue.Product;
-import lombok.extern.log4j.Log4j2;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
 import java.util.Map;
 
 @Component
+@Slf4j
 public class CatalogueUtil {
 
     // HELPERS
@@ -55,7 +56,9 @@ public class CatalogueUtil {
         return Character.toUpperCase(raw.charAt(0)) + raw.substring(1);
     }
 
-    public static String unitSuffix(String u) { return u.isBlank() ? "" : " " + u; }
+    public static String unitSuffix(String u) {
+        return u.isBlank() ? "" : " " + u;
+    }
 
     // SMART UNIT DETECTION
     public static String getUnitFor(String base, Map<String, String> UNIT_MAP) {
