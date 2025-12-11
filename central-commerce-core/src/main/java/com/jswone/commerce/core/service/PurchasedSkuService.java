@@ -7,5 +7,5 @@ import java.util.List;
 public interface PurchasedSkuService {
     List<PurchasedSku> fetchRecentlyPurchasedSku(String customerId);
 
-    List<PurchasedSku> fetchRecentlyPurchasedSkuForAllCustomers();
+    List<PurchasedSku> fetchRecentlyPurchasedSkuForAllCustomers(int offset, int limit);
 }

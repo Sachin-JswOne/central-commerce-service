@@ -75,70 +75,103 @@ public class CacheServiceImpl implements CacheService {
 
         int chunkSize = commerceValueConfig.getBuyAgainCacheChunkSize();
 
-        List<PurchasedSku> purchasedSkuForAllCustomers =
-                purchasedSkuService.fetchRecentlyPurchasedSkuForAllCustomers();
+        int dbBatchSize = 5000;
+        int offset = 0;
 
-        if (purchasedSkuForAllCustomers == null || purchasedSkuForAllCustomers.isEmpty()) {
-            log.info("BUY_AGAIN — Warm-up skipped: No purchase data found");
-            return;
-        }
-
-        Map<String, List<PurchasedSku>> groupedSkusByCustomerId = purchasedSkuForAllCustomers.stream()
-                .filter(Objects::nonNull)
-                .collect(Collectors.groupingBy(PurchasedSku::getCustomerId));
-
-        int totalCustomers = groupedSkusByCustomerId.size();
+        int totalCustomers = 0;
         int totalSuccess = 0;
         int totalFailed = 0;
 
-        List<Map.Entry<String, List<PurchasedSku>>> purchasedSkuList = new ArrayList<>(groupedSkusByCustomerId.entrySet());
-
-        List<List<Map.Entry<String, List<PurchasedSku>>>> purchasedSkuChunks = chunkPurchasedSkus(purchasedSkuList, chunkSize);
-
-        log.info("BUY_AGAIN — Processing {} customers in {} batches (chunkSize={})",
-                totalCustomers, purchasedSkuChunks.size(), chunkSize);
-
         List<String> globalFailedCustomerIds = new ArrayList<>();
 
-        for (int batchIndex = 0; batchIndex < purchasedSkuChunks.size(); batchIndex++) {
+        while (true) {
 
-            List<Map.Entry<String, List<PurchasedSku>>> purchasedSkuBatch = purchasedSkuChunks.get(batchIndex);
-            log.info("BUY_AGAIN — Executing Purchased Sku batch {}/{} (size={})",
-                    batchIndex + 1, purchasedSkuChunks.size(), purchasedSkuBatch.size());
+            List<PurchasedSku> purchasedSkuForAllCustomers =
+                    purchasedSkuService.fetchRecentlyPurchasedSkuForAllCustomers(offset, dbBatchSize);
 
-            List<Map.Entry<String, List<PurchasedSku>>> remainingPurchasedSkus = new ArrayList<>(purchasedSkuBatch);
-            int attempt = 0;
+            if (purchasedSkuForAllCustomers == null || purchasedSkuForAllCustomers.isEmpty()) {
+                log.info("BUY_AGAIN — No more purchase data found. Ending Buy Again cache warm-up.");
+                break;
+            }
 
-            // Retry failed keys
-            while (!remainingPurchasedSkus.isEmpty() && attempt <= MAX_RETRIES) {
-                attempt++;
+            log.info("BUY_AGAIN — Fetched DB batch offset={} size={}", offset, purchasedSkuForAllCustomers.size());
 
-                log.info("BUY_AGAIN — Batch {} attempt {} – {} keys",
-                        batchIndex + 1, attempt, remainingPurchasedSkus.size());
+            Map<String, List<PurchasedSku>> groupedSkusByCustomerId =
+                    purchasedSkuForAllCustomers.stream()
+                            .filter(Objects::nonNull)
+                            .collect(Collectors.groupingBy(PurchasedSku::getCustomerId));
 
-                PipelineResult result = executePipeline(remainingPurchasedSkus);
+            totalCustomers += groupedSkusByCustomerId.size();
 
-                totalSuccess += result.successCustomerIds.size();
-                remainingPurchasedSkus = result.failedEntries;
+            List<Map.Entry<String, List<PurchasedSku>>> purchasedSkuList =
+                    new ArrayList<>(groupedSkusByCustomerId.entrySet());
 
-                if (!remainingPurchasedSkus.isEmpty() && attempt < MAX_RETRIES) {
-                    log.warn("BUY_AGAIN — Batch {} attempt {} had {} failures. Retrying...",
-                            batchIndex + 1, attempt, remainingPurchasedSkus.size());
-                }
+            List<List<Map.Entry<String, List<PurchasedSku>>>> purchasedSkuChunks =
+                    chunkPurchasedSkus(purchasedSkuList, chunkSize);
 
-                if (attempt == MAX_RETRIES && !remainingPurchasedSkus.isEmpty()) {
-                    List<String> finalFailedIds = remainingPurchasedSkus.stream()
-                            .map(Map.Entry::getKey)
-                            .toList();
+            log.info("BUY_AGAIN — Processing {} customers in {} batches (chunkSize={})",
+                    groupedSkusByCustomerId.size(),
+                    purchasedSkuChunks.size(),
+                    chunkSize);
 
-                    globalFailedCustomerIds.addAll(finalFailedIds);
+            for (int batchIndex = 0; batchIndex < purchasedSkuChunks.size(); batchIndex++) {
 
-                    totalFailed += remainingPurchasedSkus.size();
-                    log.error("BUY_AGAIN — Batch {} FAILED after retries. Failed Customer IDs={}",
+                List<Map.Entry<String, List<PurchasedSku>>> purchasedSkuBatch =
+                        purchasedSkuChunks.get(batchIndex);
+
+                log.info("BUY_AGAIN — Executing Purchased Sku batch {}/{} (size={})",
+                        batchIndex + 1,
+                        purchasedSkuChunks.size(),
+                        purchasedSkuBatch.size());
+
+                List<Map.Entry<String, List<PurchasedSku>>> remainingPurchasedSkus =
+                        new ArrayList<>(purchasedSkuBatch);
+
+                int attempt = 0;
+
+                // Retry failed keys
+                while (!remainingPurchasedSkus.isEmpty() && attempt <= MAX_RETRIES) {
+                    attempt++;
+
+                    log.info("BUY_AGAIN — Batch {} attempt {} – {} keys",
                             batchIndex + 1,
-                            remainingPurchasedSkus.stream().map(Map.Entry::getKey).toList());
+                            attempt,
+                            remainingPurchasedSkus.size());
+
+                    PipelineResult result = executePipeline(remainingPurchasedSkus);
+
+                    totalSuccess += result.successCustomerIds.size();
+                    remainingPurchasedSkus = result.failedEntries;
+
+                    if (!remainingPurchasedSkus.isEmpty() && attempt < MAX_RETRIES) {
+                        log.warn("BUY_AGAIN — Batch {} attempt {} had {} failures. Retrying...",
+                                batchIndex + 1,
+                                attempt,
+                                remainingPurchasedSkus.size());
+                    }
+
+                    if (attempt == MAX_RETRIES && !remainingPurchasedSkus.isEmpty()) {
+
+                        List<String> failedIds =
+                                remainingPurchasedSkus.stream().map(Map.Entry::getKey).toList();
+
+                        globalFailedCustomerIds.addAll(failedIds);
+
+                        totalFailed += remainingPurchasedSkus.size();
+
+                        log.error("BUY_AGAIN — Batch {} FAILED after retries. Failed Customer IDs={}",
+                                batchIndex + 1, failedIds);
+                    }
                 }
             }
+            try {
+                Thread.sleep(50);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                log.warn("BUY_AGAIN — Warm-up interrupted", e);
+                return;
+            }
+            offset += dbBatchSize;
         }
 
         log.info("BUY_AGAIN — Warm-up completed. Total={}, Success={}, Failed={}",
