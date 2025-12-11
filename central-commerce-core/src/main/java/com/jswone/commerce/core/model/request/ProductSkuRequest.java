@@ -1,6 +1,7 @@
 package com.jswone.commerce.core.model.request;
 
 
+import jakarta.validation.constraints.NotNull;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -13,6 +14,8 @@ import java.util.List;
 @NoArgsConstructor
 @AllArgsConstructor
 public class ProductSkuRequest {
+    @NotNull(message = "cannot be null/blank")
     private String productMaterialMasterId;
+    @NotNull(message = "cannot be null/blank")
     private List<ProductAttributeDTO> productAttributes;
 }
