@@ -36,6 +36,7 @@ import static com.jswone.commerce.core.constants.NotificationConstants.*;
 public class CacheServiceImpl implements CacheService {
 
     private static final int MAX_RETRIES = 3;
+    private static final int DB_BATCH_SIZE = 5000;
 
     private final RedisTemplate<String, Object> redisTemplate;
 
@@ -75,7 +76,6 @@ public class CacheServiceImpl implements CacheService {
 
         int chunkSize = commerceValueConfig.getBuyAgainCacheChunkSize();
 
-        int dbBatchSize = 5000;
         int offset = 0;
 
         int totalCustomers = 0;
@@ -87,7 +87,7 @@ public class CacheServiceImpl implements CacheService {
         while (true) {
 
             List<PurchasedSku> purchasedSkuForAllCustomers =
-                    purchasedSkuService.fetchRecentlyPurchasedSkuForAllCustomers(offset, dbBatchSize);
+                    purchasedSkuService.fetchRecentlyPurchasedSkuForAllCustomers(offset, DB_BATCH_SIZE);
 
             if (purchasedSkuForAllCustomers == null || purchasedSkuForAllCustomers.isEmpty()) {
                 log.info("BUY_AGAIN — No more purchase data found. Ending Buy Again cache warm-up.");
@@ -171,7 +171,7 @@ public class CacheServiceImpl implements CacheService {
                 log.warn("BUY_AGAIN — Warm-up interrupted", e);
                 return;
             }
-            offset += dbBatchSize;
+            offset += DB_BATCH_SIZE;
         }
 
         log.info("BUY_AGAIN — Warm-up completed. Total={}, Success={}, Failed={}",
