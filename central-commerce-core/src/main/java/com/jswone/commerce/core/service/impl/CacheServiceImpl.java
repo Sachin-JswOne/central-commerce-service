@@ -190,6 +190,8 @@ public class CacheServiceImpl implements CacheService {
         List<String> orderedCustomerIds = new ArrayList<>();
         List<Map.Entry<String, List<PurchasedSku>>> entryList = new ArrayList<>();
 
+        PipelineResult prePipelineFailures = new PipelineResult();
+
         List<Object> results = redisTemplate.executePipelined((RedisCallback<Object>) connection -> {
 
             for (Map.Entry<String, List<PurchasedSku>> entry : purchasedSkus) {
@@ -234,12 +236,15 @@ public class CacheServiceImpl implements CacheService {
 
                 } catch (Exception e) {
                     log.error("BUY_AGAIN — Pre-pipeline failure for customerId: {} with message: {}", customerId, e.getMessage());
+                    prePipelineFailures.failedEntries.add(entry);
                 }
             }
             return null;
         });
 
         PipelineResult pipelineResult = new PipelineResult();
+
+        pipelineResult.failedEntries.addAll(prePipelineFailures.failedEntries);
 
         if (results == null) {
             log.debug("BUY_AGAIN — executePipelined returned null — assuming success for {} SETs", orderedCustomerIds.size());
@@ -343,9 +348,11 @@ public class CacheServiceImpl implements CacheService {
                             BUY_AGAIN_CACHE_WARM_UP_SUMMARY_MESSAGE : BUY_AGAIN_CT_CACHE_WARM_UP_SUMMARY_MESSAGE,
                     totalCustomers,
                     success,
-                    failedCustomerIds.size(),
-                    String.join(",\n", failedCustomerIds.isEmpty() ? List.of("None") : failedCustomerIds.stream().limit(100).toList())
-            );
+                    failedCustomerIds.size());
+
+            List<String> failedIds = failedCustomerIds.isEmpty() ? List.of("None") : failedCustomerIds;
+
+            log.info("Failed buy again cache customer IDs:\n{}", String.join("\n", failedIds));
 
             NotificationConfig config =
                     NotificationConfig.builder()
