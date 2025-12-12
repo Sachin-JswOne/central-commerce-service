@@ -241,6 +241,12 @@ public class CacheServiceImpl implements CacheService {
 
         PipelineResult pipelineResult = new PipelineResult();
 
+        if (results == null) {
+            log.debug("BUY_AGAIN — executePipelined returned null — assuming success for {} SETs", orderedCustomerIds.size());
+            pipelineResult.successCustomerIds.addAll(orderedCustomerIds);
+            return pipelineResult;
+        }
+
         int count = Math.min(results.size(), orderedCustomerIds.size());
         for (int i = 0; i < count; i++) {
 
@@ -315,10 +321,11 @@ public class CacheServiceImpl implements CacheService {
     }
 
     private boolean isRedisError(Object res) {
-        if (res == null) return true;
+        if (res == null) return false;
         if (res instanceof Exception) return true;
-        return res.toString().startsWith("ERR") ||
-                res.toString().toLowerCase().contains("error");
+
+        String str = res.toString().toLowerCase();
+        return str.startsWith("err") || str.contains("error");
     }
 
     private <T> List<List<T>> chunkPurchasedSkus(List<T> list, int chunkSize) {
@@ -337,7 +344,7 @@ public class CacheServiceImpl implements CacheService {
                     totalCustomers,
                     success,
                     failedCustomerIds.size(),
-                    String.join(",\n", failedCustomerIds.isEmpty() ? List.of("None") : failedCustomerIds)
+                    String.join(",\n", failedCustomerIds.isEmpty() ? List.of("None") : failedCustomerIds.stream().limit(100).toList())
             );
 
             NotificationConfig config =
