@@ -12,6 +12,7 @@ import com.jswone.commerce.core.model.response.search.SearchResponse;
 import com.jswone.commerce.core.model.response.search.SearchSuggestion;
 import com.jswone.commerce.core.util.CatalogueUtil;
 import lombok.extern.slf4j.Slf4j;
+import org.jetbrains.annotations.NotNull;
 import org.springframework.stereotype.Component;
 
 import java.util.*;
@@ -42,7 +43,7 @@ public class CatalogueConverter {
             SearchResponse response = new SearchResponse();
 
             // Dynamic Filters
-            response.setFilterConditions(buildDynamicFilters(products, searchRequest));
+            response.setFilterConditions(buildDynamicFilters(productSearchResponse.getFacets(), searchRequest));
 
             // searchAction logic
             if (searchRequest.isSearchAction()) {
@@ -164,48 +165,92 @@ public class CatalogueConverter {
     }
 
     // FILTER BUILDER ======================================================================================
-    private List<ProductFilterConditions> buildDynamicFilters(List<Product> products, SearchRequest searchRequest) {
 
-        Map<String, Set<String>> selectionValues = new HashMap<>();
-        Map<String, Double> minCollector = new HashMap<>();
-        Map<String, Double> maxCollector = new HashMap<>();
+    private List<ProductFilterConditions> buildDynamicFilters(Map<String, Set<String>> facets, SearchRequest searchRequest) {
 
-        for (Product p : products) {
+        // REQUIREMENT 1: Handle facetOnly = true (Build and return full facet list) ---
 
-            Map<String, Object> attrs = p.getAttributes();
-            if (attrs == null) continue;
+        Map<String, Set<String>> facetValues = new HashMap<>();
+        // This path is for when the UI needs the available facets
+        if (searchRequest.getFacetsOnly()) {
+            //  Extract facet data from the response
+            for (Map.Entry<String, Set<String>> facet : facets.entrySet()) {
+                String key = facet.getKey();
+                Set<String> val = facet.getValue();
 
-            for (var entry : attrs.entrySet()) {
+                if (!ATTRIBUTE_KEYS.contains(key)) continue;
+                if (val.isEmpty()) continue;
 
-                String key = entry.getKey();
-                Object val = entry.getValue();
+                facetValues.put(key, val);
+            }
+
+            // Build the final response list by facets only
+            List<ProductFilterConditions> out = new ArrayList<>();
+            facetValues.forEach((key, values) -> {
+                out.add(
+                        ProductFilterConditions.builder()
+                                .id(key.toUpperCase())
+                                .displayText(CatalogueUtil.formatName(key))
+                                .type("selection")
+                                .values(new ArrayList<>(values)) // Available values from facets
+                                .selectedValues(new ArrayList<>()) // No selected values
+                                .build()
+                );
+            });
+            return out;
+        }
+
+        // REQUIREMENT 2: handle when filters are present (Return request filters only)
+
+        // This path is for when we only care about applying the filters.
+        // We construct the output list only from the filters passed in the request.
+        if (searchRequest.getFilterConditions() != null) {
+            Map<String, Set<String>> selectionValues = new HashMap<>();
+
+            for (Map.Entry<String, Set<String>> facet : facets.entrySet()) {
+                String key = facet.getKey();
+                Set<String> val = facet.getValue();
 
                 if (!ATTRIBUTE_KEYS.contains(key)) continue;
 
-                // Skip nulls
-                if (val == null) continue;
-
                 // STRINGIFY + SANITY CHECK
-                String strVal = String.valueOf(val).trim();
-                if (strVal.isBlank() || strVal.equalsIgnoreCase("null")) continue;
-
-                if (key.endsWith("_min")) {
-                    minCollector.put(key.replace("_min", ""), CatalogueUtil.safeDouble(val));
-                    continue;
-                }
-                if (key.endsWith("_max")) {
-                    maxCollector.put(key.replace("_max", ""), CatalogueUtil.safeDouble(val));
-                    continue;
-                }
+                if (val.isEmpty()) continue;
 
                 // Valid values only
-                selectionValues
-                        .computeIfAbsent(key, x -> new TreeSet<>())
-                        .add(strVal);
+                selectionValues.put(key, val);
             }
+
+            // READ SELECTED VALUES FROM FE
+            Map<String, List<String>> selectedFromRequestMap = getSelectedFromRequestMap(searchRequest);
+
+            List<ProductFilterConditions> out = new ArrayList<>();
+
+            // BUILD FINAL FILTERS
+            selectionValues.forEach((key, values) -> {
+
+                List<String> selected = selectedFromRequestMap.getOrDefault(
+                        key.toLowerCase(),
+                        Collections.emptyList()
+                );
+
+                out.add(
+                        ProductFilterConditions.builder()
+                                .id(key.toUpperCase())
+                                .displayText(CatalogueUtil.formatName(key))
+                                .type("selection")
+                                .values(new ArrayList<>(values))
+                                .selectedValues(selected)
+                                .build()
+                );
+            });
+            return out;
         }
 
-        // READ SELECTED VALUES FROM FE
+        // If facetOnly is false and filterConditions is null, return empty list.
+        return Collections.emptyList();
+    }
+
+    private static Map<String, List<String>> getSelectedFromRequestMap(SearchRequest searchRequest) {
         Map<String, List<String>> selectedFromRequestMap = new HashMap<>();
 
         if (searchRequest.getFilterConditions() != null) {
@@ -220,28 +265,7 @@ public class CatalogueConverter {
                 selectedFromRequestMap.put(reqFilter.getId().toLowerCase(), selected);
             }
         }
-
-        List<ProductFilterConditions> out = new ArrayList<>();
-
-        // BUILD FINAL FILTERS
-        selectionValues.forEach((key, values) -> {
-
-            List<String> selected = selectedFromRequestMap.getOrDefault(
-                    key.toLowerCase(),
-                    Collections.emptyList()
-            );
-
-            out.add(
-                    ProductFilterConditions.builder()
-                            .id(key.toUpperCase())
-                            .displayText(CatalogueUtil.formatName(key))
-                            .type("selection")
-                            .values(new ArrayList<>(values))
-                            .selectedValues(selected)
-                            .build()
-            );
-        });
-
-        return out;
+        return selectedFromRequestMap;
     }
+
 }

@@ -68,6 +68,7 @@ public class CentralCatalogueClientImpl implements CentralCatalogueClient {
                     .size(searchRequest.getLimit())
                     .storefront(searchRequest.getStorefront())
                     .locale("en-US")
+                    .facets_only(searchRequest.getFacetsOnly())
                     .filters(extractFilters(searchRequest))  // method below
                     .build();
 
