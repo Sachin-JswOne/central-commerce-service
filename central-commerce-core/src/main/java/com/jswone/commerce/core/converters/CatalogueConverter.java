@@ -204,7 +204,7 @@ public class CatalogueConverter {
 
         // This path is for when we only care about applying the filters.
         // We construct the output list only from the filters passed in the request.
-        if (searchRequest.getFilterConditions() != null) {
+        if (searchRequest.getFilterConditions() != null && !searchRequest.getFilterConditions().isEmpty()) {
             Map<String, Set<String>> selectionValues = new HashMap<>();
 
             for (Map.Entry<String, Set<String>> facet : facets.entrySet()) {
@@ -253,7 +253,7 @@ public class CatalogueConverter {
     private static Map<String, List<String>> getSelectedFromRequestMap(SearchRequest searchRequest) {
         Map<String, List<String>> selectedFromRequestMap = new HashMap<>();
 
-        if (searchRequest.getFilterConditions() != null) {
+        if (searchRequest.getFilterConditions() != null && !searchRequest.getFilterConditions().isEmpty()) {
             for (ProductFilterConditions reqFilter : searchRequest.getFilterConditions()) {
 
                 if (!"selection".equalsIgnoreCase(reqFilter.getType())) continue;
