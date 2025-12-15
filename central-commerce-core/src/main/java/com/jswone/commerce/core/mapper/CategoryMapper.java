@@ -1,6 +1,8 @@
 package com.jswone.commerce.core.mapper;
 
 import com.jswone.commerce.core.model.CatalogueCategoryTree;
+import com.jswone.commerce.core.model.CatalogueMetaImage;
+import com.jswone.commerce.core.model.MetaImage;
 import com.jswone.commerce.core.model.NavigationItem;
 import java.util.Collections;
 import java.util.List;
@@ -20,6 +22,7 @@ public interface CategoryMapper {
   @Mapping(source = "attributes.href", target = "href")
   @Mapping(source = "attributes.link_title_seo_purpose", target = "linkTitleSeoPurpose")
   @Mapping(source = "attributes.link_title", target = "linkTitle")
+  @Mapping(source = "attributes.meta_image", target = "metaImage")
   @Mapping(target = "subMenu", expression = "java(mapCategories(category.getSub_menu()))")
   NavigationItem mapCategory(CatalogueCategoryTree category);
 
@@ -27,4 +30,11 @@ public interface CategoryMapper {
     if (categories == null) return Collections.emptyList();
     return categories.stream().map(this::mapCategory).collect(Collectors.toList());
   }
+
+  @Mapping(source = "title", target = "name")
+  @Mapping(source = "asset_id", target = "id")
+  @Mapping(source = "alt_text", target = "alternativeText")
+  @Mapping(source = "content_type", target = "contentType")
+  @Mapping(source = "public_url", target = "url")
+  MetaImage toMetaImage(CatalogueMetaImage metaImage);
 }
