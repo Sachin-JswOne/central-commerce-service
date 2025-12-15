@@ -69,7 +69,7 @@ steps:
       - "--image=gcr.io/$PROJECT_ID/central-commerce-service:$COMMIT_SHA"
       - "--region=asia-south1"
       - "--platform=managed"
-      - "--set-secrets=GCP-CREDENTIALS=GCP-CREDENTIALS:latest,GCP-PROJ-ID=GCP-PROJ-ID:latest,CTP-ADMIN-CLIENT-ID=CTP-ADMIN-CLIENT-ID:latest,CTP-ADMIN-PROJECTKEY=CTP-ADMIN-PROJECTKEY:latest,CTP-ADMIN-CLIENTSECRET=CTP-ADMIN-CLIENTSECRET:latest,CTP-ADMIN-SCOPE=CTP-ADMIN-SCOPE:latest,CTP-REGISTERED-CLIENTID=CTP-REGISTERED-CLIENTID:latest,CTP-REGISTERED-CLIENTSECRET=CTP-REGISTERED-CLIENTSECRET:latest,HISTORICAL_DB_PASSWORD=HISTORICAL_DB_PASSWORD:latest,NOTIFICATION_SERVICE_TOKEN=NOTIFICATION_SERVICE_TOKEN:latest,JWT_SECRET=JWT_SECRET:latest"
+      - "--set-secrets=GCP-CREDENTIALS=gcp-credentials:latest,GCP-PROJ-ID=gcp-project-id-prod:latest,CTP-ADMIN-CLIENT-ID=ctp-admin-clientId:latest,CTP-ADMIN-PROJECTKEY=ctp-admin-projectkey:latest,CTP-ADMIN-CLIENTSECRET=ctp-admin-clientsecret:latest,CTP-ADMIN-SCOPE=ctp-admin-scope:latest,CTP-REGISTERED-CLIENTID=ctp-registered-clientId:latest,CTP-REGISTERED-CLIENTSECRET=ctp-registered-clientSecret:latest,HISTORICAL_DB_PASSWORD=HISTORICAL_DB_PASSWORD:latest,NOTIFICATION_SERVICE_TOKEN=NOTIFICATION_TOKEN:latest,JWT_SECRET=JWT_SECRET:latest,SYSTEM-USER-JWT-TOKEN=system-user-jwt-token:latest"
 
 images:
   - "gcr.io/$PROJECT_ID/central-commerce-service:$COMMIT_SHA"
