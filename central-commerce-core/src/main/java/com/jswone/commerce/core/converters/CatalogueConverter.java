@@ -168,7 +168,7 @@ public class CatalogueConverter {
 
     private List<ProductFilterConditions> buildDynamicFilters(Map<String, Set<String>> facets, SearchRequest searchRequest) {
 
-        // REQUIREMENT 1: Handle facetOnly = true (Build and return full facet list) ---
+        // REQUIREMENT 1: Handle facetsOnly = true (Build and return full facet list) ---
 
         Map<String, Set<String>> facetValues = new HashMap<>();
         // This path is for when the UI needs the available facets
@@ -246,7 +246,7 @@ public class CatalogueConverter {
             return out;
         }
 
-        // If facetOnly is false and filterConditions is null, return empty list.
+        // If facetsOnly is false and filterConditions is null, return empty list.
         return Collections.emptyList();
     }
 
