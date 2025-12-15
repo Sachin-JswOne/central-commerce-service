@@ -25,7 +25,7 @@ steps:
       - '-B'
       - '-DskipTests'
       - 'clean'
-      - 'package'
+      - 'install'
     dir: "central-commerce-application"
 
   # ----------------------------
