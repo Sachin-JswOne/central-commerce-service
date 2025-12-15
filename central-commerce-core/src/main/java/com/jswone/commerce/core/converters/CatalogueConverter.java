@@ -10,7 +10,9 @@ import com.jswone.commerce.core.model.response.plp.PLPCard;
 import com.jswone.commerce.core.model.response.plp.ProductFilterConditions;
 import com.jswone.commerce.core.model.response.search.SearchResponse;
 import com.jswone.commerce.core.model.response.search.SearchSuggestion;
+import com.jswone.commerce.core.rest.CentralCatalogueClient;
 import com.jswone.commerce.core.util.CatalogueUtil;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.jetbrains.annotations.NotNull;
 import org.springframework.stereotype.Component;
@@ -25,11 +27,13 @@ public class CatalogueConverter {
     private final Set<String> NON_ATTRIBUTE_KEYS;
     private final Set<String> ATTRIBUTE_KEYS;
     private final Map<String, String> UNIT_MAP;
+    private final CentralCatalogueClient centralCatalogueClient;
 
-    public CatalogueConverter(CatalogueDynamicConfig catalogueDynamicConfig) {
+    public CatalogueConverter(CatalogueDynamicConfig catalogueDynamicConfig, CentralCatalogueClient centralCatalogueClient) {
         this.NON_ATTRIBUTE_KEYS = new HashSet<>(catalogueDynamicConfig.getExcludedAttributes());
         this.UNIT_MAP = new HashMap<>(catalogueDynamicConfig.getUnitMap());
         this.ATTRIBUTE_KEYS = new HashSet<>(catalogueDynamicConfig.getIncludedAttributes());
+        this.centralCatalogueClient = centralCatalogueClient;
     }
 
     // MAIN CONVERTER ======================================================================================
@@ -43,7 +47,7 @@ public class CatalogueConverter {
             SearchResponse response = new SearchResponse();
 
             // Dynamic Filters
-            response.setFilterConditions(buildDynamicFilters(productSearchResponse.getFacets(), searchRequest));
+            response.setFilterConditions(buildDynamicFilters(searchRequest));
 
             // searchAction logic
             if (searchRequest.isSearchAction()) {
@@ -165,89 +169,63 @@ public class CatalogueConverter {
     }
 
     // FILTER BUILDER ======================================================================================
+    private List<ProductFilterConditions> buildDynamicFilters(SearchRequest searchRequest) {
 
-    private List<ProductFilterConditions> buildDynamicFilters(Map<String, Set<String>> facets, SearchRequest searchRequest) {
+        List<ProductFilterConditions> out = new ArrayList<>();
 
-        // REQUIREMENT 1: Handle facetsOnly = true (Build and return full facet list) ---
+        // Handle facetOnly = true (Build and return full facets list)
+        ProductSearchResponse facetResponse = centralCatalogueClient.genericSearch(SearchRequest.builder()
+                .storefront(searchRequest.getStorefront())
+                .text(searchRequest.getText())
+                .facetsOnly(true)
+                .build());
 
         Map<String, Set<String>> facetValues = new HashMap<>();
-        // This path is for when the UI needs the available facets
-        if (searchRequest.getFacetsOnly()) {
-            //  Extract facet data from the response
-            for (Map.Entry<String, Set<String>> facet : facets.entrySet()) {
-                String key = facet.getKey();
-                Set<String> val = facet.getValue();
 
-                if (!ATTRIBUTE_KEYS.contains(key)) continue;
-                if (val.isEmpty()) continue;
+        //  Extract facet data from the response
+        for (Map.Entry<String, Set<String>> facet : facetResponse.getFacets().entrySet()) {
+            String key = facet.getKey();
+            Set<String> val = facet.getValue();
 
-                facetValues.put(key, val);
-            }
+            if (!ATTRIBUTE_KEYS.contains(key)) continue;
+            if (val.isEmpty()) continue;
 
-            // Build the final response list by facets only
-            List<ProductFilterConditions> out = new ArrayList<>();
-            facetValues.forEach((key, values) -> {
-                out.add(
-                        ProductFilterConditions.builder()
-                                .id(key.toUpperCase())
-                                .displayText(CatalogueUtil.formatName(key))
-                                .type("selection")
-                                .values(new ArrayList<>(values)) // Available values from facets
-                                .selectedValues(new ArrayList<>()) // No selected values
-                                .build()
-                );
-            });
-            return out;
+            facetValues.put(key, val);
         }
 
-        // REQUIREMENT 2: handle when filters are present (Return request filters only)
+        // Build the response list by facets only
+        facetValues.forEach((key, values) -> {
+            out.add(
+                    ProductFilterConditions.builder()
+                            .id(key.toUpperCase())
+                            .displayText(CatalogueUtil.formatName(key))
+                            .type("selection")
+                            .values(new ArrayList<>(values)) // Available values from facets
+                            .selectedValues(new ArrayList<>()) // No selected values
+                            .build()
+            );
+        });
 
-        // This path is for when we only care about applying the filters.
-        // We construct the output list only from the filters passed in the request.
+
+        // Construct the output list only from the filters passed in the request.
         if (searchRequest.getFilterConditions() != null && !searchRequest.getFilterConditions().isEmpty()) {
-            Map<String, Set<String>> selectionValues = new HashMap<>();
-
-            for (Map.Entry<String, Set<String>> facet : facets.entrySet()) {
-                String key = facet.getKey();
-                Set<String> val = facet.getValue();
-
-                if (!ATTRIBUTE_KEYS.contains(key)) continue;
-
-                // STRINGIFY + SANITY CHECK
-                if (val.isEmpty()) continue;
-
-                // Valid values only
-                selectionValues.put(key, val);
-            }
-
             // READ SELECTED VALUES FROM FE
             Map<String, List<String>> selectedFromRequestMap = getSelectedFromRequestMap(searchRequest);
 
-            List<ProductFilterConditions> out = new ArrayList<>();
-
             // BUILD FINAL FILTERS
-            selectionValues.forEach((key, values) -> {
-
+            facetValues.forEach((key, values) -> {
                 List<String> selected = selectedFromRequestMap.getOrDefault(
                         key.toLowerCase(),
                         Collections.emptyList()
                 );
-
-                out.add(
-                        ProductFilterConditions.builder()
-                                .id(key.toUpperCase())
-                                .displayText(CatalogueUtil.formatName(key))
-                                .type("selection")
-                                .values(new ArrayList<>(values))
-                                .selectedValues(selected)
-                                .build()
-                );
+                out.forEach(productFilterConditions -> {
+                    if (productFilterConditions.getId().equalsIgnoreCase(key)) {
+                        productFilterConditions.setSelectedValues(selected);
+                    }
+                });
             });
-            return out;
         }
-
-        // If facetsOnly is false and filterConditions is null, return empty list.
-        return Collections.emptyList();
+        return out;
     }
 
     private static Map<String, List<String>> getSelectedFromRequestMap(SearchRequest searchRequest) {
