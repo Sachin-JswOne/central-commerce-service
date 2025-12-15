@@ -19,6 +19,10 @@
         <module>central-commerce-core</module>
         <module>central-commerce-web</module>
         <module>central-commerce-application</module>
+        <module>central-commerce-elastic-consumer</module>
+        <module>central-commerce-elastic-service</module>
+        <module>central-commerce-elastic-publisher</module>
+        <module>central-commerce-elastic-core</module>
     </modules>
     <properties>
         <java.version>21</java.version>
@@ -141,6 +145,11 @@
                 <groupId>com.google.cloud</groupId>
                 <artifactId>google-cloud-datastore</artifactId>
                 <version>2.26.1</version> <!-- Latest stable as of now -->
+            </dependency>
+            <dependency>
+                <groupId>co.elastic.clients</groupId>
+                <artifactId>elasticsearch-java</artifactId>
+                <version>8.12.0</version>
             </dependency>
         </dependencies>
     </dependencyManagement>
