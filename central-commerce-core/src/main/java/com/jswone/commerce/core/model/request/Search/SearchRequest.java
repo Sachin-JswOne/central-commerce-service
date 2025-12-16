@@ -40,6 +40,4 @@ public class SearchRequest {
 
     /** Optional storefront name (used when calling Central Catalogue) */
     @Builder.Default private String storefront = "default";
-
-    @Builder.Default private Boolean facetsOnly = false;
 }

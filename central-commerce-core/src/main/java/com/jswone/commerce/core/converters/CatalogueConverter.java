@@ -27,18 +27,16 @@ public class CatalogueConverter {
     private final Set<String> NON_ATTRIBUTE_KEYS;
     private final Set<String> ATTRIBUTE_KEYS;
     private final Map<String, String> UNIT_MAP;
-    private final CentralCatalogueClient centralCatalogueClient;
 
-    public CatalogueConverter(CatalogueDynamicConfig catalogueDynamicConfig, CentralCatalogueClient centralCatalogueClient) {
+    public CatalogueConverter(CatalogueDynamicConfig catalogueDynamicConfig) {
         this.NON_ATTRIBUTE_KEYS = new HashSet<>(catalogueDynamicConfig.getExcludedAttributes());
         this.UNIT_MAP = new HashMap<>(catalogueDynamicConfig.getUnitMap());
         this.ATTRIBUTE_KEYS = new HashSet<>(catalogueDynamicConfig.getIncludedAttributes());
-        this.centralCatalogueClient = centralCatalogueClient;
     }
 
     // MAIN CONVERTER ======================================================================================
     public SearchResponse convertGenericSearchToSearchResponse(
-            ProductSearchResponse productSearchResponse, SearchRequest searchRequest) {
+            ProductSearchResponse productSearchResponse, ProductSearchResponse facetsResponse, SearchRequest searchRequest) {
 
         try {
             List<Product> products = Optional.ofNullable(productSearchResponse.getProducts())
@@ -47,7 +45,7 @@ public class CatalogueConverter {
             SearchResponse response = new SearchResponse();
 
             // Dynamic Filters
-            response.setFilterConditions(buildDynamicFilters(searchRequest));
+            response.setFilterConditions(buildDynamicFilters(facetsResponse, searchRequest));
 
             // searchAction logic
             if (searchRequest.isSearchAction()) {
@@ -169,17 +167,11 @@ public class CatalogueConverter {
     }
 
     // FILTER BUILDER ======================================================================================
-    private List<ProductFilterConditions> buildDynamicFilters(SearchRequest searchRequest) {
+    private List<ProductFilterConditions> buildDynamicFilters(ProductSearchResponse facetResponse, SearchRequest searchRequest) {
 
         List<ProductFilterConditions> out = new ArrayList<>();
 
-        // Handle facetOnly = true (Build and return full facets list)
-        ProductSearchResponse facetResponse = centralCatalogueClient.genericSearch(SearchRequest.builder()
-                .storefront(searchRequest.getStorefront())
-                .text(searchRequest.getText())
-                .facetsOnly(true)
-                .build());
-
+        // Build and return full facets
         Map<String, Set<String>> facetValues = new HashMap<>();
 
         //  Extract facet data from the response
