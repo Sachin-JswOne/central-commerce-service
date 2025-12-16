@@ -9,7 +9,7 @@
         <version>${revision}</version>
     </parent>
 
-    <artifactId>central-commerce-elastic-service</artifactId>
+    <artifactId>cemtral-commerce-worker</artifactId>
 
     <properties>
         <maven.compiler.source>21</maven.compiler.source>

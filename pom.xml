@@ -19,10 +19,7 @@
         <module>central-commerce-core</module>
         <module>central-commerce-web</module>
         <module>central-commerce-application</module>
-        <module>central-commerce-elastic-consumer</module>
-        <module>central-commerce-elastic-service</module>
-        <module>central-commerce-elastic-publisher</module>
-        <module>central-commerce-elastic-core</module>
+        <module>cemtral-commerce-worker</module>
     </modules>
     <properties>
         <java.version>21</java.version>
@@ -149,7 +146,7 @@
             <dependency>
                 <groupId>co.elastic.clients</groupId>
                 <artifactId>elasticsearch-java</artifactId>
-                <version>8.12.0</version>
+                <version>8.19.5</version>
             </dependency>
         </dependencies>
     </dependencyManagement>
