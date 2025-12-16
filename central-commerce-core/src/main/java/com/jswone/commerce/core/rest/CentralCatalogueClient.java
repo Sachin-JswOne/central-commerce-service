@@ -17,6 +17,7 @@ import java.util.List;
 
 public interface CentralCatalogueClient {
     ProductSearchResponse genericSearch(SearchRequest searchRequest);
+    ProductSearchResponse genericSearchFacetsOnly(SearchRequest searchRequest);
     ProductBulkResponse bulkMMIDResponse(ProductBulkRequest productBulkRequest);
     ProductTypeBulkResponse bulkTypeIdResponse(ProductTypeBulkRequest productTypeBulkRequest);
     Map<String, ImageMetadata> fetchImagesForMmIds(Set<String> productMmIds);
