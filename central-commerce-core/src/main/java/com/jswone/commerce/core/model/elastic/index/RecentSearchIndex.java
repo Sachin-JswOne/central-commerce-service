@@ -14,7 +14,7 @@ import java.time.Instant;
 @NoArgsConstructor
 @Setter
 @JsonInclude(JsonInclude.Include.NON_NULL)
-public class RecentSearchElasticIndex {
+public class RecentSearchIndex {
 
     private String id;
 

@@ -28,6 +28,11 @@
             <artifactId>central-commerce-web</artifactId>
             <version>${revision}</version>
         </dependency>
+        <dependency>
+            <groupId>com.jswone.central-commerce</groupId>
+            <artifactId>cemtral-commerce-worker</artifactId>
+            <version>${revision}</version>
+        </dependency>
     </dependencies>
 
     <build>

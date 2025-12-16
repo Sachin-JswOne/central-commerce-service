@@ -1,8 +1,10 @@
-package com.jswone.commerce.core.config;
+package com.jswone.commerce.core.config.redis;
 
 import com.google.cloud.secretmanager.v1.AccessSecretVersionResponse;
 import com.google.cloud.secretmanager.v1.SecretManagerServiceClient;
 import com.google.cloud.secretmanager.v1.SecretVersionName;
+import com.jswone.commerce.core.config.cache.CacheClientConfig;
+import com.jswone.commerce.core.config.CommerceValueConfig;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;

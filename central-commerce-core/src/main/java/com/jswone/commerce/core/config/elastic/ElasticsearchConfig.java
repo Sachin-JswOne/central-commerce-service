@@ -1,9 +1,10 @@
-package com.jswone.commerce.core.config;
+package com.jswone.commerce.core.config.elastic;
 
 import co.elastic.clients.elasticsearch.ElasticsearchClient;
 import co.elastic.clients.json.jackson.JacksonJsonpMapper;
 import co.elastic.clients.transport.rest_client.RestClientTransport;
 
+import com.jswone.commerce.core.config.CommerceValueConfig;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.http.HttpHost;
