@@ -20,5 +20,7 @@ public class JWTConstants {
                     "/**/actuator/**");
 
     public static final String USER_ID_CLAIM = "userId";
+    public static final String SF_ID_CLAIM = "sfCustomerId";
+    public static final String USER_TYPE_CLAIM = "userType";
 
 }

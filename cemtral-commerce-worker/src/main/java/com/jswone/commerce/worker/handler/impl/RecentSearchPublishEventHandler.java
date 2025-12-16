@@ -24,7 +24,7 @@ public class RecentSearchPublishEventHandler implements EventHandler {
 
     @Override
     public void handleEvent(Map<String, Object> data) throws Exception {
-        RecentSearchIndex message = objectMapper.convertValue(data.get("data"), RecentSearchIndex.class);
+        RecentSearchIndex message = objectMapper.convertValue(data, RecentSearchIndex.class);
         try {
             recentSearchElasticIndexRepository.insertData(message);
         } catch (Exception e) {

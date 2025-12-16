@@ -5,6 +5,7 @@ import com.jswone.commerce.core.model.ImageMetadata;
 import com.jswone.commerce.core.model.request.Search.SearchRequest;
 import com.jswone.commerce.core.model.response.centralCatalogue.ProductSearchResponse;
 import com.jswone.commerce.core.model.response.search.SearchResponse;
+import com.jswone.commerce.core.publisher.recentSearch.RecentSearchItemPublisher;
 import com.jswone.commerce.core.rest.CentralCatalogueClient;
 import com.jswone.commerce.core.service.CentralCatalogueService;
 import com.jswone.commerce.core.util.CatalogueUtil;
@@ -26,17 +27,20 @@ public class CentralCatalogueServiceImpl implements CentralCatalogueService {
     private final CentralCatalogueClient centralCatalogueClient;
     private final CatalogueConverter catalogueConverter;
     private final CatalogueValidator catalogueValidator;
+    private final RecentSearchItemPublisher recentSearchItemPublisher;
 
-    public CentralCatalogueServiceImpl(CentralCatalogueClient centralCatalogueClient, CatalogueConverter catalogueConverter, CatalogueValidator catalogueValidator) {
+    public CentralCatalogueServiceImpl(CentralCatalogueClient centralCatalogueClient, CatalogueConverter catalogueConverter, CatalogueValidator catalogueValidator, RecentSearchItemPublisher recentSearchItemPublisher) {
         this.centralCatalogueClient = centralCatalogueClient;
         this.catalogueConverter = catalogueConverter;
         this.catalogueValidator = catalogueValidator;
+        this.recentSearchItemPublisher = recentSearchItemPublisher;
     }
 
     @Override
     public SearchResponse searchCatalogue(SearchRequest searchRequest) {
         catalogueValidator.validateSearchRequest(searchRequest);
         ProductSearchResponse productSearchResponse = centralCatalogueClient.genericSearch(searchRequest);
+        recentSearchItemPublisher.publish(productSearchResponse, searchRequest);
         return catalogueConverter.convertGenericSearchToSearchResponse(productSearchResponse, searchRequest);
     }
 

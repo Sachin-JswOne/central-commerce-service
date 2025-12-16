@@ -17,5 +17,6 @@ public class SearchQuery {
     private String normalized;
 
     @JsonProperty("valid_query_for_trending_search")
-    private boolean validQueryForTrendingSearch;
+
+    @Builder.Default private boolean validQueryForTrendingSearch = true;
 }
