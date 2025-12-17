@@ -9,41 +9,24 @@
         <version>${revision}</version>
     </parent>
 
-    <artifactId>central-commerce-application</artifactId>
+    <artifactId>cemtral-commerce-worker</artifactId>
 
     <properties>
         <maven.compiler.source>21</maven.compiler.source>
         <maven.compiler.target>21</maven.compiler.target>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     </properties>
-
     <dependencies>
         <dependency>
             <groupId>com.jswone.central-commerce</groupId>
             <artifactId>central-commerce-core</artifactId>
             <version>${revision}</version>
         </dependency>
+
         <dependency>
-            <groupId>com.jswone.central-commerce</groupId>
-            <artifactId>central-commerce-web</artifactId>
-            <version>${revision}</version>
-        </dependency>
-        <dependency>
-            <groupId>com.jswone.central-commerce</groupId>
-            <artifactId>cemtral-commerce-worker</artifactId>
-            <version>${revision}</version>
+            <groupId>org.projectlombok</groupId>
+            <artifactId>lombok</artifactId>
+            <scope>provided</scope>
         </dependency>
     </dependencies>
-
-    <build>
-        <plugins>
-            <plugin>
-                <groupId>org.springframework.boot</groupId>
-                <artifactId>spring-boot-maven-plugin</artifactId>
-                <configuration>
-                    <jvmArguments>-Dspring-boot.run.fork=false</jvmArguments>
-                </configuration>
-            </plugin>
-        </plugins>
-    </build>
 </project>

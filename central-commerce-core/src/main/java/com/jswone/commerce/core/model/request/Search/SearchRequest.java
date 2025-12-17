@@ -1,5 +1,6 @@
 package com.jswone.commerce.core.model.request.Search;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.jswone.commerce.core.model.response.plp.ProductFilterConditions;
 import jakarta.validation.constraints.NotBlank;
 import lombok.AllArgsConstructor;
@@ -40,4 +41,10 @@ public class SearchRequest {
 
     /** Optional storefront name (used when calling Central Catalogue) */
     @Builder.Default private String storefront = "default";
+
+    @NotBlank(message = "Search text cannot be blank")
+    private String searchId;
+
+    @NotBlank(message = "Search text cannot be blank")
+    private String searchType;
 }

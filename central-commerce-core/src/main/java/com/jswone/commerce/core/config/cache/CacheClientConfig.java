@@ -1,4 +1,4 @@
-package com.jswone.commerce.core.config;
+package com.jswone.commerce.core.config.cache;
 
 import io.netty.handler.ssl.SslContextBuilder;
 import lombok.RequiredArgsConstructor;

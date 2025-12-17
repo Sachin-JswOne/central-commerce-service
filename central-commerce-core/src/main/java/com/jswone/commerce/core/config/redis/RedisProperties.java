@@ -1,4 +1,4 @@
-package com.jswone.commerce.core.config;
+package com.jswone.commerce.core.config.redis;
 
 import lombok.Data;
 import org.springframework.boot.context.properties.ConfigurationProperties;
