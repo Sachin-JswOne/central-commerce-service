@@ -15,7 +15,8 @@ public class UomConvert {
 
     private String productMMID;
     private UomValueDetails<?> primaryUom;
-    private UomValueDetails<?> secondaryUom;
+    private UomValueDetails<?> purchasedUom;
+    private boolean primaryUomPurchased;
     private boolean success;
     private String errorMessage;
 }

@@ -26,6 +26,7 @@ import java.util.*;
 public class UomConvertServiceImpl implements UomConvertService {
 
     private static final String DEFAULT_VARIANT_SUFFIX = "-10000000";
+    private static final String PRIMARY_UOM = "primary";
     private final UOMConvertorService uomConvertorService;
     private final MasterDataClient masterDataClient;
 
@@ -115,33 +116,41 @@ public class UomConvertServiceImpl implements UomConvertService {
                 .map(Category::getUom)
                 .orElse(Collections.emptyList());
 
-        String primaryUom = getUomByType(uomList, "primary");
-        String secondaryUom = getUomByType(uomList, "secondary");
+        List<String> uomNameList = uomList.stream().map(Uom::getName).toList();
+
+        String primaryUom = getUomByType(uomList, PRIMARY_UOM);
 
         Attribute purchasedUom = req.getPurchasedUom();
 
-        if (purchasedUom == null || purchasedUom.getName() == null || purchasedUom.getValue() == null) {
+        if (purchasedUom == null || purchasedUom.getName() == null || purchasedUom.getValue() == null
+                || !uomNameList.contains(purchasedUom.getName())) {
             throw new CentralCommerceServiceException(
-                    "Invalid purchasedUom for product " + req.getProductMMID(),
+                    "Invalid Purchased Uom for product " + req.getProductMMID(),
                     HttpStatus.BAD_REQUEST
             );
         }
 
-        String sourceUom = req.getPurchasedUom().getName();
-        double sourceQty = Double.parseDouble(req.getPurchasedUom().getValue());
+        String sourceUom = purchasedUom.getName();
+        double sourceQty = Double.parseDouble(purchasedUom.getValue());
 
         Map<String, Double> attributeMap = extractAttributes(req);
 
-        UnitConversionResponse<Double> primaryResp =
+        UnitConversionResponse<Double> primaryUomConvertResp =
                 convertTo(primaryUom, sourceUom, sourceQty, attributeMap);
 
-        UnitConversionResponse<Double> secondaryResp =
-                convertTo(secondaryUom, sourceUom, sourceQty, attributeMap);
+        UnitConversionResponse<Double> purchasedUomResp = UnitConversionResponse.<Double>builder()
+                .uom(sourceUom)
+                .convertedQuantity(sourceQty)
+                .unRoundedConvertedQuantity(sourceQty)
+                .pricePerUnit(Optional.empty())
+                .convertedPrice(Optional.empty())
+                .build();
 
         return UomConvert.builder()
                 .productMMID(req.getProductMMID())
-                .primaryUom(buildUom(primaryUom, primaryResp, uomList))
-                .secondaryUom(buildUom(secondaryUom, secondaryResp, uomList))
+                .primaryUom(buildUom(primaryUom, primaryUomConvertResp, uomList))
+                .purchasedUom(buildUom(sourceUom, purchasedUomResp, uomList))
+                .primaryUomPurchased(primaryUom.equalsIgnoreCase(purchasedUom.getName()))
                 .build();
     }
 
@@ -221,17 +230,17 @@ public class UomConvertServiceImpl implements UomConvertService {
 
     private UomValueDetails buildUom(
             String uomName,
-            UnitConversionResponse<Double> resp,
+            UnitConversionResponse<Double> uomConvertResp,
             List<Uom> uomList) {
 
-        if (uomName == null || resp == null)
+        if (uomName == null || uomConvertResp == null)
             return null;
 
         Uom details = findUomDetails(uomList, uomName);
 
         return UomValueDetails.builder()
                 .unit(uomName)
-                .value(resp.getConvertedQuantity())
+                .value(uomConvertResp.getConvertedQuantity())
                 .label(details != null ? details.getUiLabelQuantity() : null)
                 .priceLabel(details != null ? details.getUiLabelPrice() : null)
                 .build();
