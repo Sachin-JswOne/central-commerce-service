@@ -1,5 +1,7 @@
 package com.jswone.commerce.core.model.request.Search;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.jswone.commerce.core.model.response.plp.ProductFilterConditions;
 import jakarta.validation.constraints.NotBlank;
@@ -18,6 +20,7 @@ import java.util.List;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class SearchRequest {
 
     /** Text entered by user in search bar (mapped to Central Catalogue 'query') */
@@ -42,9 +45,9 @@ public class SearchRequest {
     /** Optional storefront name (used when calling Central Catalogue) */
     @Builder.Default private String storefront = "default";
 
-    @NotBlank(message = "Search text cannot be blank")
+    @NotBlank(message = "searchId cannot be blank")
     private String searchId;
 
-    @NotBlank(message = "Search text cannot be blank")
+    @NotBlank(message = "searchType cannot be blank")
     private String searchType;
 }
