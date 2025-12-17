@@ -2,7 +2,11 @@ package com.jswone.commerce.core.publisher.recentSearch;
 
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.api.core.ApiFuture;
+import com.google.api.core.ApiFutureCallback;
+import com.google.api.core.ApiFutures;
 import com.google.cloud.pubsub.v1.Publisher;
+import com.google.common.util.concurrent.MoreExecutors;
 import com.google.protobuf.ByteString;
 import com.google.pubsub.v1.PubsubMessage;
 import com.jswone.commerce.core.enums.ElasticPublisherEventTypes;
@@ -48,7 +52,23 @@ public class RecentSearchItemPublisher {
             ByteString data = ByteString.copyFromUtf8(messageString);
             // Create PubsubMessage with the serialized data
             PubsubMessage pubsubMessage = PubsubMessage.newBuilder().setData(data).build();
-            publisher.publish(pubsubMessage);
+            ApiFuture<String> messageId = publisher.publish(pubsubMessage);
+            ApiFutures.addCallback(
+                    messageId,
+                    new ApiFutureCallback<>() {
+                        @Override
+                        public void onSuccess(String messageId) {
+                            log.info("Published Data to Topic: {}, messageId: {}", publisher.getTopicName(), messageId);
+                        }
+
+                        @Override
+                        public void onFailure(Throwable t) {
+                            log.error("Failed to publish Data to Topic: {}, message: {}", publisher.getTopicName(), t.getMessage());
+                        }
+
+                    },
+                    MoreExecutors.directExecutor()
+            );
             log.info("Published Recent Search message: {}", messageString);
             MDC.clear();
         } catch (Exception e) {
