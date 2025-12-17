@@ -11,6 +11,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.util.List;
+import java.util.UUID;
 
 /**
  * Unified request model for Search API in Central Commerce Service (CCS). This merges existing CCP
@@ -45,9 +46,9 @@ public class SearchRequest {
     /** Optional storefront name (used when calling Central Catalogue) */
     @Builder.Default private String storefront = "default";
 
-    @NotBlank(message = "searchId cannot be blank")
-    private String searchId;
+//    @NotBlank(message = "searchId cannot be blank")
+    @Builder.Default private String searchId = UUID.randomUUID().toString();
 
-    @NotBlank(message = "searchType cannot be blank")
-    private String searchType;
+//    @NotBlank(message = "searchType cannot be blank")
+    @Builder.Default private String searchType = "PARTIAL";
 }
