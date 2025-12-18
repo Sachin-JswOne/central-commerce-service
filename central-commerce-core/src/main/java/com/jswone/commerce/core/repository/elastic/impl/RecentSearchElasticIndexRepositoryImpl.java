@@ -58,6 +58,7 @@ public class RecentSearchElasticIndexRepositoryImpl implements RecentSearchElast
                         )
                 )
                 .query(recentSearchQueryBuilder.getRecentSearchQuery(userId))
+                .size(1000)
         );
 
         log.info("Executing search with request: {}", request);
