@@ -22,6 +22,7 @@ public class RecentSearchElasticIndexRepositoryImpl implements RecentSearchElast
     @Override
     public void insertData(RecentSearchIndex recentSearch) {
         IndexRequest<RecentSearchIndex> request = IndexRequest.of(i -> i
+                .id(recentSearch.getId())
                 .index(ElasticConstants.RECENT_SEARCH_INDEX)
                 .document(recentSearch)
         );
