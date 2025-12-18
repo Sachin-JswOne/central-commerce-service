@@ -74,7 +74,6 @@ public class CatalogueConverter {
 
             response.setQuery(searchRequest.getText());
             response.setSearchAction(searchRequest.isSearchAction());
-            response.setDescription(null);
 
             return response;
 
