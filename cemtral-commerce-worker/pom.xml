@@ -9,7 +9,7 @@
         <version>${revision}</version>
     </parent>
 
-    <artifactId>cemtral-commerce-worker</artifactId>
+    <artifactId>central-commerce-worker</artifactId>
 
     <properties>
         <maven.compiler.source>21</maven.compiler.source>
