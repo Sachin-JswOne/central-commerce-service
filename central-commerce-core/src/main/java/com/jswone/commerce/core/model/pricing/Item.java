@@ -17,6 +17,8 @@ import java.util.List;
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public class Item {
     @NotNull(message = "cannot be null/blank")
+    private String requestIdentifier;
+    @NotNull(message = "cannot be null/blank")
     private PurchasedQuantity purchasedQuantity;
     @NotNull(message = "cannot be null/blank")
     private String productMMID;

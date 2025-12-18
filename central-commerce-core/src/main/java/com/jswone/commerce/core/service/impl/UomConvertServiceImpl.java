@@ -151,6 +151,7 @@ public class UomConvertServiceImpl implements UomConvertService {
                 .primaryUom(buildUom(primaryUom, primaryUomConvertResp, uomList))
                 .purchasedUom(buildUom(sourceUom, purchasedUomResp, uomList))
                 .primaryUomPurchased(primaryUom.equalsIgnoreCase(purchasedUom.getName()))
+                .requestIdentifier(req.getRequestIdentifier())
                 .build();
     }
 

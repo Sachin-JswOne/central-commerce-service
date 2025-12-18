@@ -14,7 +14,8 @@ import java.util.Set;
 @NoArgsConstructor
 @Builder
 public class PurchasedUom {
-
+    @NotNull(message = "cannot be null/blank")
+    private String requestIdentifier;
     @NotEmpty
     private String productMMID;
     private String variantMMID;

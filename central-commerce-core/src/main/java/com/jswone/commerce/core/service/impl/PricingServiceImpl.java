@@ -43,6 +43,7 @@ public class PricingServiceImpl implements PricingService {
             List<LineItemPrice> lineItemPrices = new ArrayList<>();
             List<PurchasedUom> purchasedUoms = priceRequest.getItems().stream()
                     .map(price -> PurchasedUom.builder()
+                            .requestIdentifier(price.getRequestIdentifier())
                             .productMMID(price.getProductMMID())
                             .purchasedUom(Attribute.builder()
                                     .name(price.getPurchasedQuantity().getKey())
@@ -88,8 +89,7 @@ public class PricingServiceImpl implements PricingService {
             Map<String, Vendor> priceVendor = getPriceVendorMap(priceServiceResponse);
 
             priceRequest.getItems().forEach(item -> {
-                String variantString = getVariantString(item);
-                Vendor vendor = priceVendor.get(item.getProductMMID().concat(MMID_SUFFIX).concat("_").concat(variantString));
+                Vendor vendor = priceVendor.get(item.getRequestIdentifier());
                 if (Objects.isNull(vendor) || StringUtils.isNotEmpty(vendor.getError_message())) {
                     throw new CentralCommerceServiceException("Price Not Available", HttpStatus.BAD_REQUEST);
                 }
@@ -127,7 +127,7 @@ public class PricingServiceImpl implements PricingService {
                         "freight charge for product MMID:{} is :{}",
                         item.getProductMMID(),
                         freightCharge);
-                UomConvert convert = productUomMap.get(item.getProductMMID().concat("_").concat(variantString));
+                UomConvert convert = productUomMap.get(item.getRequestIdentifier());
                 lineItemPrices.add(prepareLineItemPrice(vendor, convert, pricingMode, item.getProductAttributes()));
             });
 
@@ -186,8 +186,7 @@ public class PricingServiceImpl implements PricingService {
                             Attribute::getName,
                             Attribute::getValue
                     ));
-            String variantString = getVariantString(item);
-            UomConvert convert = productUomMap.get(item.getProductMMID().concat("_").concat(variantString));
+            UomConvert convert = productUomMap.get(item.getRequestIdentifier());
             ProductVariantPricingRequest productVariantPricingRequest = ProductVariantPricingRequest.builder()
                     .mmid(item.getProductMMID().concat(MMID_SUFFIX))
                     .variant_attributes(variantMap)
@@ -197,14 +196,14 @@ public class PricingServiceImpl implements PricingService {
                                     .pricing_mode(null)
                                     .order_quantity(Double.parseDouble(convert.getPrimaryUom().getValue().toString()))
                                     .ship_to_location(Integer.valueOf(priceRequest.getPinCode()))
-                                    .reference_id(PricingUtil.generateRandomText(16))
+                                    .reference_id(item.getRequestIdentifier())
                                     .build())
                     .priceItemMeta(
                             PriceItemMeta.builder()
-                                    .customerId(PricingUtil.generateRandomText(16))
-                                    .referenceId(PricingUtil.generateRandomText(16))
+                                    .customerId(item.getRequestIdentifier())
+                                    .referenceId(item.getRequestIdentifier())
                                     .build())
-                    .reference_id(PricingUtil.generateRandomText(16))
+                    .reference_id(item.getRequestIdentifier())
                     .build();
             productVariantPricingRequests.add(productVariantPricingRequest);
         });
@@ -299,21 +298,15 @@ public class PricingServiceImpl implements PricingService {
 
     private Map<String, UomConvert> getProductUomMap(PriceRequest priceRequest, UomConvertResponse uomConvertResponse){
         Map<String, UomConvert> productUomMap = new HashMap<>();
-        priceRequest.getItems().forEach(item -> {
-            String mmid = item.getProductMMID();
-            String variantString = getVariantString(item);
-            double qty = Double.parseDouble(item.getPurchasedQuantity().getValue());
 
+        priceRequest.getItems().forEach(item -> {
             UomConvert matchedUom = uomConvertResponse.getUomConvertedProducts()
                     .stream()
-                    .filter(uom -> uom.getProductMMID().equalsIgnoreCase(mmid))
-                    .filter(uom -> uom.getPrimaryUom().getValue().equals(qty))
                     .filter(UomConvert::isSuccess)
+                    .filter(uom -> uom.getRequestIdentifier().equalsIgnoreCase(item.getRequestIdentifier()))
                     .findFirst()
                     .orElse(null);
-
-            productUomMap.put(item.getProductMMID().concat("_").concat(variantString), matchedUom);
-
+            productUomMap.put(item.getRequestIdentifier(), matchedUom);
         });
 
         return productUomMap;
@@ -324,33 +317,12 @@ public class PricingServiceImpl implements PricingService {
                 .stream()
                 .filter(item -> Objects.nonNull(item.getVendors()))
                 .collect(Collectors.toMap(
-                        item -> {
-                            String variantString = (item.getVariantAttributes() == null)
-                                    ? ""
-                                    : item.getVariantAttributes()
-                                    .entrySet()
-                                    .stream()
-                                    .map(entry -> entry.getKey() + "_" + entry.getValue())
-                                    .collect(Collectors.joining("_"));
-
-                            return item.getMmId() + "_" + variantString;
-                        },
+                        PriceResponse::getReferenceId,
                         priceResponse -> priceResponse.getVendors()
                                 .stream()
                                 .findFirst()
                                 .orElse(new Vendor())
                 ));
-    }
-
-    private String getVariantString(Item item){
-        return item.getProductAttributes().stream()
-                .map(
-                        attribute ->
-                                attribute
-                                        .getName()
-                                        .concat("_")
-                                        .concat(String.valueOf(attribute.getValue())))
-                .collect(Collectors.joining("_"));
     }
 
     private Set<String> getIncorrectMMIDs(UomConvertResponse uomConvertResponse){
