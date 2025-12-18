@@ -10,8 +10,11 @@ import com.jswone.commerce.core.model.response.plp.PLPCard;
 import com.jswone.commerce.core.model.response.plp.ProductFilterConditions;
 import com.jswone.commerce.core.model.response.search.SearchResponse;
 import com.jswone.commerce.core.model.response.search.SearchSuggestion;
+import com.jswone.commerce.core.rest.CentralCatalogueClient;
 import com.jswone.commerce.core.util.CatalogueUtil;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.jetbrains.annotations.NotNull;
 import org.springframework.stereotype.Component;
 
 import java.util.*;
@@ -33,7 +36,7 @@ public class CatalogueConverter {
 
     // MAIN CONVERTER ======================================================================================
     public SearchResponse convertGenericSearchToSearchResponse(
-            ProductSearchResponse productSearchResponse, SearchRequest searchRequest) {
+            ProductSearchResponse productSearchResponse, ProductSearchResponse facetsResponse, SearchRequest searchRequest) {
 
         try {
             List<Product> products = Optional.ofNullable(productSearchResponse.getProducts())
@@ -42,7 +45,7 @@ public class CatalogueConverter {
             SearchResponse response = new SearchResponse();
 
             // Dynamic Filters
-            response.setFilterConditions(buildDynamicFilters(products, searchRequest));
+            response.setFilterConditions(buildDynamicFilters(facetsResponse, searchRequest));
 
             // searchAction logic
             if (searchRequest.isSearchAction()) {
@@ -71,7 +74,6 @@ public class CatalogueConverter {
 
             response.setQuery(searchRequest.getText());
             response.setSearchAction(searchRequest.isSearchAction());
-            response.setDescription(null);
 
             return response;
 
@@ -164,51 +166,63 @@ public class CatalogueConverter {
     }
 
     // FILTER BUILDER ======================================================================================
-    private List<ProductFilterConditions> buildDynamicFilters(List<Product> products, SearchRequest searchRequest) {
+    private List<ProductFilterConditions> buildDynamicFilters(ProductSearchResponse facetResponse, SearchRequest searchRequest) {
 
-        Map<String, Set<String>> selectionValues = new HashMap<>();
-        Map<String, Double> minCollector = new HashMap<>();
-        Map<String, Double> maxCollector = new HashMap<>();
+        List<ProductFilterConditions> out = new ArrayList<>();
 
-        for (Product p : products) {
+        // Build and return full facets
+        Map<String, Set<String>> facetValues = new HashMap<>();
 
-            Map<String, Object> attrs = p.getAttributes();
-            if (attrs == null) continue;
+        //  Extract facet data from the response
+        for (Map.Entry<String, Set<String>> facet : facetResponse.getFacets().entrySet()) {
+            String key = facet.getKey();
+            Set<String> val = facet.getValue();
 
-            for (var entry : attrs.entrySet()) {
+            if (!ATTRIBUTE_KEYS.contains(key)) continue;
+            if (val.isEmpty()) continue;
 
-                String key = entry.getKey();
-                Object val = entry.getValue();
-
-                if (!ATTRIBUTE_KEYS.contains(key)) continue;
-
-                // Skip nulls
-                if (val == null) continue;
-
-                // STRINGIFY + SANITY CHECK
-                String strVal = String.valueOf(val).trim();
-                if (strVal.isBlank() || strVal.equalsIgnoreCase("null")) continue;
-
-                if (key.endsWith("_min")) {
-                    minCollector.put(key.replace("_min", ""), CatalogueUtil.safeDouble(val));
-                    continue;
-                }
-                if (key.endsWith("_max")) {
-                    maxCollector.put(key.replace("_max", ""), CatalogueUtil.safeDouble(val));
-                    continue;
-                }
-
-                // Valid values only
-                selectionValues
-                        .computeIfAbsent(key, x -> new TreeSet<>())
-                        .add(strVal);
-            }
+            facetValues.put(key, val);
         }
 
-        // READ SELECTED VALUES FROM FE
+        // Build the response list by facets only
+        facetValues.forEach((key, values) -> {
+            out.add(
+                    ProductFilterConditions.builder()
+                            .id(key.toUpperCase())
+                            .displayText(CatalogueUtil.formatName(key))
+                            .type("selection")
+                            .values(new ArrayList<>(values)) // Available values from facets
+                            .selectedValues(new ArrayList<>()) // No selected values
+                            .build()
+            );
+        });
+
+
+        // Construct the output list only from the filters passed in the request.
+        if (searchRequest.getFilterConditions() != null && !searchRequest.getFilterConditions().isEmpty()) {
+            // READ SELECTED VALUES FROM FE
+            Map<String, List<String>> selectedFromRequestMap = getSelectedFromRequestMap(searchRequest);
+
+            // BUILD FINAL FILTERS
+            facetValues.forEach((key, values) -> {
+                List<String> selected = selectedFromRequestMap.getOrDefault(
+                        key.toLowerCase(),
+                        Collections.emptyList()
+                );
+                out.forEach(productFilterConditions -> {
+                    if (productFilterConditions.getId().equalsIgnoreCase(key)) {
+                        productFilterConditions.setSelectedValues(selected);
+                    }
+                });
+            });
+        }
+        return out;
+    }
+
+    private static Map<String, List<String>> getSelectedFromRequestMap(SearchRequest searchRequest) {
         Map<String, List<String>> selectedFromRequestMap = new HashMap<>();
 
-        if (searchRequest.getFilterConditions() != null) {
+        if (searchRequest.getFilterConditions() != null && !searchRequest.getFilterConditions().isEmpty()) {
             for (ProductFilterConditions reqFilter : searchRequest.getFilterConditions()) {
 
                 if (!"selection".equalsIgnoreCase(reqFilter.getType())) continue;
@@ -220,28 +234,7 @@ public class CatalogueConverter {
                 selectedFromRequestMap.put(reqFilter.getId().toLowerCase(), selected);
             }
         }
-
-        List<ProductFilterConditions> out = new ArrayList<>();
-
-        // BUILD FINAL FILTERS
-        selectionValues.forEach((key, values) -> {
-
-            List<String> selected = selectedFromRequestMap.getOrDefault(
-                    key.toLowerCase(),
-                    Collections.emptyList()
-            );
-
-            out.add(
-                    ProductFilterConditions.builder()
-                            .id(key.toUpperCase())
-                            .displayText(CatalogueUtil.formatName(key))
-                            .type("selection")
-                            .values(new ArrayList<>(values))
-                            .selectedValues(selected)
-                            .build()
-            );
-        });
-
-        return out;
+        return selectedFromRequestMap;
     }
+
 }

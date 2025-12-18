@@ -7,6 +7,8 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 @Data
 @NoArgsConstructor
@@ -15,4 +17,5 @@ public class ProductSearchResponse {
     private List<Product> products;
     @JsonProperty("total_hits")
     private long totalHits;
+    private Map<String, Set<String>> facets;
 }

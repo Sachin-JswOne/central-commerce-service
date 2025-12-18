@@ -30,9 +30,6 @@ public class SearchResponse {
     /** Total available results in catalogue */
     private Long total;
 
-    /** Descriptive message (useful for UI) */
-    private String description;
-
     /** Echoes back the original search query (for debugging/UI) */
     private String query;
 

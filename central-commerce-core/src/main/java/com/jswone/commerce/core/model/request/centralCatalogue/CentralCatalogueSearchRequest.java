@@ -18,5 +18,6 @@ public class CentralCatalogueSearchRequest {
     private Integer size;
     private String storefront;
     private String locale;
+    private Boolean facets_only;
     private Map<String, List<String>> filters;
 }
