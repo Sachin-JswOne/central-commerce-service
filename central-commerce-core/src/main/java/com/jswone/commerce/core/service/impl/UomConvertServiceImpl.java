@@ -91,7 +91,7 @@ public class UomConvertServiceImpl implements UomConvertService {
                 uomConvertList.add(uomConverted);
 
             } catch (CentralCommerceServiceException e) {
-                log.error("UOM conversion failed for productMMID={}", purchasedUom.getProductMMID(), e);
+                log.error("UOM conversion failed for Product MMID={}", purchasedUom.getProductMMID(), e);
                 uomConvertList.add(UomConvert.builder()
                         .productMMID(purchasedUom.getProductMMID())
                         .success(false)
@@ -110,7 +110,7 @@ public class UomConvertServiceImpl implements UomConvertService {
         return UomConvertResponse.builder().uomConvertedProducts(uomConvertList).build();
     }
 
-    private UomConvert processUom(Data data, PurchasedUom req) {
+    private UomConvert processUom(Data data, PurchasedUom purchasedUomRequest) {
 
         List<Uom> uomList = Optional.ofNullable(data.getCategory())
                 .map(Category::getUom)
@@ -120,12 +120,12 @@ public class UomConvertServiceImpl implements UomConvertService {
 
         String primaryUom = getUomByType(uomList, PRIMARY_UOM);
 
-        Attribute purchasedUom = req.getPurchasedUom();
+        Attribute purchasedUom = purchasedUomRequest.getPurchasedUom();
 
         if (purchasedUom == null || purchasedUom.getName() == null || purchasedUom.getValue() == null
                 || !uomNameList.contains(purchasedUom.getName())) {
             throw new CentralCommerceServiceException(
-                    "Invalid Purchased Uom for product " + req.getProductMMID(),
+                    "Invalid Purchased Uom for product " + purchasedUomRequest.getProductMMID(),
                     HttpStatus.BAD_REQUEST
             );
         }
@@ -133,7 +133,7 @@ public class UomConvertServiceImpl implements UomConvertService {
         String sourceUom = purchasedUom.getName();
         double sourceQty = Double.parseDouble(purchasedUom.getValue());
 
-        Map<String, Double> attributeMap = extractAttributes(req);
+        Map<String, Double> attributeMap = extractAttributes(purchasedUomRequest);
 
         UnitConversionResponse<Double> primaryUomConvertResp =
                 convertTo(primaryUom, sourceUom, sourceQty, attributeMap);
@@ -147,10 +147,11 @@ public class UomConvertServiceImpl implements UomConvertService {
                 .build();
 
         return UomConvert.builder()
-                .productMMID(req.getProductMMID())
+                .productMMID(purchasedUomRequest.getProductMMID())
                 .primaryUom(buildUom(primaryUom, primaryUomConvertResp, uomList))
                 .purchasedUom(buildUom(sourceUom, purchasedUomResp, uomList))
                 .primaryUomPurchased(primaryUom.equalsIgnoreCase(purchasedUom.getName()))
+                .requestIdentifier(purchasedUomRequest.getRequestIdentifier())
                 .build();
     }
 
