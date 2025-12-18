@@ -94,6 +94,7 @@ public class UomConvertServiceImpl implements UomConvertService {
                 log.error("UOM conversion failed for Product MMID={}", purchasedUom.getProductMMID(), e);
                 uomConvertList.add(UomConvert.builder()
                         .productMMID(purchasedUom.getProductMMID())
+                        .requestIdentifier(purchasedUom.getRequestIdentifier())
                         .success(false)
                         .errorMessage(e.getMessage())
                         .build());
@@ -101,6 +102,7 @@ public class UomConvertServiceImpl implements UomConvertService {
                 log.error("Unexpected error while converting UOM for productMMID={}", purchasedUom.getProductMMID(), e);
                 uomConvertList.add(UomConvert.builder()
                         .productMMID(purchasedUom.getProductMMID())
+                        .requestIdentifier(purchasedUom.getRequestIdentifier())
                         .success(false)
                         .errorMessage("Unexpected Internal Error")
                         .build());
