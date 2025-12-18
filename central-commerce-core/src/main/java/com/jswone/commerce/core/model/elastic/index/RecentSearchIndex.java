@@ -5,7 +5,10 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.jswone.commerce.core.model.elastic.dto.ResultContext;
 import com.jswone.commerce.core.model.elastic.dto.SearchQuery;
 import lombok.*;
+import org.apache.commons.lang3.time.DateUtils;
+import org.mapstruct.ap.shaded.freemarker.template.utility.DateUtil;
 
+import java.time.Instant;
 import java.util.Date;
 
 @Builder(toBuilder = true)

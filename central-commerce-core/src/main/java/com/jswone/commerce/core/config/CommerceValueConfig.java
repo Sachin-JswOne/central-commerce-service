@@ -91,6 +91,15 @@ public class CommerceValueConfig {
     @Value("${central.catalogue.admin.client.id}")
     private String centralCatalogueAdminClientId;
 
+    @Value("${catalogue.category.base.url}")
+    private String catalogueCategoryBaseUrl;
+
+    @Value("${catalogue.category.api.key}")
+    private String catalogueCategoryApiKey;
+
+    @Value("${catalogue.category.client.id}")
+    private String catalogueCategoryClientId;
+
     @Value("${redis.profile}")
     private String redisCacheProfile;
 
@@ -117,6 +126,27 @@ public class CommerceValueConfig {
 
     @Value("${buy.again.cache.chunk.size}")
     private int buyAgainCacheChunkSize;
+
+    @Value("${master.data.service.base.url}")
+    private String masterDataServiceBaseUrl;
+
+    @Value("${master.data.bulk.product.mmid.endpoint}")
+    private String bulkMasterDataProductMMIDEndpoint;
+
+    @Value("${master.data.bulk.product.mmid.api.key}")
+    private String bulkMasterDataProductMMIDApiKey;
+
+    @Value("${master.data.bulk.product.mmid.client.id}")
+    private String bulkMasterDataProductMMIDClientId;
+
+    @Value("${pricing.service.base.url}")
+    private String pricingServiceBaseUrl;
+
+    @Value("${pricing.service.fetch.price.endpoint}")
+    private String priceFetchEndpoint;
+
+    @Value("${pricing.service.api.key}")
+    private String pricingXApiKey;
 
     // Elastic Configs -- Start
     @Value("${elasticsearch.host}")
@@ -153,5 +183,4 @@ public class CommerceValueConfig {
     @Value("${elasticsearch.connection.idle.timeout:60000}")
     private long idleConnectionTimeout;
     // Elastic Configs -- End
-
 }

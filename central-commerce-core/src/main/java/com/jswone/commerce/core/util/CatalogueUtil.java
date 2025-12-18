@@ -5,6 +5,10 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
 import java.util.Map;
+import java.util.Set;
+import java.util.List;
+import java.util.ArrayList;
+import java.util.HashSet;
 
 @Component
 @Slf4j
@@ -56,9 +60,7 @@ public class CatalogueUtil {
         return Character.toUpperCase(raw.charAt(0)) + raw.substring(1);
     }
 
-    public static String unitSuffix(String u) {
-        return u.isBlank() ? "" : " " + u;
-    }
+    public static String unitSuffix(String u) { return u.isBlank() ? "" : " " + u; }
 
     // SMART UNIT DETECTION
     public static String getUnitFor(String base, Map<String, String> UNIT_MAP) {
@@ -73,6 +75,41 @@ public class CatalogueUtil {
         if (key.contains("thickness")) return "mm";
         if (key.contains("length")) return "mm";
 
-        return "";
+    return "";
+  }
+
+  public static String extractErrorMessage(String responseBody) {
+    if (responseBody == null || !responseBody.contains("\"message\"")) {
+      return "Unexpected error occurred";
+    }
+    try {
+      int startIndex = responseBody.indexOf("\"message\"") + 10; // after "message":
+      int endIndex = responseBody.indexOf("\"", startIndex + 1);
+      if (endIndex > startIndex) {
+        return responseBody.substring(startIndex + 1, endIndex);
+      }
+    } catch (Exception ex) {
+      log.error("Failed to extract error message: {}", ex.getMessage(), ex);
+    }
+    return "Unexpected error occurred";
+  }
+
+    /**
+     * Splits a Set into chunks of specified size.
+     *
+     * @param inputSet  The original set to split
+     * @param chunkSize The size of each chunk
+     * @param <T>       The type of elements in the set
+     * @return List of chunks (each chunk is a Set)
+     */
+    public static <T> List<Set<T>> chunkSet(Set<T> inputSet, int chunkSize) {
+        List<Set<T>> chunks = new ArrayList<>();
+        List<T> list = new ArrayList<>(inputSet);
+
+        for (int i = 0; i < list.size(); i += chunkSize) {
+            Set<T> chunk = new HashSet<>(list.subList(i, Math.min(i + chunkSize, list.size())));
+            chunks.add(chunk);
+        }
+        return chunks;
     }
 }
