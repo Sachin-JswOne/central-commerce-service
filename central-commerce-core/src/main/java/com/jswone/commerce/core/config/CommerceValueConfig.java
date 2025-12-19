@@ -183,4 +183,5 @@ public class CommerceValueConfig {
     @Value("${elasticsearch.connection.idle.timeout:60000}")
     private long idleConnectionTimeout;
     // Elastic Configs -- End
+
 }

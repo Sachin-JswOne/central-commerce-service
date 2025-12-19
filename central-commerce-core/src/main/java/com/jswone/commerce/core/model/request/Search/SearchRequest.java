@@ -46,9 +46,9 @@ public class SearchRequest {
     /** Optional storefront name (used when calling Central Catalogue) */
     @Builder.Default private String storefront = "default";
 
-//    @NotBlank(message = "searchId cannot be blank")
-    @Builder.Default private String searchId = UUID.randomUUID().toString();
+    @NotBlank(message = "searchId cannot be blank")
+    private String searchId;
 
-//    @NotBlank(message = "searchType cannot be blank")
-    @Builder.Default private String searchType = "PARTIAL";
+    @NotBlank(message = "searchType cannot be blank")
+    private String searchType;
 }

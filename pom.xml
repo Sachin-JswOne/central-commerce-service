@@ -19,7 +19,7 @@
         <module>central-commerce-core</module>
         <module>central-commerce-web</module>
         <module>central-commerce-application</module>
-        <module>cemtral-commerce-worker</module>
+        <module>central-commerce-worker</module>
     </modules>
     <properties>
         <java.version>21</java.version>

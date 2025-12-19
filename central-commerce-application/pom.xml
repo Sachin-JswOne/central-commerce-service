@@ -30,7 +30,7 @@
         </dependency>
         <dependency>
             <groupId>com.jswone.central-commerce</groupId>
-            <artifactId>cemtral-commerce-worker</artifactId>
+            <artifactId>central-commerce-worker</artifactId>
             <version>${revision}</version>
         </dependency>
     </dependencies>

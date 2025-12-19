@@ -81,7 +81,7 @@ public class RecentSearchItemPublisher {
 
         RecentSearchIndex recentSearchIndex = RecentSearchIndex.builder()
                 .searchId(searchRequest.getSearchId())
-                .searchType(searchRequest.getSearchType())
+                .searchType(searchRequest.getSearchType().equalsIgnoreCase("Full Search") ? "FULL" : "PARTIAL")
                 .eventType(UserSearchTrackingEventTypes.RECENT_SEARCH.getValue())
                 .id(UUID.randomUUID().toString())
                 .userId(MDC.get(USER_ID_CLAIM))
