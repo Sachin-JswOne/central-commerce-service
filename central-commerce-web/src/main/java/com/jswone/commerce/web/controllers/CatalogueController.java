@@ -2,7 +2,9 @@ package com.jswone.commerce.web.controllers;
 
 import com.jswone.commerce.core.model.ApiResponse;
 import com.jswone.commerce.core.model.ImageMetadata;
+import com.jswone.commerce.core.model.request.ProductListingRequest;
 import com.jswone.commerce.core.model.request.Search.SearchRequest;
+import com.jswone.commerce.core.model.response.ProductListingResponse;
 import com.jswone.commerce.core.model.response.search.SearchResponse;
 import com.jswone.commerce.core.service.CentralCatalogueService;
 import com.jswone.commerce.core.util.ApiResponseUtil;
@@ -38,5 +40,11 @@ public class CatalogueController implements CentralBaseController{
     public ApiResponse<Map<String, ImageMetadata>> fetchBulkImages(@RequestBody @NotEmpty(message = "MMIDs cannot be empty") Set<String> productMmIds) {
         Map<String, ImageMetadata> response = centralCatalogueService.fetchImagesForMmIds(productMmIds);
         return ApiResponseUtil.createSuccessResponse(response, HttpStatus.OK);
+    }
+
+    @PostMapping(value = "/products/listing", produces = MediaType.APPLICATION_JSON_VALUE)
+    public ApiResponse<ProductListingResponse> productListing(@Valid @RequestBody ProductListingRequest productListingRequest) {
+        log.info("Received request for product listing :{} ", productListingRequest.toString());
+        return ApiResponseUtil.createSuccessResponse(centralCatalogueService.productListing(productListingRequest), HttpStatus.OK);
     }
 }

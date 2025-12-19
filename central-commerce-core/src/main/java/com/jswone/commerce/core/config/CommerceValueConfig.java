@@ -184,4 +184,6 @@ public class CommerceValueConfig {
     private long idleConnectionTimeout;
     // Elastic Configs -- End
 
+    @Value("${central.catalogue.product.listing.endpoint}")
+    private String centralCatalogueProductListingEndpoint;
 }

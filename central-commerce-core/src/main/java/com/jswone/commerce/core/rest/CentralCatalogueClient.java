@@ -4,9 +4,11 @@ import com.jswone.commerce.core.model.CatalogueBreadCrumbData;
 import com.jswone.commerce.core.model.CatalogueCategoryTree;
 import com.jswone.commerce.core.model.ImageMetadata;
 import com.jswone.commerce.core.model.request.ProductBulkRequest;
+import com.jswone.commerce.core.model.request.ProductListingRequest;
 import com.jswone.commerce.core.model.request.ProductTypeBulkRequest;
 import com.jswone.commerce.core.model.request.Search.SearchRequest;
 import com.jswone.commerce.core.model.response.centralCatalogue.ProductBulkResponse;
+import com.jswone.commerce.core.model.response.centralCatalogue.ProductListingCatalogueResponse;
 import com.jswone.commerce.core.model.response.centralCatalogue.ProductSearchResponse;
 import com.jswone.commerce.core.model.response.centralCatalogue.ProductTypeBulkResponse;
 
@@ -23,4 +25,6 @@ public interface CentralCatalogueClient {
     Map<String, ImageMetadata> fetchImagesForMmIds(Set<String> productMmIds);
     List<CatalogueCategoryTree> getCategoryTree();
     CatalogueBreadCrumbData getBreadcrumb(String categoryId);
+    ProductListingCatalogueResponse productListing(ProductListingRequest productListingRequest);
+    ProductListingCatalogueResponse productListingFacetsOnly(ProductListingRequest productListingRequest);
 }

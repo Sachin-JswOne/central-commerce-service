@@ -2,7 +2,10 @@ package com.jswone.commerce.core.service.impl;
 
 import com.jswone.commerce.core.converters.CatalogueConverter;
 import com.jswone.commerce.core.model.ImageMetadata;
+import com.jswone.commerce.core.model.request.ProductListingRequest;
 import com.jswone.commerce.core.model.request.Search.SearchRequest;
+import com.jswone.commerce.core.model.response.ProductListingResponse;
+import com.jswone.commerce.core.model.response.centralCatalogue.ProductListingCatalogueResponse;
 import com.jswone.commerce.core.model.response.centralCatalogue.ProductSearchResponse;
 import com.jswone.commerce.core.model.response.search.SearchResponse;
 import com.jswone.commerce.core.publisher.recentSearch.RecentSearchItemPublisher;
@@ -63,5 +66,13 @@ public class CentralCatalogueServiceImpl implements CentralCatalogueService {
         }
         log.info("Successfully processed {} MMIDs in {} batches", finalImageMap.size(), batches.size());
         return finalImageMap;
+    }
+
+    @Override
+    public ProductListingResponse productListing(ProductListingRequest productListingRequest) {
+        catalogueValidator.validateProductListingRequest(productListingRequest);
+        ProductListingCatalogueResponse catalogueResponse = centralCatalogueClient.productListing(productListingRequest);
+        ProductListingCatalogueResponse facetsResponse = centralCatalogueClient.productListingFacetsOnly(productListingRequest);
+        return catalogueConverter.convertCataloguePLPResponseToPLPResponse(catalogueResponse, facetsResponse, productListingRequest);
     }
 }

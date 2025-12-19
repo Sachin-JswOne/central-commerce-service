@@ -1,8 +1,7 @@
 package com.jswone.commerce.core.model.request.Search;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
-import com.fasterxml.jackson.annotation.JsonInclude;
-import com.fasterxml.jackson.annotation.JsonProperty;
+import com.jswone.commerce.core.model.request.FilterRequestProvider;
 import com.jswone.commerce.core.model.response.plp.ProductFilterConditions;
 import jakarta.validation.constraints.NotBlank;
 import lombok.AllArgsConstructor;
@@ -11,7 +10,6 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.util.List;
-import java.util.UUID;
 
 /**
  * Unified request model for Search API in Central Commerce Service (CCS). This merges existing CCP
@@ -22,7 +20,7 @@ import java.util.UUID;
 @NoArgsConstructor
 @AllArgsConstructor
 @JsonIgnoreProperties(ignoreUnknown = true)
-public class SearchRequest {
+public class SearchRequest implements FilterRequestProvider {
 
     /** Text entered by user in search bar (mapped to Central Catalogue 'query') */
     @NotBlank(message = "Search text cannot be blank")
