@@ -179,7 +179,7 @@ public class CatalogueConverter {
             Set<String> val = facet.getValue();
 
             if (!ATTRIBUTE_KEYS.contains(key)) continue;
-            if (val.isEmpty()) continue;
+            if (val == null || val.isEmpty()) continue;
 
             facetValues.put(key, val);
         }
