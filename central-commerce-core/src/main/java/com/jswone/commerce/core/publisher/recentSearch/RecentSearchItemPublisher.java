@@ -19,12 +19,14 @@ import com.jswone.commerce.core.model.elastic.dto.SearchQuery;
 import com.jswone.commerce.core.model.elastic.index.RecentSearchIndex;
 import com.jswone.commerce.core.model.request.Search.SearchRequest;
 import com.jswone.commerce.core.model.response.centralCatalogue.ProductSearchResponse;
+import jakarta.annotation.PreDestroy;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.slf4j.MDC;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
+import java.io.IOException;
 import java.util.Map;
 import java.util.Objects;
 import java.util.UUID;
@@ -38,6 +40,7 @@ import static com.jswone.commerce.core.enums.ErrorType.INCORRECT_INPUT;
 public class RecentSearchItemPublisher {
 
     private final ObjectMapper objectMapper;
+    private final Publisher publisher;
 
     @Value("${gcp.elastic.tracker.publisher.topic}")
     private String TRACKER_PUBLISHER_TOPIC;
@@ -46,31 +49,7 @@ public class RecentSearchItemPublisher {
     public void publish(ProductSearchResponse productSearchResponse, SearchRequest searchRequest) {
         try {
             Event event = buildConsumerEvent(productSearchResponse, searchRequest);
-            String messageString = objectMapper.writeValueAsString(event);
-            log.info("Elastic TRACKER_PUBLISHER_TOPIC: {}", TRACKER_PUBLISHER_TOPIC);
-            Publisher publisher = Publisher.newBuilder(Objects.requireNonNull(TRACKER_PUBLISHER_TOPIC)).build();
-            ByteString data = ByteString.copyFromUtf8(messageString);
-            // Create PubsubMessage with the serialized data
-            PubsubMessage pubsubMessage = PubsubMessage.newBuilder().setData(data).build();
-            ApiFuture<String> messageId = publisher.publish(pubsubMessage);
-            ApiFutures.addCallback(
-                    messageId,
-                    new ApiFutureCallback<>() {
-                        @Override
-                        public void onSuccess(String messageId) {
-                            log.info("Published Data to Topic: {}, messageId: {}", publisher.getTopicName(), messageId);
-                        }
-
-                        @Override
-                        public void onFailure(Throwable t) {
-                            log.error("Failed to publish Data to Topic: {}, message: {}", publisher.getTopicName(), t.getMessage());
-                        }
-
-                    },
-                    MoreExecutors.directExecutor()
-            );
-            log.info("Published Recent Search message: {}", messageString);
-            MDC.clear();
+            publishRecentSearch(event);
         } catch (Exception e) {
             log.error(e.getMessage());
             throw new ParsingException("Error serializing ", INCORRECT_INPUT);
@@ -115,4 +94,57 @@ public class RecentSearchItemPublisher {
                 .build();
     }
 
+    public void publishClearRecentSearch(RecentSearchIndex recentSearchIndex) {
+
+        try {
+            Map<String, Object> requestMap =
+                    objectMapper.convertValue(recentSearchIndex, Map.class);
+
+            Event event = Event.builder()
+                    .eventId(UUID.randomUUID().toString())
+                    .eventType(
+                            ElasticPublisherEventTypes.CLEAR_RECENT_SEARCH.getValue()
+                    )
+                    .payload(requestMap)
+                    .build();
+
+            publishRecentSearch(event);
+        } catch (Exception e) {
+            log.error(e.getMessage());
+            throw new ParsingException("Error serializing ", INCORRECT_INPUT);
+        }
+    }
+
+    private void publishRecentSearch(Event event) throws IOException {
+        String messageString = objectMapper.writeValueAsString(event);
+        log.info("Elastic TRACKER_PUBLISHER_TOPIC: {}", TRACKER_PUBLISHER_TOPIC);
+        ByteString data = ByteString.copyFromUtf8(messageString);
+        // Create PubsubMessage with the serialized data
+        PubsubMessage pubsubMessage = PubsubMessage.newBuilder().setData(data).build();
+        ApiFuture<String> messageId = publisher.publish(pubsubMessage);
+        ApiFutures.addCallback(
+                messageId,
+                new ApiFutureCallback<>() {
+                    @Override
+                    public void onSuccess(String messageId) {
+                        log.info("Published Data to Topic: {}, messageId: {}", publisher.getTopicName(), messageId);
+                    }
+
+                    @Override
+                    public void onFailure(Throwable t) {
+                        log.error("Failed to publish Data to Topic: {}, message: {}", publisher.getTopicName(), t.getMessage());
+                    }
+
+                },
+                MoreExecutors.directExecutor()
+        );
+        log.info("Published Recent Search message: {}", messageString);
+        MDC.clear();
+    }
+
+    @PreDestroy
+    public void shutdown() {
+        log.info("Shutting down Pub/Sub publisher");
+        publisher.shutdown();
+    }
 }

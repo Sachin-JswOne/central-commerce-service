@@ -13,7 +13,7 @@ public class RecentSearchQueryBuilder {
         return BoolQuery.of(b -> b
                         .filter(
                                 TermQuery.of(t -> t
-                                        .field("user_id.keyword")
+                                        .field("user_id")
                                         .value(userId)
                                 )._toQuery(),
                                 TermQuery.of(t -> t
