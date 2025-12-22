@@ -76,6 +76,13 @@ public class CatalogueCategoryServiceImpl implements CatalogueCategoryService {
         throw new CentralCommerceServiceException("Please provide either category or brand", HttpStatus.BAD_REQUEST);
       }
 
+        if((Objects.nonNull(categoryRequestDTO.getBrandCategoryIds()) &&
+           categoryRequestDTO.getBrandCategoryIds().isEmpty()) ||
+           (Objects.nonNull(categoryRequestDTO.getCategoryIds()) &&
+           categoryRequestDTO.getCategoryIds().isEmpty())){
+        throw new CentralCommerceServiceException("Please provide either category or brand", HttpStatus.BAD_REQUEST);
+      }
+
       CategoryTreeResponse categoryTreeResponse = this.getCatalogueCategoryTree();
 
       if(Objects.nonNull(categoryRequestDTO.getCategoryIds()) &&
