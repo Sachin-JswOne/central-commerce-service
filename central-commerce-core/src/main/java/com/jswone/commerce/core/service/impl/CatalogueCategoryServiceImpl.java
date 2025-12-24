@@ -89,7 +89,7 @@ public class CatalogueCategoryServiceImpl implements CatalogueCategoryService {
               !categoryRequestDTO.getCategoryIds().isEmpty()){
 
         categoryTreeResponse.getNavigation().removeIf(navigationItem ->
-                !navigationItem.getSlug().equalsIgnoreCase("jsw-main-menu-v2"));
+                !navigationItem.getName().equalsIgnoreCase("All products"));
 
         categoryTreeResponse.getNavigation().forEach(navigationItem ->
                 navigationItem.getSubMenu().
@@ -99,7 +99,7 @@ public class CatalogueCategoryServiceImpl implements CatalogueCategoryService {
               !categoryRequestDTO.getBrandCategoryIds().isEmpty()){
 
         categoryTreeResponse.getNavigation().removeIf(navigationItem ->
-                !navigationItem.getSlug().equalsIgnoreCase("brands"));
+                !navigationItem.getName().equalsIgnoreCase("Brands"));
 
         categoryTreeResponse.getNavigation().forEach(navigationItem ->
                 navigationItem.getSubMenu().
