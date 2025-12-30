@@ -19,6 +19,7 @@ public class CentralCatalogueProductListingRequest {
     private Integer page;
     private Integer size;
     private String category_id;
+    private String slug;
     private String storefront;
     private String locale;
     private Boolean facets_only;

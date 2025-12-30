@@ -427,6 +427,7 @@ public class CentralCatalogueClientImpl implements CentralCatalogueClient {
                     .page(productListingRequest.getOffSet())
                     .size(productListingRequest.getLimit())
                     .category_id(productListingRequest.getCategoryId())
+                    .slug(productListingRequest.getSlug())
                     .storefront(productListingRequest.getStorefront())
                     .facets_only(false)
                     .locale("en-US")
@@ -477,6 +478,7 @@ public class CentralCatalogueClientImpl implements CentralCatalogueClient {
 
             CentralCatalogueProductListingRequest ccplRequest = CentralCatalogueProductListingRequest.builder()
                     .category_id(productListingRequest.getCategoryId())
+                    .slug(productListingRequest.getSlug())
                     .storefront(productListingRequest.getStorefront())
                     .facets_only(true)
                     .locale("en-US")

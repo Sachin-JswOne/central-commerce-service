@@ -1,6 +1,7 @@
 package com.jswone.commerce.core.service.impl;
 
 import com.jswone.commerce.core.converters.CatalogueConverter;
+import com.jswone.commerce.core.exceptions.CentralCommerceServiceException;
 import com.jswone.commerce.core.model.ImageMetadata;
 import com.jswone.commerce.core.model.request.ProductListingRequest;
 import com.jswone.commerce.core.model.request.Search.SearchRequest;
@@ -14,6 +15,8 @@ import com.jswone.commerce.core.service.CentralCatalogueService;
 import com.jswone.commerce.core.util.CatalogueUtil;
 import com.jswone.commerce.core.validators.CatalogueValidator;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang3.StringUtils;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 
 import java.util.HashMap;
@@ -71,6 +74,16 @@ public class CentralCatalogueServiceImpl implements CentralCatalogueService {
     @Override
     public ProductListingResponse productListing(ProductListingRequest productListingRequest) {
         catalogueValidator.validateProductListingRequest(productListingRequest);
+
+        if (StringUtils.isBlank(productListingRequest.getCategoryId()) && StringUtils.isBlank(productListingRequest.getSlug())) {
+            throw new CentralCommerceServiceException("Either categoryId or slug must be provided", HttpStatus.BAD_REQUEST);
+        }
+        if (StringUtils.isNotBlank(productListingRequest.getCategoryId()) && StringUtils.isNotBlank(productListingRequest.getSlug())) {
+            throw new CentralCommerceServiceException("Both categoryId and slug can not be provided together", HttpStatus.BAD_REQUEST);
+        }
+        log.info("Processing product listing for identifier: {}",
+                StringUtils.isNotBlank(productListingRequest.getCategoryId()) ? productListingRequest.getCategoryId() : productListingRequest.getSlug());
+
         ProductListingCatalogueResponse catalogueResponse = centralCatalogueClient.productListing(productListingRequest);
         ProductListingCatalogueResponse facetsResponse = centralCatalogueClient.productListingFacetsOnly(productListingRequest);
         return catalogueConverter.convertCataloguePLPResponseToPLPResponse(catalogueResponse, facetsResponse, productListingRequest);

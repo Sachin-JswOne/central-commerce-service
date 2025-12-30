@@ -1,7 +1,6 @@
 package com.jswone.commerce.core.model.request;
 
 import com.jswone.commerce.core.model.response.plp.ProductFilterConditions;
-import jakarta.validation.constraints.NotBlank;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -24,8 +23,9 @@ public class ProductListingRequest implements FilterRequestProvider {
     /** Optional storefront name (used when calling Central Catalogue) */
     @Builder.Default private String storefront = "msme";
 
-    @NotBlank(message = "CategoryId can not be blank")
     private String categoryId;
+
+    private String slug;
 
     /** Current applied or available filters from the FE */
     private List<ProductFilterConditions> filterConditions;
