@@ -186,4 +186,7 @@ public class CommerceValueConfig {
 
     @Value("${central.catalogue.product.listing.endpoint}")
     private String centralCatalogueProductListingEndpoint;
+
+    @Value("${central.catalogue.product.slug.endpoint}")
+    private String centralCatalogueProductSlugEndpoint;
 }
