@@ -55,6 +55,7 @@ public class CentralCatalogueClientImpl implements CentralCatalogueClient {
                     .size(searchRequest.getLimit())
                     .storefront(searchRequest.getStorefront())
                     .locale("en-US")
+                    .facets_only(false)
                     .filters(extractFilters(searchRequest))  // method below
                     .build();
 
@@ -90,6 +91,55 @@ public class CentralCatalogueClientImpl implements CentralCatalogueClient {
 
             throw new CentralCatalogueServiceException(
                     "HttpClientErrorException while calling central catalogue search: "
+                            + httpClientErrorException.getMessage(),
+                    HttpStatus.valueOf(httpClientErrorException.getStatusCode().value())
+            );
+        }
+    }
+
+    @Override
+    public ProductSearchResponse genericSearchFacetsOnly(SearchRequest searchRequest) {
+        try {
+
+            CentralCatalogueSearchRequest ccRequest = CentralCatalogueSearchRequest.builder()
+                    .query(searchRequest.getText())
+                    .storefront(searchRequest.getStorefront())
+                    .locale("en-US")
+                    .facets_only(true)
+                    .build();
+
+            String url = commerceValueConfig.getCentralCatalogueBaseUrl()
+                    + commerceValueConfig.getCentralCatalogueGenericSearchEndpoint();
+
+            Map<String, String> headers = Map.of(
+                    X_API_KEY, commerceValueConfig.getCentralCatalogueApiKey(),
+                    CLIENT_ID, commerceValueConfig.getCentralCatalogueClientId(),
+                    CONTENT_TYPE, APPLICATION_JSON
+            );
+
+            log.info("Calling Central Catalogue Search facetsOnly POST API: {}", url);
+
+            ResponseEntity<ProductSearchResponse> response = RetryUtil.retryHttpCalls(
+                    () -> restUtil.makeRestCall(
+                            url,
+                            ccRequest,
+                            HttpMethod.POST,
+                            ProductSearchResponse.class,
+                            headers
+                    ),
+                    0,
+                    3,
+                    100, CENTRAL_CATALOGUE_SEARCH
+            );
+
+            return response.getBody();
+
+        } catch (HttpClientErrorException httpClientErrorException) {
+            log.error("HttpClientErrorException while calling central catalogue search for facetsOnly: {}",
+                    httpClientErrorException.getMessage(), httpClientErrorException);
+
+            throw new CentralCatalogueServiceException(
+                    "HttpClientErrorException while calling central catalogue search for facetsOnly: "
                             + httpClientErrorException.getMessage(),
                     HttpStatus.valueOf(httpClientErrorException.getStatusCode().value())
             );

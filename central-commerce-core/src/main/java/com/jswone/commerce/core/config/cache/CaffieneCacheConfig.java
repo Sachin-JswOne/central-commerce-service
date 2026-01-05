@@ -1,6 +1,8 @@
-package com.jswone.commerce.core.config;
+package com.jswone.commerce.core.config.cache;
 
 import com.github.benmanes.caffeine.cache.Caffeine;
+import com.jswone.commerce.core.config.CommerceValueConfig;
+import com.jswone.commerce.core.config.ProfileAwareCacheConfig;
 import com.jswone.commerce.core.constants.CacheNames;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
