@@ -5,6 +5,7 @@ import com.jswone.commerce.core.model.ImageMetadata;
 import com.jswone.commerce.core.model.request.ProductListingRequest;
 import com.jswone.commerce.core.model.request.Search.SearchRequest;
 import com.jswone.commerce.core.model.response.ProductListingResponse;
+import com.jswone.commerce.core.model.response.centralCatalogue.ProductBulkResponse;
 import com.jswone.commerce.core.model.response.search.SearchResponse;
 import com.jswone.commerce.core.service.CentralCatalogueService;
 import com.jswone.commerce.core.util.ApiResponseUtil;
@@ -22,7 +23,7 @@ import java.util.Set;
 
 @RestController
 @Slf4j
-public class CatalogueController implements CentralBaseController{
+public class CatalogueController implements CentralBaseController {
 
     private final CentralCatalogueService centralCatalogueService;
 
@@ -46,5 +47,11 @@ public class CatalogueController implements CentralBaseController{
     public ApiResponse<ProductListingResponse> productListing(@Valid @RequestBody ProductListingRequest productListingRequest) {
         log.info("Received request for product listing :{} ", productListingRequest.toString());
         return ApiResponseUtil.createSuccessResponse(centralCatalogueService.productListing(productListingRequest), HttpStatus.OK);
+    }
+
+    @PostMapping(value = "/catalogue/product-details", produces = MediaType.APPLICATION_JSON_VALUE)
+    public ApiResponse<ProductBulkResponse> fetchProductDetails(@RequestBody @NotEmpty(message = "MMIDs cannot be empty") Set<String> productMMIDs) {
+        log.info("Received request to fetch product details for Product MMIDs: {} ", productMMIDs);
+        return ApiResponseUtil.createSuccessResponse(centralCatalogueService.fetchProductsByProductMMIDs(productMMIDs), HttpStatus.OK);
     }
 }

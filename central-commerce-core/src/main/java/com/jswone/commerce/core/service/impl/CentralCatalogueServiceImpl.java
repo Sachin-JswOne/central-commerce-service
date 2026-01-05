@@ -3,9 +3,11 @@ package com.jswone.commerce.core.service.impl;
 import com.jswone.commerce.core.converters.CatalogueConverter;
 import com.jswone.commerce.core.exceptions.CentralCommerceServiceException;
 import com.jswone.commerce.core.model.ImageMetadata;
+import com.jswone.commerce.core.model.request.ProductBulkRequest;
 import com.jswone.commerce.core.model.request.ProductListingRequest;
 import com.jswone.commerce.core.model.request.Search.SearchRequest;
 import com.jswone.commerce.core.model.response.ProductListingResponse;
+import com.jswone.commerce.core.model.response.centralCatalogue.ProductBulkResponse;
 import com.jswone.commerce.core.model.response.centralCatalogue.ProductListingCatalogueResponse;
 import com.jswone.commerce.core.model.response.centralCatalogue.ProductSearchResponse;
 import com.jswone.commerce.core.model.response.search.SearchResponse;
@@ -19,17 +21,16 @@ import org.apache.commons.lang3.StringUtils;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 
+import static com.jswone.commerce.core.constants.BuyAgainConstants.LOCALE_EN_US;
 import static com.jswone.commerce.core.constants.GenericConstants.BULK_IMAGE_CHUNK_SIZE;
 
 @Service
 @Slf4j
 public class CentralCatalogueServiceImpl implements CentralCatalogueService {
 
+    private static final String STOREFRONT_MSME = "msme";
     private final CentralCatalogueClient centralCatalogueClient;
     private final CatalogueConverter catalogueConverter;
     private final CatalogueValidator catalogueValidator;
@@ -87,5 +88,26 @@ public class CentralCatalogueServiceImpl implements CentralCatalogueService {
         ProductListingCatalogueResponse catalogueResponse = centralCatalogueClient.productListing(productListingRequest);
         ProductListingCatalogueResponse facetsResponse = centralCatalogueClient.productListingFacetsOnly(productListingRequest);
         return catalogueConverter.convertCataloguePLPResponseToPLPResponse(catalogueResponse, facetsResponse, productListingRequest);
+    }
+
+    @Override
+    public ProductBulkResponse fetchProductsByProductMMIDs(Set<String> productMMIDList) {
+
+        if (productMMIDList == null || productMMIDList.isEmpty()) {
+            return new ProductBulkResponse(Collections.emptyList(), 0);
+        }
+
+        log.info("Calling Central Catalogue Product Bulk API with Product MMID Count={}",
+                productMMIDList.size());
+
+        try {
+            ProductBulkRequest request =
+                    new ProductBulkRequest(productMMIDList, STOREFRONT_MSME, LOCALE_EN_US);
+            return centralCatalogueClient.bulkMMIDResponse(request);
+        } catch (Exception e) {
+            log.error("Central catalogue call failed (client retries already attempted): {}",
+                    e.getMessage(), e);
+            return new ProductBulkResponse(Collections.emptyList(), 0);
+        }
     }
 }

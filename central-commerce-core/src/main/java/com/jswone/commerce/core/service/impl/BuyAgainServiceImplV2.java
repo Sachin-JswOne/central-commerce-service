@@ -12,13 +12,13 @@ import com.jswone.commerce.core.model.Uom;
 import com.jswone.commerce.core.model.centralCatalogue.Product;
 import com.jswone.commerce.core.model.centralCatalogue.ProductTypeData;
 import com.jswone.commerce.core.model.centralCatalogue.Variant;
-import com.jswone.commerce.core.model.request.ProductBulkRequest;
 import com.jswone.commerce.core.model.request.ProductTypeBulkRequest;
 import com.jswone.commerce.core.model.response.centralCatalogue.ProductBulkResponse;
 import com.jswone.commerce.core.model.response.centralCatalogue.ProductTypeBulkResponse;
 import com.jswone.commerce.core.repository.ProductCatalogueStoreRepository;
 import com.jswone.commerce.core.rest.CentralCatalogueClient;
 import com.jswone.commerce.core.service.BuyAgainServiceV2;
+import com.jswone.commerce.core.service.CentralCatalogueService;
 import com.jswone.commerce.core.service.PurchasedSkuService;
 import com.jswone.commerce.core.util.JSWCustomerUtil;
 import com.jswone.commons.util.JwtTokenUtil;
@@ -34,7 +34,6 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import static com.jswone.commerce.core.config.ProfileAwareCacheConfig.getCacheNameWithProfile;
-import static com.jswone.commerce.core.constants.BuyAgainConstants.LOCALE_EN_US;
 import static com.jswone.commerce.core.constants.JSWProductConstants.EMPTY_STRING;
 import static com.jswone.commerce.core.constants.JWTConstants.HYPHEN;
 import static com.jswone.commerce.core.util.CatalogueUtil.extractImage;
@@ -46,15 +45,17 @@ public class BuyAgainServiceImplV2 implements BuyAgainServiceV2 {
 
     private static final String DATE_FORMAT = "yyyy-MM-dd HH:mm:ss";
     private final PurchasedSkuService purchasedSkuService;
+    private final CentralCatalogueService centralCatalogueService;
     private final ProductCatalogueStoreRepository productCatalogueStoreRepository;
     private final CentralCatalogueClient centralCatalogueClient;
     private final JSWCustomerUtil customerUtil;
     private final CacheManager cacheManager;
     private final CommerceValueConfig commerceValueConfig;
 
-    public BuyAgainServiceImplV2(PurchasedSkuService purchasedSkuService, ProductCatalogueStoreRepository productCatalogueStoreRepository,
+    public BuyAgainServiceImplV2(PurchasedSkuService purchasedSkuService, CentralCatalogueService centralCatalogueService, ProductCatalogueStoreRepository productCatalogueStoreRepository,
                                  CentralCatalogueClient centralCatalogueClient, JSWCustomerUtil customerUtil, CacheManager cacheManager, CommerceValueConfig commerceValueConfig) {
         this.purchasedSkuService = purchasedSkuService;
+        this.centralCatalogueService = centralCatalogueService;
         this.productCatalogueStoreRepository = productCatalogueStoreRepository;
         this.centralCatalogueClient = centralCatalogueClient;
         this.customerUtil = customerUtil;
@@ -175,7 +176,7 @@ public class BuyAgainServiceImplV2 implements BuyAgainServiceV2 {
 
         Set<String> productMMIDList = getProductMMIDList(purchasedSkus, productCatalogueStoreMap);
         log.info("Buy_Again - Calling Cental Catalogue Product Bulk API with ProductMMIDCount={}", productMMIDList.size());
-        ProductBulkResponse productBulkMMIDResponse = fetchCentralCatalogueProductsWithRetry(productMMIDList);
+        ProductBulkResponse productBulkMMIDResponse = centralCatalogueService.fetchProductsByProductMMIDs(productMMIDList);
         Map<String, Product> centralCatalogueProductMap = mapCentralCatalogueProducts(productBulkMMIDResponse);
 
         Set<String> productTypeIds = productBulkMMIDResponse.getProducts().stream()
@@ -260,26 +261,6 @@ public class BuyAgainServiceImplV2 implements BuyAgainServiceV2 {
                         resolveProductMMID(purchasedSku, productCatalogueStoreMap.get(purchasedSku.getProductKey())))
                 .filter(Objects::nonNull)
                 .collect(Collectors.toSet());
-    }
-
-    private ProductBulkResponse fetchCentralCatalogueProductsWithRetry(Set<String> productMMIDList) {
-
-        if (productMMIDList == null || productMMIDList.isEmpty()) {
-            return new ProductBulkResponse(Collections.emptyList(), 0);
-        }
-
-        log.info("Buy_Again - Calling Central Catalogue Product Bulk API with ProductMMID Count={}",
-                productMMIDList.size());
-
-        try {
-            ProductBulkRequest request =
-                    new ProductBulkRequest(productMMIDList, "msme", LOCALE_EN_US);
-            return centralCatalogueClient.bulkMMIDResponse(request);
-        } catch (Exception e) {
-            log.error("Buy_Again - Central catalogue call failed (client retries already attempted): {}",
-                    e.getMessage(), e);
-            return new ProductBulkResponse(Collections.emptyList(), 0);
-        }
     }
 
     private ProductTypeBulkResponse fetchCentralCatalogueAdminProductsWithRetry(Set<String> productTypeIdList) {
