@@ -136,22 +136,24 @@ public class BuyAgainServiceImpl implements BuyAgainService {
             return buildDistributedBuyAgainResponse(Collections.emptyList());
         }
 
-        Set<String> productKeys = purchasedSkus.stream()
-                .map(PurchasedSku::getProductKey)
-                .filter(Objects::nonNull)
-                .collect(Collectors.toSet());
+        Set<String> productMMIDList = getProductMMIDList(purchasedSkus);
 
         log.info("Buy_Again - Fetching Product Catalogue Store");
-        List<ProductCatalogueStore> productCatalogueStoreList = getProductDataStoreInBatches(productKeys);
-        log.info("Buy_Again - Fetched Product Catalogue Store for ProductKeyCount={}", productKeys.size());
+        List<ProductCatalogueStore> productCatalogueStoreList = getProductDataStoreInBatches(productMMIDList);
+        log.info("Buy_Again - Fetched Product Catalogue Store for ProductMMIDCount={}", productMMIDList.size());
         Map<String, ProductCatalogueStore> productCatalogueStoreMap = productCatalogueStoreList.stream()
-                .collect(Collectors.toMap(ProductCatalogueStore::getProductKey, Function.identity()));
+                .collect(Collectors.toMap(ProductCatalogueStore::getProductMaterialMasterId, Function.identity()));
         List<PurchasedLineItemResponse> lineItemResponseList = new ArrayList<>();
         log.info("Buy_Again - Preparing purchased line item response");
 
         for (PurchasedSku purchasedSku : purchasedSkus) {
+            String productMMID = resolveProductMMID(purchasedSku);
+            if (StringUtils.isEmpty(productMMID)) {
+                log.warn("Buy_Again - Skipping Purchased SKU as Product MMID is missing");
+                continue;
+            }
             log.info("Buy_Again - Preparing purchased line item response for Purchased SKU={} ", purchasedSku);
-            ProductCatalogueStore productCatalogueStore = productCatalogueStoreMap.get(purchasedSku.getProductKey());
+            ProductCatalogueStore productCatalogueStore = productCatalogueStoreMap.get(productMMID);
 
             if (Objects.nonNull(productCatalogueStore)) {
                 lineItemResponseList.add(buildPurchasedLineItemResponse(purchasedSku, productCatalogueStore));
@@ -237,6 +239,19 @@ public class BuyAgainServiceImpl implements BuyAgainService {
         return buildDistributedBuyAgainResponse(pagedPurchasedLineItems);
     }
 
+    private Set<String> getProductMMIDList(List<PurchasedSku> purchasedSkus) {
+        return purchasedSkus.stream()
+                .map(this::resolveProductMMID)
+                .filter(StringUtils::isNotEmpty)
+                .collect(Collectors.toSet());
+    }
+
+    private String resolveProductMMID(PurchasedSku purchasedSku) {
+        if (purchasedSku == null) return null;
+        String productMMID = purchasedSku.getProductMMID();
+        return StringUtils.isEmpty(productMMID) ? null : productMMID;
+    }
+
     private Map<String, String> transformPurchaseSkuAttributes(
             List<Attribute> attributeList, Map<String, String> ctSkuAttributes) {
         return attributeList.stream()
@@ -301,15 +316,15 @@ public class BuyAgainServiceImpl implements BuyAgainService {
                 .orElse(null);
     }
 
-    public List<ProductCatalogueStore> getProductDataStoreInBatches(Set<String> productKeys) {
+    public List<ProductCatalogueStore> getProductDataStoreInBatches(Set<String> productMMIds) {
         int batchSize = 30;
         List<ProductCatalogueStore> productStoreList = new ArrayList<>();
-        List<String> productKeyString = new ArrayList<>(productKeys);
-        for (int i = 0; i < productKeyString.size(); i += batchSize) {
+        List<String> productMMIDList = new ArrayList<>(productMMIds);
+        for (int i = 0; i < productMMIDList.size(); i += batchSize) {
             List<String> batch =
-                    productKeyString.subList(i, Math.min(i + batchSize, productKeyString.size()));
+                    productMMIDList.subList(i, Math.min(i + batchSize, productMMIDList.size()));
             List<ProductCatalogueStore> batchResults =
-                    productCatalogueStoreRepository.findProductCatalogueStoresByProductKeys(batch);
+                    productCatalogueStoreRepository.findProductCatalogueStoresByProductMaterialMasterIds(batch);
 
             productStoreList.addAll(batchResults);
         }
