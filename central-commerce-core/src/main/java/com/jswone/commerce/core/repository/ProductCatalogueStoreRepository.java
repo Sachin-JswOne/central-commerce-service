@@ -12,8 +12,8 @@ import java.util.List;
 @Repository
 public interface ProductCatalogueStoreRepository extends DatastoreRepository<ProductCatalogueStore, Key> {
 
-    @Query("SELECT * FROM product_catalogue_store WHERE productKey IN @productKeys")
-    List<ProductCatalogueStore> findProductCatalogueStoresByProductKeys(@Param("productKeys") List<String> productKeys);
+    @Query("SELECT * FROM product_catalogue_store WHERE productKey IN @productMaterialMasterIds")
+    List<ProductCatalogueStore> findProductCatalogueStoresByProductMaterialMasterIds(@Param("productMaterialMasterIds") List<String> productMaterialMasterIds);
 
     ProductCatalogueStore findProductCatalogueStoresByProductMaterialMasterId(String productMaterialMasterId);
 
