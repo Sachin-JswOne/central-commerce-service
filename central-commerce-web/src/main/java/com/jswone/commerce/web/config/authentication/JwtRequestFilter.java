@@ -12,6 +12,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.extern.log4j.Log4j2;
 import org.apache.commons.lang3.StringUtils;
+import org.slf4j.MDC;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -104,6 +105,9 @@ public class JwtRequestFilter extends OncePerRequestFilter {
             }
 
             String userId = (String) claims.get(USER_ID_CLAIM);
+            MDC.put(USER_ID_CLAIM,userId);
+            MDC.put(SF_ID_CLAIM, (String) claims.getOrDefault(SF_ID_CLAIM,null));
+            MDC.put(USER_TYPE_CLAIM, (String) claims.getOrDefault(USER_TYPE_CLAIM,null));
             UserDetails userDetails = new User(userId, jwtAccessToken, getAuthorities());
             UsernamePasswordAuthenticationToken authentication =
                     new UsernamePasswordAuthenticationToken(

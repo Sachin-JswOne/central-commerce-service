@@ -118,4 +118,40 @@ public class CommerceValueConfig {
     @Value("${buy.again.cache.chunk.size}")
     private int buyAgainCacheChunkSize;
 
+    // Elastic Configs -- Start
+    @Value("${elasticsearch.host}")
+    private String elasticsearchHost;
+
+    @Value("${elasticsearch.username}")
+    private String elasticUsername;
+
+    @Value("${elasticsearch.password}")
+    private String elasticPassword;
+
+    // Connection Pool Configuration Properties
+    @Value("${elasticsearch.connection.pool.max-total:200}")
+    private int maxTotalConnections;
+
+    @Value("${elasticsearch.connection.pool.max-per-route:100}")
+    private int maxConnectionsPerRoute;
+
+    @Value("${elasticsearch.connection.pool.default-max-per-route:10}")
+    private int defaultMaxConnectionsPerRoute;
+
+    @Value("${elasticsearch.connection.timeout:5000}")
+    private int connectionTimeout;
+
+    @Value("${elasticsearch.socket.timeout:60000}")
+    private int socketTimeout;
+
+    @Value("${elasticsearch.connection.request.timeout:5000}")
+    private int connectionRequestTimeout;
+
+    @Value("${elasticsearch.connection.keep-alive:300000}")
+    private long keepAliveTime;
+
+    @Value("${elasticsearch.connection.idle.timeout:60000}")
+    private long idleConnectionTimeout;
+    // Elastic Configs -- End
+
 }

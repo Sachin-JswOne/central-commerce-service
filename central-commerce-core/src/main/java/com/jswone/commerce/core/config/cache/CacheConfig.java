@@ -1,5 +1,9 @@
-package com.jswone.commerce.core.config;
+package com.jswone.commerce.core.config.cache;
 
+import com.jswone.commerce.core.config.CommerceValueConfig;
+import com.jswone.commerce.core.config.redis.RedisConfiguration;
+import com.jswone.commerce.core.config.redis.RedisErrorWarnHandler;
+import com.jswone.commerce.core.config.redis.RedisProperties;
 import com.jswone.commerce.core.constants.CacheNames;
 import io.lettuce.core.ClientOptions;
 import io.lettuce.core.SslOptions;
