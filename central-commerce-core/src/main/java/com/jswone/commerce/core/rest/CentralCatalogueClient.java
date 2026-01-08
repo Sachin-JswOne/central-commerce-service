@@ -24,7 +24,7 @@ public interface CentralCatalogueClient {
     ProductTypeBulkResponse bulkTypeIdResponse(ProductTypeBulkRequest productTypeBulkRequest);
     Map<String, ImageMetadata> fetchImagesForMmIds(Set<String> productMmIds);
     List<CatalogueCategoryTree> getCategoryTree();
-    CatalogueBreadCrumbData getBreadcrumb(String categoryId);
+    CatalogueBreadCrumbData getBreadcrumb(String categoryId, String slug);
     ProductListingCatalogueResponse productListing(ProductListingRequest productListingRequest);
     ProductListingCatalogueResponse productListingFacetsOnly(ProductListingRequest productListingRequest);
     ProductBulkResponse getProductFromSlug(String slug, String storeFront);

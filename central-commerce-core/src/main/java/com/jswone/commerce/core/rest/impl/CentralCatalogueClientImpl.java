@@ -266,10 +266,16 @@ public class CentralCatalogueClientImpl implements CentralCatalogueClient {
         }
     }
 
-    public CatalogueBreadCrumbData getBreadcrumb(String categoryId) {
-        String url =
-                commerceValueConfig.getCatalogueCategoryBaseUrl().concat("/category/").concat(categoryId);
-        log.info("Calling Central Catalogue breadcrumb API: {}", url);
+    public CatalogueBreadCrumbData getBreadcrumb(String categoryId, String slug) {
+        String url;
+        if(Objects.nonNull(categoryId) && Objects.isNull(slug)){
+            url = commerceValueConfig.getCatalogueCategoryBaseUrl().concat("/category?categoryId=").concat(categoryId);
+            log.info("Calling Central Catalogue breadcrumb API via categoryId: {}", url);
+        }else {
+            url = commerceValueConfig.getCatalogueCategoryBaseUrl().concat("/category?slug=").concat(slug);
+            log.info("Calling Central Catalogue breadcrumb via slug: {}", url);
+        }
+
 
         try {
 
