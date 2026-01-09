@@ -10,6 +10,7 @@ import com.jswone.commerce.core.mapper.ProductSlugMapper;
 import com.jswone.commerce.core.model.centralCatalogue.ProductSlug;
 import com.jswone.commerce.core.model.centralCatalogue.ProductTypeData;
 import com.jswone.commerce.core.model.centralCatalogue.QuantityCard;
+import com.jswone.commerce.core.model.centralCatalogue.VariantSelector;
 import com.jswone.commerce.core.model.request.ProductAttributeDTO;
 import com.jswone.commerce.core.model.request.ProductSkuRequest;
 import com.jswone.commerce.core.model.request.ProductTypeBulkRequest;
@@ -74,18 +75,29 @@ public class ProductServiceImpl implements ProductService {
 
             ProductTypeBulkResponse productTypeBulkResponse = centralCatalogueClient.bulkTypeIdResponse(request);
 
-            if(Objects.isNull(productTypeBulkResponse) || productTypeBulkResponse.getData().isEmpty()){
+            if(Objects.isNull(productTypeBulkResponse) || productTypeBulkResponse.getData().getProductTypeDetail().isEmpty()){
                 throw new CentralCommerceServiceException("Product type is not available for slug : "+slug, HttpStatus.BAD_GATEWAY);
             }
 
-            if(Objects.isNull(productTypeBulkResponse.getData().get(productTypeId).getQuantityCards())){
+            if(Objects.isNull(productTypeBulkResponse.getData().getProductTypeDetail().get(productTypeId).getQuantityCards())){
                 throw new CentralCommerceServiceException("Quantity cards are not available for slug : "+slug, HttpStatus.BAD_GATEWAY);
             }
 
-            List<QuantityCard> quantityCards = productTypeBulkResponse.getData().get(productTypeId).getQuantityCards();
+            List<QuantityCard> quantityCards = productTypeBulkResponse.getData().getProductTypeDetail().get(productTypeId).getQuantityCards();
 
-            return productSlugMapper.toProductSlug(productBulkResponse.getProducts().getFirst(),quantityCards);
-        }catch (Exception e) {
+            ProductSlug productSlug = productSlugMapper.toProductSlug(productBulkResponse.getProducts().getFirst(),quantityCards);
+
+            productSlug.setVariantSelectors(productTypeBulkResponse.getData().getProductTypeDetail().get(productTypeId).getVariantSelectors());
+
+            productSlug.setStandardAttributes(productTypeBulkResponse.getData().getProductTypeDetail().get(productTypeId).getStandardAttributes());
+
+            productSlug.setCustomAttributes(productTypeBulkResponse.getData().getProductTypeDetail().get(productTypeId).getAttributes());
+
+            productSlug.setProductOverview(productTypeBulkResponse.getData().getProductOverview());
+
+            return productSlug;
+
+        } catch (Exception e) {
             throw new CentralCommerceServiceException(e.getLocalizedMessage(), HttpStatus.BAD_GATEWAY);
         }
     }

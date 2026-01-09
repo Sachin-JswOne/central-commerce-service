@@ -20,4 +20,7 @@ public class ProductTypeData {
     private Map<String, VariantSelector> variantSelectors;
     @JsonProperty("quantity_cards")
     private List<QuantityCard> quantityCards;
+    @JsonProperty("standard_attributes")
+    private List<Map<String, Object>> standardAttributes;
+    private List<Map<String, Object>> attributes;
 }

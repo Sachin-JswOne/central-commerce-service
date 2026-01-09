@@ -14,5 +14,5 @@ import java.util.Map;
 public class ProductTypeBulkResponse {
     private int statusCode;
     private String status;
-    private Map<String, ProductTypeData> data;
+    private ProductTypeBulkDTO data;
 }

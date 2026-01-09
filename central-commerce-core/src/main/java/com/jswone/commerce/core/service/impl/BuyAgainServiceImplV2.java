@@ -14,6 +14,7 @@ import com.jswone.commerce.core.model.centralCatalogue.ProductTypeData;
 import com.jswone.commerce.core.model.centralCatalogue.Variant;
 import com.jswone.commerce.core.model.request.ProductTypeBulkRequest;
 import com.jswone.commerce.core.model.response.centralCatalogue.ProductBulkResponse;
+import com.jswone.commerce.core.model.response.centralCatalogue.ProductTypeBulkDTO;
 import com.jswone.commerce.core.model.response.centralCatalogue.ProductTypeBulkResponse;
 import com.jswone.commerce.core.repository.ProductCatalogueStoreRepository;
 import com.jswone.commerce.core.rest.CentralCatalogueClient;
@@ -266,7 +267,7 @@ public class BuyAgainServiceImplV2 implements BuyAgainServiceV2 {
     private ProductTypeBulkResponse fetchCentralCatalogueAdminProductsWithRetry(Set<String> productTypeIdList) {
 
         if (productTypeIdList == null || productTypeIdList.isEmpty()) {
-            return new ProductTypeBulkResponse(200, "Success", Collections.emptyMap()
+            return new ProductTypeBulkResponse(200, "Success", new ProductTypeBulkDTO()
             );
         }
 
@@ -279,7 +280,7 @@ public class BuyAgainServiceImplV2 implements BuyAgainServiceV2 {
         } catch (Exception e) {
             log.error("Buy_Again - Central catalogue call failed (client retries already attempted): {}",
                     e.getMessage(), e);
-            return new ProductTypeBulkResponse(200, "Success", Collections.emptyMap()
+            return new ProductTypeBulkResponse(200, "Success", new ProductTypeBulkDTO()
             );
         }
     }
@@ -356,11 +357,11 @@ public class BuyAgainServiceImplV2 implements BuyAgainServiceV2 {
 
     private Map<String, com.jswone.commerce.core.model.centralCatalogue.QuantityCard> mapProductTypeIdToQuantityCard(ProductTypeBulkResponse productTypeBulkResponse) {
 
-        if (productTypeBulkResponse == null || productTypeBulkResponse.getData() == null || productTypeBulkResponse.getData().isEmpty()) {
+        if (productTypeBulkResponse == null || productTypeBulkResponse.getData() == null || productTypeBulkResponse.getData().getProductTypeDetail().isEmpty()) {
             return Collections.emptyMap();
         }
 
-        return productTypeBulkResponse.getData()
+        return productTypeBulkResponse.getData().getProductTypeDetail()
                 .entrySet()
                 .stream()
                 .map(entry -> {

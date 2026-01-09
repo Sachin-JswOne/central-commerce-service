@@ -40,4 +40,12 @@ public class ProductSlug {
     private List<ProductLocation> productLocation;
 
     private List<QuantityCard> quantityCards;
+
+    private Map<String, VariantSelector> variantSelectors;
+
+    private List<Map<String, Object>> standardAttributes;
+
+    private List<Map<String, Object>> customAttributes;
+
+    private List<Map<String,Object>> productOverview;
 }
