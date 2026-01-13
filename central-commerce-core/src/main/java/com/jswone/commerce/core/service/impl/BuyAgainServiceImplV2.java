@@ -357,7 +357,7 @@ public class BuyAgainServiceImplV2 implements BuyAgainServiceV2 {
 
     private Map<String, com.jswone.commerce.core.model.centralCatalogue.QuantityCard> mapProductTypeIdToQuantityCard(ProductTypeBulkResponse productTypeBulkResponse) {
 
-        if (productTypeBulkResponse == null || productTypeBulkResponse.getData() == null || productTypeBulkResponse.getData().getProductTypeDetail().isEmpty()) {
+        if (productTypeBulkResponse == null || productTypeBulkResponse.getData() == null || productTypeBulkResponse.getData().getProductTypeDetail() == null) {
             return Collections.emptyMap();
         }
 
