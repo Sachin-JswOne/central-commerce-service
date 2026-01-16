@@ -171,7 +171,7 @@ public class BuyAgainServiceImpl implements BuyAgainService {
 
         return PurchasedLineItemResponse.builder()
                 .name(productCatalogueStore.getProductTitle())
-                .productKey(productCatalogueStore.getProductKey())
+                .productKey(purchasedSku.getProductKey())
                 .productSlug(productCatalogueStore.getProductSlug())
                 .attributes(
                         matchVariant != null
