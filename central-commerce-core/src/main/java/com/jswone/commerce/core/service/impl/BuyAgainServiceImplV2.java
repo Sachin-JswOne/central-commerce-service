@@ -216,6 +216,7 @@ public class BuyAgainServiceImplV2 implements BuyAgainServiceV2 {
 
         return PurchasedLineItemResponse.builder()
                 .name(str(centralProduct.getAttributes().get("product_title")))
+                .productKey(purchasedSku.getProductKey())
                 .productSlug(str(centralProduct.getAttributes().get("slug")))
                 .attributes(Optional.ofNullable(matchVariant)
                         .map(Variant::getAttributes)
