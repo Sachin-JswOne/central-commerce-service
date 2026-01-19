@@ -7,13 +7,14 @@ import com.jswone.commerce.core.model.*;
 import com.jswone.commerce.core.model.request.BulkCategoryRequestDTO;
 import com.jswone.commerce.core.rest.CentralCatalogueClient;
 import com.jswone.commerce.core.service.CatalogueCategoryService;
-import java.util.List;
-import java.util.Objects;
-
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+
+import java.util.Comparator;
+import java.util.List;
+import java.util.Objects;
 
 @Service
 @Slf4j
@@ -99,22 +100,43 @@ public class CatalogueCategoryServiceImpl implements CatalogueCategoryService {
       if(Objects.nonNull(categoryRequestDTO.getCategoryIds()) &&
               !categoryRequestDTO.getCategoryIds().isEmpty()){
 
+        List<String> categoryIds = categoryRequestDTO.getCategoryIds()
+                                   .stream()
+                                   .distinct()
+                                   .toList();
+
         categoryTreeResponse.getNavigation().removeIf(navigationItem ->
                 !navigationItem.getName().equalsIgnoreCase("All products"));
 
-        categoryTreeResponse.getNavigation().forEach(navigationItem ->
-                navigationItem.getSubMenu().
-                        removeIf(subMenu -> !categoryRequestDTO.getCategoryIds().contains(subMenu.getId())));
+        categoryTreeResponse.getNavigation().forEach(navigationItem -> {
+          navigationItem.getSubMenu().removeIf(
+                  subMenu -> !categoryIds.contains(subMenu.getId())
+          );
+
+          navigationItem.getSubMenu().sort(
+                  Comparator.comparingInt(subMenu -> categoryIds.indexOf(subMenu.getId()))
+          );
+        });
 
       } else if(Objects.nonNull(categoryRequestDTO.getBrandCategoryIds()) &&
               !categoryRequestDTO.getBrandCategoryIds().isEmpty()){
+        List<String> brandCategoryIds = categoryRequestDTO.getBrandCategoryIds()
+                                        .stream()
+                                        .distinct()
+                                        .toList();
 
         categoryTreeResponse.getNavigation().removeIf(navigationItem ->
                 !navigationItem.getName().equalsIgnoreCase("Brands"));
 
-        categoryTreeResponse.getNavigation().forEach(navigationItem ->
-                navigationItem.getSubMenu().
-                        removeIf(subMenu -> !categoryRequestDTO.getBrandCategoryIds().contains(subMenu.getId())));
+        categoryTreeResponse.getNavigation().forEach(navigationItem -> {
+          navigationItem.getSubMenu().removeIf(
+                  subMenu -> !brandCategoryIds.contains(subMenu.getId())
+          );
+
+          navigationItem.getSubMenu().sort(
+                  Comparator.comparingInt(subMenu -> brandCategoryIds.indexOf(subMenu.getId()))
+          );
+        });
       }
       return categoryTreeResponse;
     }catch (Exception ex){
