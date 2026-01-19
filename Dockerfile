@@ -1,4 +1,4 @@
-FROM asia.gcr.io/modular-bucksaw-305821/otel-java21:latest
+FROM asia-docker.pkg.dev/modular-bucksaw-305821/jopl/otel-java21:latest
 
 #Add a user with name jswuser into user group jswuser
 RUN groupadd -r jswuser && useradd -r -g jswuser jswuser
@@ -10,8 +10,5 @@ COPY central-commerce-application/target/central-commerce-application-0.0.1-SNAP
 # Service configuration
 ENV OTEL_SERVICE_NAME=central-commerce-service
 ENV OTEL_RESOURCE_ATTRIBUTES=service.version=0.0.1,team=ccp,environment=qa
-
-# Custom JVM options (JAVA_OPTS already has -javaagent)
-ENV JAVA_OPTS="$JAVA_OPTS -Dotel.propagators=tracecontext,baggage,b3,b3multi,jaeger,xray -Dotel.instrumentation.log4j-appender.enabled=true"
 
 ENTRYPOINT ["sh", "-c", "java $JAVA_OPTS -jar /app/app.jar"]
