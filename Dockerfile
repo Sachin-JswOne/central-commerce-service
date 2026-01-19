@@ -1,4 +1,4 @@
-FROM asia-docker.pkg.dev/modular-bucksaw-305821/jopl/otel-java21:latest
+FROM asia-south1-docker.pkg.dev/modular-bucksaw-305821/jopl/otel-java21:latest
 
 #Add a user with name jswuser into user group jswuser
 RUN groupadd -r jswuser && useradd -r -g jswuser jswuser
