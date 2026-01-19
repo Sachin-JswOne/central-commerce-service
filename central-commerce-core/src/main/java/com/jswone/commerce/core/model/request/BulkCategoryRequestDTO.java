@@ -5,13 +5,13 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-import java.util.Set;
+import java.util.List;
 
 @Data
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
 public class BulkCategoryRequestDTO {
-    private Set<String> categoryIds;
-    private Set<String> brandCategoryIds;
+    private List<String> categoryIds;
+    private List<String> brandCategoryIds;
 }
