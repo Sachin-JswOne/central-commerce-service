@@ -11,4 +11,4 @@ COPY central-commerce-application/target/central-commerce-application-0.0.1-SNAP
 ENV OTEL_SERVICE_NAME=central-commerce-service
 ENV OTEL_RESOURCE_ATTRIBUTES=service.version=0.0.1,team=ccp,environment=qa
 
-ENTRYPOINT ["sh", "-c", "exec java ${JAVA_OPTS} -jar /app/app.jar"]
+ENTRYPOINT ["java", "-javaagent:${OTEL_JAVAAGENT_PATH}", "-jar", "/app/app.jar"]
