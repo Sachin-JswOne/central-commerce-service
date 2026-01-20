@@ -3,11 +3,18 @@ package com.jswone.commerce.core.service.impl;
 import com.jswone.commerce.core.entity.catalogue.Attribute;
 import com.jswone.commerce.core.entity.catalogue.ProductCatalogueStore;
 import com.jswone.commerce.core.entity.catalogue.Variant;
+import com.jswone.commerce.core.exceptions.CentralCommerceServiceException;
 import com.jswone.commerce.core.exceptions.ProductSelectorException;
+import com.jswone.commerce.core.mapper.ProductSlugMapper;
+import com.jswone.commerce.core.model.centralCatalogue.*;
 import com.jswone.commerce.core.model.request.ProductAttributeDTO;
 import com.jswone.commerce.core.model.request.ProductSkuRequest;
 import com.jswone.commerce.core.model.response.SkuInfo;
+import com.jswone.commerce.core.model.response.centralCatalogue.ProductBulkResponse;
+import com.jswone.commerce.core.model.response.centralCatalogue.ProductTypeBulkDTO;
+import com.jswone.commerce.core.model.response.centralCatalogue.ProductTypeBulkResponse;
 import com.jswone.commerce.core.repository.ProductCatalogueStoreRepository;
+import com.jswone.commerce.core.rest.CentralCatalogueClient;
 import com.jswone.commerce.core.util.ProductAttributeUtil;
 import org.apache.commons.lang3.tuple.Pair;
 import org.junit.jupiter.api.Test;
@@ -18,16 +25,24 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.lang.reflect.Method;
 import java.util.List;
+import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 class ProductServiceImplTest {
 
     @Mock
     private ProductCatalogueStoreRepository productCatalogueStoreRepository;
+
+    @Mock
+    private ProductSlugMapper productSlugMapper;
+
+    @Mock
+    private CentralCatalogueClient centralCatalogueClient;
 
     @Mock
     private ProductAttributeUtil productAttributeUtil;
@@ -411,6 +426,171 @@ class ProductServiceImplTest {
                 ProductSelectorException.class,
                 () -> productService.getMatchedVariantResponse(request)
         );
+    }
+
+    @Test
+    void getProductFromSlug_shouldReturnProductSlug_whenValidResponse() {
+        String slug = "tmt-bars";
+        String productTypeId = "PT1";
+
+        // -------- Product --------
+        Product product = mock(Product.class);
+        when(product.getProductTypeId()).thenReturn(productTypeId);
+
+        ProductBulkResponse bulkResponse = mock(ProductBulkResponse.class);
+        when(bulkResponse.getProducts()).thenReturn(List.of(product));
+
+        // -------- Quantity Cards --------
+        QuantityCard quantityCard = mock(QuantityCard.class);
+        List<QuantityCard> quantityCards = List.of(quantityCard);
+
+        // -------- ProductTypeData (IMPORTANT) --------
+        ProductTypeData productTypeData = mock(ProductTypeData.class);
+        when(productTypeData.getQuantityCards()).thenReturn(quantityCards);
+        when(productTypeData.getVariantSelectors()).thenReturn(Map.of());
+        when(productTypeData.getStandardAttributes()).thenReturn(List.of());
+        when(productTypeData.getAttributes()).thenReturn(List.of());
+
+        Map<String, ProductTypeData> productTypeMap =
+                Map.of(productTypeId, productTypeData);
+
+        // -------- ProductTypeBulkDTO --------
+        ProductTypeBulkDTO bulkDTO = mock(ProductTypeBulkDTO.class);
+        when(bulkDTO.getProductTypeDetail()).thenReturn(productTypeMap);
+        when(bulkDTO.getProductOverview()).thenReturn(List.of());
+
+        ProductTypeBulkResponse typeBulkResponse =
+                new ProductTypeBulkResponse(200, "SUCCESS", bulkDTO);
+
+        ProductSlug mappedSlug = new ProductSlug();
+
+        when(centralCatalogueClient.getProductFromSlug(slug, "msme"))
+                .thenReturn(bulkResponse);
+        when(centralCatalogueClient.bulkTypeIdResponse(any()))
+                .thenReturn(typeBulkResponse);
+        when(productSlugMapper.toProductSlug(product, quantityCards))
+                .thenReturn(mappedSlug);
+
+        // -------- Call --------
+        ProductSlug result = productService.getProductFromSlug(slug);
+
+        // -------- Assert --------
+        assertNotNull(result);
+        assertEquals(mappedSlug, result);
+    }
+
+    @Test
+    void getProductFromSlug_shouldThrowException_whenProductBulkResponseIsNull() {
+        when(centralCatalogueClient.getProductFromSlug(any(), any()))
+                .thenReturn(null);
+
+        assertThrows(
+                CentralCommerceServiceException.class,
+                () -> productService.getProductFromSlug("slug")
+        );
+    }
+
+    @Test
+    void getProductFromSlug_shouldThrowException_whenProductsEmpty() {
+        ProductBulkResponse response = new ProductBulkResponse();
+        response.setProducts(List.of());
+
+        when(centralCatalogueClient.getProductFromSlug(any(), any()))
+                .thenReturn(response);
+
+        assertThrows(
+                CentralCommerceServiceException.class,
+                () -> productService.getProductFromSlug("slug")
+        );
+    }
+
+    @Test
+    void getProductFromSlug_shouldThrowException_whenProductTypeIdNull() {
+        Product product = new Product();
+        product.setProductTypeId(null);
+
+        ProductBulkResponse response = new ProductBulkResponse();
+        response.setProducts(List.of(product));
+
+        when(centralCatalogueClient.getProductFromSlug(any(), any()))
+                .thenReturn(response);
+
+        assertThrows(
+                CentralCommerceServiceException.class,
+                () -> productService.getProductFromSlug("slug")
+        );
+    }
+
+    @Test
+    void getProductFromSlug_shouldThrowException_whenProductTypeBulkResponseNull() {
+        Product product = new Product();
+        product.setProductTypeId("PT1");
+
+        ProductBulkResponse response = new ProductBulkResponse();
+        response.setProducts(List.of(product));
+
+        when(centralCatalogueClient.getProductFromSlug(any(), any()))
+                .thenReturn(response);
+        when(centralCatalogueClient.bulkTypeIdResponse(any()))
+                .thenReturn(null);
+
+        assertThrows(
+                CentralCommerceServiceException.class,
+                () -> productService.getProductFromSlug("slug")
+        );
+    }
+
+    @Test
+    void getProductFromSlug_shouldThrowException_whenQuantityCardsNull() {
+        // -------- Product --------
+        Product product = new Product();
+        product.setProductTypeId("PT1");
+
+        ProductBulkResponse bulkResponse = new ProductBulkResponse();
+        bulkResponse.setProducts(List.of(product));
+
+        // -------- ProductTypeData (CORRECT CLASS) --------
+        ProductTypeData productTypeData = new ProductTypeData();
+        productTypeData.setQuantityCards(null); // 👈 this is what we are testing
+
+        Map<String, ProductTypeData> productTypeMap =
+                Map.of("PT1", productTypeData);
+
+        // -------- ProductTypeBulkDTO (CORRECT CLASS) --------
+        ProductTypeBulkDTO bulkDTO = new ProductTypeBulkDTO();
+        bulkDTO.setProductTypeDetail(productTypeMap);
+        bulkDTO.setProductOverview(List.of());
+
+        // -------- ProductTypeBulkResponse --------
+        ProductTypeBulkResponse typeBulkResponse = new ProductTypeBulkResponse();
+        typeBulkResponse.setData(bulkDTO);
+
+        // -------- Stubbing --------
+        when(centralCatalogueClient.getProductFromSlug(any(), any()))
+                .thenReturn(bulkResponse);
+        when(centralCatalogueClient.bulkTypeIdResponse(any()))
+                .thenReturn(typeBulkResponse);
+
+        // -------- Assert --------
+        assertThrows(
+                CentralCommerceServiceException.class,
+                () -> productService.getProductFromSlug("slug")
+        );
+    }
+
+
+    @Test
+    void getProductFromSlug_shouldWrapAnyException() {
+        when(centralCatalogueClient.getProductFromSlug(any(), any()))
+                .thenThrow(new RuntimeException("Service down"));
+
+        CentralCommerceServiceException ex =
+                assertThrows(
+                        CentralCommerceServiceException.class,
+                        () -> productService.getProductFromSlug("slug")
+                );
+
+        assertTrue(ex.getMessage().contains("Service down"));
     }
 
 }

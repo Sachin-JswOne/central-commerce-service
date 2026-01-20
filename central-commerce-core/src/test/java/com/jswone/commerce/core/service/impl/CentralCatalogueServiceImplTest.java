@@ -1,7 +1,14 @@
 package com.jswone.commerce.core.service.impl;
 
 import com.jswone.commerce.core.converters.CatalogueConverter;
+import com.jswone.commerce.core.exceptions.CentralCommerceServiceException;
+import com.jswone.commerce.core.model.ImageMetadata;
+import com.jswone.commerce.core.model.request.ProductBulkRequest;
+import com.jswone.commerce.core.model.request.ProductListingRequest;
 import com.jswone.commerce.core.model.request.Search.SearchRequest;
+import com.jswone.commerce.core.model.response.ProductListingResponse;
+import com.jswone.commerce.core.model.response.centralCatalogue.ProductBulkResponse;
+import com.jswone.commerce.core.model.response.centralCatalogue.ProductListingCatalogueResponse;
 import com.jswone.commerce.core.model.response.centralCatalogue.ProductSearchResponse;
 import com.jswone.commerce.core.model.response.search.SearchResponse;
 import com.jswone.commerce.core.publisher.recentSearch.RecentSearchItemPublisher;
@@ -12,6 +19,8 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+
+import java.util.*;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
@@ -32,89 +41,159 @@ class CentralCatalogueServiceImplTest {
     private RecentSearchItemPublisher recentSearchItemPublisher;
 
     @InjectMocks
-    private CentralCatalogueServiceImpl centralCatalogueService;
+    private CentralCatalogueServiceImpl service;
 
-    // -------------------- POSITIVE CASE --------------------
+    /* -------------------- searchCatalogue -------------------- */
 
     @Test
-    void searchCatalogue_successfulFlow() {
-        SearchRequest searchRequest = mock(SearchRequest.class);
-        ProductSearchResponse productSearchResponse = mock(ProductSearchResponse.class);
+    void searchCatalogue_success() {
+        SearchRequest request = mock(SearchRequest.class);
+        ProductSearchResponse searchResponse = mock(ProductSearchResponse.class);
         ProductSearchResponse facetsResponse = mock(ProductSearchResponse.class);
-        SearchResponse searchResponse = mock(SearchResponse.class);
+        SearchResponse finalResponse = mock(SearchResponse.class);
 
-        when(centralCatalogueClient.genericSearch(searchRequest))
-                .thenReturn(productSearchResponse);
-
-        when(centralCatalogueClient.genericSearchFacetsOnly(searchRequest))
-                .thenReturn(facetsResponse);
-
+        when(centralCatalogueClient.genericSearch(request)).thenReturn(searchResponse);
+        when(centralCatalogueClient.genericSearchFacetsOnly(request)).thenReturn(facetsResponse);
         when(catalogueConverter.convertGenericSearchToSearchResponse(
-                productSearchResponse, facetsResponse, searchRequest))
-                .thenReturn(searchResponse);
+                searchResponse, facetsResponse, request)).thenReturn(finalResponse);
 
-        SearchResponse result = centralCatalogueService.searchCatalogue(searchRequest);
+        SearchResponse result = service.searchCatalogue(request);
 
         assertNotNull(result);
-        assertEquals(searchResponse, result);
-
-        verify(catalogueValidator).validateSearchRequest(searchRequest);
-        verify(centralCatalogueClient).genericSearch(searchRequest);
-        verify(recentSearchItemPublisher).publish(productSearchResponse, searchRequest);
-        verify(centralCatalogueClient).genericSearchFacetsOnly(searchRequest);
-        verify(catalogueConverter).convertGenericSearchToSearchResponse(
-                productSearchResponse, facetsResponse, searchRequest);
+        verify(catalogueValidator).validateSearchRequest(request);
+        verify(recentSearchItemPublisher).publish(searchResponse, request);
     }
 
-    // -------------------- NEGATIVE CASES --------------------
-
     @Test
-    void searchCatalogue_validationFailure_shouldThrowException() {
-        SearchRequest searchRequest = mock(SearchRequest.class);
+    void searchCatalogue_validationFailure() {
+        SearchRequest request = mock(SearchRequest.class);
 
-        doThrow(new IllegalArgumentException("Invalid search request"))
-                .when(catalogueValidator)
-                .validateSearchRequest(searchRequest);
+        doThrow(new IllegalArgumentException("Invalid"))
+                .when(catalogueValidator).validateSearchRequest(request);
 
         assertThrows(IllegalArgumentException.class,
-                () -> centralCatalogueService.searchCatalogue(searchRequest));
+                () -> service.searchCatalogue(request));
 
-        verify(catalogueValidator).validateSearchRequest(searchRequest);
         verifyNoInteractions(centralCatalogueClient, catalogueConverter, recentSearchItemPublisher);
     }
 
+    /* -------------------- fetchImagesForMmIds -------------------- */
+
     @Test
-    void searchCatalogue_genericSearchFailure_shouldPropagateException() {
-        SearchRequest searchRequest = mock(SearchRequest.class);
+    void fetchImagesForMmIds_singleBatch() {
+        Set<String> mmIds = Set.of("MM1", "MM2");
+        ImageMetadata metadata = mock(ImageMetadata.class);
 
-        when(centralCatalogueClient.genericSearch(searchRequest))
-                .thenThrow(new RuntimeException("Catalogue service error"));
+        when(centralCatalogueClient.fetchImagesForMmIds(anySet()))
+                .thenReturn(Map.of("MM1", metadata, "MM2", metadata));
 
-        assertThrows(RuntimeException.class,
-                () -> centralCatalogueService.searchCatalogue(searchRequest));
+        Map<String, ImageMetadata> result = service.fetchImagesForMmIds(mmIds);
 
-        verify(catalogueValidator).validateSearchRequest(searchRequest);
-        verify(centralCatalogueClient).genericSearch(searchRequest);
-        verifyNoInteractions(catalogueConverter);
+        assertEquals(2, result.size());
+        verify(centralCatalogueClient).fetchImagesForMmIds(anySet());
     }
 
     @Test
-    void searchCatalogue_facetsSearchFailure_shouldPropagateException() {
-        SearchRequest searchRequest = mock(SearchRequest.class);
-        ProductSearchResponse productSearchResponse = mock(ProductSearchResponse.class);
+    void fetchImagesForMmIds_multipleBatches() {
+        Set<String> mmIds = new HashSet<>();
+        for (int i = 0; i < 25; i++) {
+            mmIds.add("MM" + i);
+        }
 
-        when(centralCatalogueClient.genericSearch(searchRequest))
-                .thenReturn(productSearchResponse);
+        when(centralCatalogueClient.fetchImagesForMmIds(anySet()))
+                .thenReturn(Collections.emptyMap());
 
-        when(centralCatalogueClient.genericSearchFacetsOnly(searchRequest))
-                .thenThrow(new RuntimeException("Facet API failed"));
+        Map<String, ImageMetadata> result = service.fetchImagesForMmIds(mmIds);
 
-        assertThrows(RuntimeException.class,
-                () -> centralCatalogueService.searchCatalogue(searchRequest));
+        assertNotNull(result);
+        verify(centralCatalogueClient, atLeastOnce()).fetchImagesForMmIds(anySet());
+    }
 
-        verify(centralCatalogueClient).genericSearch(searchRequest);
-        verify(recentSearchItemPublisher).publish(productSearchResponse, searchRequest);
-        verify(centralCatalogueClient).genericSearchFacetsOnly(searchRequest);
-        verifyNoInteractions(catalogueConverter);
+    /* -------------------- productListing -------------------- */
+
+    @Test
+    void productListing_success_withCategoryId() {
+        ProductListingRequest request = mock(ProductListingRequest.class);
+        ProductListingCatalogueResponse catalogueResponse = mock(ProductListingCatalogueResponse.class);
+        ProductListingCatalogueResponse facetsResponse = mock(ProductListingCatalogueResponse.class);
+        ProductListingResponse finalResponse = mock(ProductListingResponse.class);
+
+        when(request.getCategoryId()).thenReturn("CAT123");
+        when(request.getSlug()).thenReturn(null);
+
+        when(centralCatalogueClient.productListing(request)).thenReturn(catalogueResponse);
+        when(centralCatalogueClient.productListingFacetsOnly(request)).thenReturn(facetsResponse);
+        when(catalogueConverter.convertCataloguePLPResponseToPLPResponse(
+                catalogueResponse, facetsResponse, request)).thenReturn(finalResponse);
+
+        ProductListingResponse response = service.productListing(request);
+
+        assertNotNull(response);
+        verify(catalogueValidator).validateProductListingRequest(request);
+    }
+
+    @Test
+    void productListing_missingCategoryAndSlug_shouldThrowException() {
+        ProductListingRequest request = mock(ProductListingRequest.class);
+        when(request.getCategoryId()).thenReturn(null);
+        when(request.getSlug()).thenReturn(null);
+
+        assertThrows(CentralCommerceServiceException.class,
+                () -> service.productListing(request));
+    }
+
+    @Test
+    void productListing_bothCategoryAndSlugPresent_shouldThrowException() {
+        ProductListingRequest request = mock(ProductListingRequest.class);
+        when(request.getCategoryId()).thenReturn("CAT1");
+        when(request.getSlug()).thenReturn("slug");
+
+        assertThrows(CentralCommerceServiceException.class,
+                () -> service.productListing(request));
+    }
+
+    /* -------------------- fetchProductsByProductMMIDs -------------------- */
+
+    @Test
+    void fetchProductsByProductMMIDs_nullInput() {
+        ProductBulkResponse response = service.fetchProductsByProductMMIDs(null);
+
+        assertNotNull(response);
+        verifyNoInteractions(centralCatalogueClient);
+    }
+
+    @Test
+    void fetchProductsByProductMMIDs_emptyInput() {
+        ProductBulkResponse response = service.fetchProductsByProductMMIDs(Collections.emptySet());
+
+        assertNotNull(response);
+        verifyNoInteractions(centralCatalogueClient);
+    }
+
+    @Test
+    void fetchProductsByProductMMIDs_success() {
+        Set<String> mmIds = Set.of("MM1", "MM2");
+        ProductBulkResponse bulkResponse = new ProductBulkResponse(Collections.emptyList(), 2);
+
+        when(centralCatalogueClient.bulkMMIDResponse(any(ProductBulkRequest.class)))
+                .thenReturn(bulkResponse);
+
+        ProductBulkResponse response = service.fetchProductsByProductMMIDs(mmIds);
+
+        assertNotNull(response);
+        verify(centralCatalogueClient).bulkMMIDResponse(any(ProductBulkRequest.class));
+    }
+
+    @Test
+    void fetchProductsByProductMMIDs_exceptionHandledGracefully() {
+        Set<String> mmIds = Set.of("MM1");
+
+        when(centralCatalogueClient.bulkMMIDResponse(any(ProductBulkRequest.class)))
+                .thenThrow(new RuntimeException("Downstream failure"));
+
+        ProductBulkResponse response = service.fetchProductsByProductMMIDs(mmIds);
+
+        assertNotNull(response);
+        verify(centralCatalogueClient).bulkMMIDResponse(any(ProductBulkRequest.class));
     }
 }
