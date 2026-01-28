@@ -11,7 +11,7 @@ import com.jswone.commerce.core.model.response.centralCatalogue.ProductBulkRespo
 import com.jswone.commerce.core.model.response.centralCatalogue.ProductListingCatalogueResponse;
 import com.jswone.commerce.core.model.response.centralCatalogue.ProductSearchResponse;
 import com.jswone.commerce.core.model.response.search.SearchResponse;
-import com.jswone.commerce.core.publisher.recentSearch.RecentSearchItemPublisher;
+import com.jswone.commerce.core.publisher.recentSearch.UserSearchLogsItemPublisher;
 import com.jswone.commerce.core.rest.CentralCatalogueClient;
 import com.jswone.commerce.core.validators.CatalogueValidator;
 import org.junit.jupiter.api.Test;
@@ -38,7 +38,7 @@ class CentralCatalogueServiceImplTest {
     private CatalogueValidator catalogueValidator;
 
     @Mock
-    private RecentSearchItemPublisher recentSearchItemPublisher;
+    private UserSearchLogsItemPublisher recentSearchItemPublisher;
 
     @InjectMocks
     private CentralCatalogueServiceImpl service;
