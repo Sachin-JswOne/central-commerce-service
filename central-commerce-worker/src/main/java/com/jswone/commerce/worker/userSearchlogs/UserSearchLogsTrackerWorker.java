@@ -1,4 +1,4 @@
-package com.jswone.commerce.worker.recentSearch;
+package com.jswone.commerce.worker.userSearchlogs;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.cloud.spring.pubsub.support.BasicAcknowledgeablePubsubMessage;
@@ -17,17 +17,17 @@ import java.util.List;
 
 @Service
 @Slf4j
-public class RecentSearchTrackerWorker {
+public class UserSearchLogsTrackerWorker {
 
     private final ObjectMapper objectMapper;
     private final EventProcessor eventProcessor;
     private final List<String> allowedEvents;
 
-    public RecentSearchTrackerWorker(ObjectMapper objectMapper, EventProcessor eventProcessor, List<String> allowedEvents) {
+    public UserSearchLogsTrackerWorker(ObjectMapper objectMapper, EventProcessor eventProcessor, List<String> allowedEvents) {
         this.objectMapper = objectMapper;
         this.eventProcessor = eventProcessor;
         this.allowedEvents = List.of(
-                ElasticPublisherEventTypes.PUBLISH_RECENT_SEARCH.getValue()
+                ElasticPublisherEventTypes.PUBLISH_USER_SEARCH_LOGS.getValue()
         );
     }
 

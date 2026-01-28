@@ -6,5 +6,6 @@ public class ElasticConstants {
     }
 
     public static final String RECENT_SEARCH_INDEX = "recent_searches";
+    public static final String USER_SEARCH_LOGS = "user_search_logs";
 
 }

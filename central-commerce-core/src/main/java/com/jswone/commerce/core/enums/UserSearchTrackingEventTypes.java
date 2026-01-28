@@ -7,7 +7,8 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 public enum UserSearchTrackingEventTypes {
 
-    RECENT_SEARCH("RECENT_SEARCH");
+    RECENT_SEARCH("RECENT_SEARCH"),
+    USER_SEARCH_LOGS("USER_SEARCH_LOGS");
 
     private final String value;
 }
