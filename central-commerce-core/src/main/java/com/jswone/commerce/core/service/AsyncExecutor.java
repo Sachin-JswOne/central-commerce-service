@@ -4,6 +4,8 @@ import com.jswone.commerce.core.service.recentSearch.RecentSearchService;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
+import java.util.Date;
+
 @Service
 public class AsyncExecutor {
 
@@ -21,7 +23,7 @@ public class AsyncExecutor {
     }
 
     @Async
-    public void clearRecentSearches(String userId) {
-        recentSearchService.clearRecentSearches(userId);
+    public void clearRecentSearches(String userId, Date clearTime) {
+        recentSearchService.clearRecentSearches(userId, clearTime);
     }
 }

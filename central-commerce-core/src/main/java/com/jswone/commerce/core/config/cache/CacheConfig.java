@@ -43,7 +43,9 @@ import java.util.Set;
 public class CacheConfig {
     private static final Set<Pair<String, Duration>> cache =
             Set.of(Pair.of(CacheNames.BUY_AGAIN_PRODUCTS_CACHE_PREFIX_V2, duration(1440L)),
-                    Pair.of(CacheNames.BUY_AGAIN_PRODUCTS_CACHE_PREFIX, duration(1440L)));
+                    Pair.of(CacheNames.BUY_AGAIN_PRODUCTS_CACHE_PREFIX, duration(1440L)),
+                    Pair.of(CacheNames.CLEAR_RECENT_SEARCHES_CACHE_PREFIX, duration(525600L))
+            );
 
     private final CommerceValueConfig commerceValueConfig;
 
