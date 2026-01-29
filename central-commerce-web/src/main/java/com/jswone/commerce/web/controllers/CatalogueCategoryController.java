@@ -30,6 +30,15 @@ public class CatalogueCategoryController implements CentralBaseController {
     return ApiResponseUtil.createSuccessResponse(categoryTreeResponse, HttpStatus.OK);
   }
 
+  @GetMapping("/categories/breadcrumb")
+  public ApiResponse<BreadcrumbData> getBreadcrumb(@RequestParam(required = false) String categoryId,
+                                                   @RequestParam(required = false) String slug) {
+    log.info("Received breadcrumb request for categoryId: {} or slug {}", categoryId, slug);
+    BreadcrumbData breadcrumbData = categoryService.getBreadcrumbData(categoryId, slug);
+    log.info("Successfully fetched breadcrumb response for categoryId: {} or slug {}", categoryId, slug);
+    return ApiResponseUtil.createSuccessResponse(breadcrumbData, HttpStatus.OK);
+  }
+
   @PostMapping("/categories/tree/list")
   public ApiResponse<CategoryTreeResponse> getBulkCategoryTree(@Valid @RequestBody BulkCategoryRequestDTO categoryRequestDTO) {
     log.info("Received request for bulk category tree : {}",categoryRequestDTO);

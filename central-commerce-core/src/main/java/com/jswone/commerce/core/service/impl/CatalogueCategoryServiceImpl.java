@@ -50,6 +50,34 @@ public class CatalogueCategoryServiceImpl implements CatalogueCategoryService {
     return categoryTreeResponse;
   }
 
+  @Override
+  public BreadcrumbData getBreadcrumbData(String categoryId, String slug) {
+    try {
+      if(Objects.nonNull(categoryId) && Objects.nonNull(slug)){
+        throw new CentralCommerceServiceException("Both category and slug cannot be called together", HttpStatus.BAD_REQUEST);
+      }
+
+      if(Objects.isNull(categoryId) && Objects.isNull(slug)){
+        throw new CentralCommerceServiceException("Please provide either category or slug", HttpStatus.BAD_REQUEST);
+      }
+      CatalogueBreadCrumbData catalogueBreadcrumbResponse =
+              centralCatalogueClient.getBreadcrumb(categoryId, slug);
+
+      if (catalogueBreadcrumbResponse == null
+              || catalogueBreadcrumbResponse.getBread_crumb_details() == null) {
+        log.error(
+                "Category breadcrumb API returned invalid or empty data for categoryId: {}", categoryId);
+        throw new CentralCommerceServiceException(
+                "Category breadcrumb API returned invalid or empty data for categoryId");
+      }
+
+      log.info("Mapping Catalogue breadcrumb data to central commerce format");
+      return breadcrumbMapper.toBreadcrumbResponse(catalogueBreadcrumbResponse);
+    }catch (Exception ex){
+      throw new CentralCommerceServiceException(ex.getMessage(),HttpStatus.BAD_REQUEST);
+    }
+  }
+
 //  @Override
 //  public CategoryTreeResponse getBulkCatalogueCategoryTree(BulkCategoryRequestDTO categoryRequestDTO) {
 //    try {

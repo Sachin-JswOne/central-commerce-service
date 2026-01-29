@@ -2,6 +2,8 @@ package com.jswone.commerce.core.rest.impl;
 
 import com.jswone.commerce.core.config.CommerceValueConfig;
 import com.jswone.commerce.core.exceptions.CentralCatalogueServiceException;
+import com.jswone.commerce.core.model.CatalogueBreadCrumbData;
+import com.jswone.commerce.core.model.CatalogueBreadcrumbResponse;
 import com.jswone.commerce.core.model.request.FilterRequestProvider;
 import com.jswone.commerce.core.exceptions.CentralCommerceServiceException;
 import com.jswone.commerce.core.model.CatalogueCategoryTree;
@@ -30,10 +32,7 @@ import org.springframework.web.util.UriComponentsBuilder;
 
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 import static com.jswone.commerce.core.constants.GenericConstants.*;
 import static com.jswone.commerce.core.constants.RestConstants.CLIENT_ID;
@@ -253,6 +252,48 @@ public class CentralCatalogueClientImpl implements CentralCatalogueClient {
                     "Error calling central catalogue category tree API: ",
                     HttpStatus.INTERNAL_SERVER_ERROR,
                     ex);
+        }
+    }
+
+    public CatalogueBreadCrumbData getBreadcrumb(String categoryId, String slug) {
+        String url;
+        if(Objects.nonNull(categoryId) && Objects.isNull(slug)){
+            url = commerceValueConfig.getCatalogueCategoryBaseUrl().concat("/category?categoryId=").concat(categoryId);
+            log.info("Calling Central Catalogue breadcrumb API via categoryId: {}", url);
+        }else {
+            url = commerceValueConfig.getCatalogueCategoryBaseUrl().concat("/category?slug=").concat(slug);
+            log.info("Calling Central Catalogue breadcrumb via slug: {}", url);
+        }
+
+
+        try {
+
+            Map<String, String> headers = Map.of(
+                    X_API_KEY, commerceValueConfig.getCatalogueCategoryApiKey(),
+                    CLIENT_ID, commerceValueConfig.getCatalogueCategoryClientId()
+            );
+
+            ResponseEntity<CatalogueBreadcrumbResponse> response =
+                    restUtil.makeRestCall(url, categoryId, HttpMethod.GET, CatalogueBreadcrumbResponse.class, headers);
+
+            if (response.getStatusCode() != HttpStatus.OK || response.getBody() == null) {
+                log.error("Failed to fetch catalogue breadcrumb data: {}", response.getStatusCode());
+                throw new CentralCommerceServiceException(
+                        "Failed to fetch catalogue breadcrumb data", (HttpStatus) response.getStatusCode());
+            }
+
+            log.info("Central catalogue breadcrumb API call successful");
+            return response.getBody() != null ? response.getBody().getData() : null;
+
+        } catch (HttpClientErrorException | HttpServerErrorException ex) {
+            log.error("Error calling catalogue breadcrumb API: {}", ex.getMessage(), ex);
+            String errorMessage = extractErrorMessage(ex.getResponseBodyAsString());
+            throw new CentralCatalogueServiceException(errorMessage, (HttpStatus) ex.getStatusCode());
+
+        } catch (Exception ex) {
+            log.error("Error calling catalogue breadcrumb API: {}", ex.getMessage(), ex);
+            throw new CentralCommerceServiceException(
+                    "Error calling central catalogue breadcrumb API", HttpStatus.INTERNAL_SERVER_ERROR, ex);
         }
     }
 
