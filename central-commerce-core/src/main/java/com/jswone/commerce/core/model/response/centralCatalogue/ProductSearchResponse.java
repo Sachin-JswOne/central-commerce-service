@@ -13,7 +13,7 @@ import java.util.Set;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-public class ProductSearchResponse {
+public class ProductSearchResponse implements FacetsProvider {
     private List<Product> products;
     @JsonProperty("total_hits")
     private long totalHits;

@@ -9,7 +9,7 @@ import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.scheduling.annotation.EnableAsync;
 
 @SpringBootApplication(exclude = {RedisAutoConfiguration.class},
-        scanBasePackages = "com.jswone.commerce")
+        scanBasePackages = {"com.jswone.commerce", "com.jswone.uom.convertor"})
 @EnableDatastoreRepositories(basePackages = "com.jswone.commerce")
 @EnableConfigurationProperties(CatalogueDynamicConfig.class)
 @EnableAsync

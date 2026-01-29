@@ -112,6 +112,14 @@
 <!--            <artifactId>spring-cloud-gcp-starter-data-firestore</artifactId>-->
 <!--        </dependency>-->
         <dependency>
+            <groupId>com.jswone</groupId>
+            <artifactId>uom-convertor</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.jswone.measurement.common</groupId>
+            <artifactId>measurement_common_model</artifactId>
+        </dependency>
+        <dependency>
             <groupId>com.jsw</groupId>
             <artifactId>notification_common_model</artifactId>
         </dependency>
@@ -152,6 +160,17 @@
             <groupId>com.github.ben-manes.caffeine</groupId>
             <artifactId>caffeine</artifactId>
         </dependency>
+        <dependency>
+            <groupId>org.mapstruct</groupId>
+            <artifactId>mapstruct</artifactId>
+            <version>1.5.5.Final</version>
+        </dependency>
+        <dependency>
+            <groupId>org.mapstruct</groupId>
+            <artifactId>mapstruct-processor</artifactId>
+            <version>1.5.5.Final</version>
+            <scope>provided</scope>
+        </dependency>
 
         <!-- JUnit 5 Engine -->
         <dependency>
@@ -187,17 +206,6 @@
         <dependency>
             <groupId>org.springframework.integration</groupId>
             <artifactId>spring-integration-core</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>org.mapstruct</groupId>
-            <artifactId>mapstruct</artifactId>
-            <version>1.5.5.Final</version>
-        </dependency>
-        <dependency>
-            <groupId>org.mapstruct</groupId>
-            <artifactId>mapstruct-processor</artifactId>
-            <version>1.5.5.Final</version>
-            <scope>provided</scope>
         </dependency>
     </dependencies>
 

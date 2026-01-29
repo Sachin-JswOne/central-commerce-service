@@ -2,11 +2,18 @@ package com.jswone.commerce.core.rest.impl;
 
 import com.jswone.commerce.core.config.CommerceValueConfig;
 import com.jswone.commerce.core.exceptions.CentralCatalogueServiceException;
+import com.jswone.commerce.core.model.request.FilterRequestProvider;
+import com.jswone.commerce.core.exceptions.CentralCommerceServiceException;
+import com.jswone.commerce.core.model.CatalogueCategoryTree;
+import com.jswone.commerce.core.model.CatalogueCategoryTreeResponse;
 import com.jswone.commerce.core.model.request.ProductBulkRequest;
+import com.jswone.commerce.core.model.request.ProductListingRequest;
 import com.jswone.commerce.core.model.request.ProductTypeBulkRequest;
 import com.jswone.commerce.core.model.request.Search.SearchRequest;
+import com.jswone.commerce.core.model.request.centralCatalogue.CentralCatalogueProductListingRequest;
 import com.jswone.commerce.core.model.request.centralCatalogue.CentralCatalogueSearchRequest;
 import com.jswone.commerce.core.model.response.centralCatalogue.ProductBulkResponse;
+import com.jswone.commerce.core.model.response.centralCatalogue.ProductListingCatalogueResponse;
 import com.jswone.commerce.core.model.response.centralCatalogue.ProductSearchResponse;
 import com.jswone.commerce.core.model.response.centralCatalogue.ProductTypeBulkResponse;
 import com.jswone.commerce.core.rest.CentralCatalogueClient;
@@ -18,6 +25,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.HttpClientErrorException;
+import org.springframework.web.client.HttpServerErrorException;
 import org.springframework.web.util.UriComponentsBuilder;
 
 import java.net.URLEncoder;
@@ -30,6 +38,7 @@ import java.util.Map;
 import static com.jswone.commerce.core.constants.GenericConstants.*;
 import static com.jswone.commerce.core.constants.RestConstants.CLIENT_ID;
 import static com.jswone.commerce.core.constants.RestConstants.X_API_KEY;
+import static com.jswone.commerce.core.util.CatalogueUtil.extractErrorMessage;
 import static io.grpc.netty.shaded.io.netty.handler.codec.http.HttpHeaders.Values.APPLICATION_JSON;
 import static org.apache.http.HttpHeaders.CONTENT_TYPE;
 
@@ -146,15 +155,15 @@ public class CentralCatalogueClientImpl implements CentralCatalogueClient {
         }
     }
 
-    private Map<String, List<String>> extractFilters(SearchRequest searchRequest) {
+    private Map<String, List<String>> extractFilters(FilterRequestProvider filterRequestProvider) {
 
-        if (searchRequest.getFilterConditions() == null) {
+        if (filterRequestProvider.getFilterConditions() == null) {
             return Collections.emptyMap();
         }
 
         Map<String, List<String>> filters = new HashMap<>();
 
-        searchRequest.getFilterConditions().forEach(filter -> {
+        filterRequestProvider.getFilterConditions().forEach(filter -> {
 
             if (!"selection".equalsIgnoreCase(filter.getType())) return;
 
@@ -208,6 +217,45 @@ public class CentralCatalogueClientImpl implements CentralCatalogueClient {
         }
     }
 
+    public List<CatalogueCategoryTree> getCategoryTree() {
+        try {
+            log.info(
+                    "Calling external central catalogue category tree API: {}",
+                    commerceValueConfig.getCatalogueCategoryBaseUrl());
+
+            Map<String, String> headers = Map.of(
+                    X_API_KEY, commerceValueConfig.getCatalogueCategoryApiKey(),
+                    CLIENT_ID, commerceValueConfig.getCatalogueCategoryClientId()
+            );
+
+            String url = commerceValueConfig.getCatalogueCategoryBaseUrl().concat("/category-tree");
+
+            ResponseEntity<CatalogueCategoryTreeResponse> response =
+                    restUtil.makeRestCall(url, null, HttpMethod.GET, CatalogueCategoryTreeResponse.class, headers);
+
+            if (response.getStatusCode() != HttpStatus.OK || response.getBody() == null) {
+                log.error("Failed to fetch catalogue category tree data: {}", response.getStatusCode());
+                throw new CentralCommerceServiceException(
+                        "Failed to fetch catalogue category tree ", (HttpStatus) response.getStatusCode());
+            }
+
+            log.info("Central catalogue tree API call successful");
+            return response.getBody() != null ? response.getBody().getData() : Collections.emptyList();
+
+        } catch (HttpClientErrorException | HttpServerErrorException ex) {
+            log.error("Error calling catalogue tree API: {}", ex.getMessage(), ex);
+            String errorMessage = extractErrorMessage(ex.getResponseBodyAsString());
+            throw new CentralCatalogueServiceException(errorMessage, (HttpStatus) ex.getStatusCode());
+
+        } catch (Exception ex) {
+            log.error("Error calling external Catalogue API: {}", ex.getMessage(), ex);
+            throw new CentralCommerceServiceException(
+                    "Error calling central catalogue category tree API: ",
+                    HttpStatus.INTERNAL_SERVER_ERROR,
+                    ex);
+        }
+    }
+
     public ProductTypeBulkResponse bulkTypeIdResponse(ProductTypeBulkRequest productTypeBulkRequest) {
         try {
             String baseUrl = commerceValueConfig.getCentralCatalogueBaseUrl()
@@ -255,6 +303,109 @@ public class CentralCatalogueClientImpl implements CentralCatalogueClient {
                             e.getMessage()
                     ),
                     HttpStatus.valueOf(e.getStatusCode().value())
+            );
+        }
+    }
+
+    @Override
+    public ProductListingCatalogueResponse productListing(ProductListingRequest productListingRequest) {
+        try {
+
+            CentralCatalogueProductListingRequest ccplRequest = CentralCatalogueProductListingRequest.builder()
+                    .page(productListingRequest.getOffSet())
+                    .size(productListingRequest.getLimit())
+                    .category_id(productListingRequest.getCategoryId())
+                    .slug(productListingRequest.getSlug())
+                    .storefront(productListingRequest.getStorefront())
+                    .facets_only(false)
+                    .locale("en-US")
+                    .filters(extractFilters(productListingRequest))
+                    .build();
+
+            String url = commerceValueConfig.getCentralCatalogueBaseUrl()
+                    + commerceValueConfig.getCentralCatalogueProductListingEndpoint();
+
+            Map<String, String> headers = Map.of(
+                    X_API_KEY, commerceValueConfig.getCentralCatalogueApiKey(),
+                    CLIENT_ID, commerceValueConfig.getCentralCatalogueClientId(),
+                    CONTENT_TYPE, APPLICATION_JSON
+            );
+
+            log.info("Calling Central Catalogue Product Listing POST API: {}", url);
+
+            ResponseEntity<ProductListingCatalogueResponse> response = RetryUtil.retryHttpCalls(
+                    () -> restUtil.makeRestCall(
+                            url,
+                            ccplRequest,
+                            HttpMethod.POST,
+                            ProductListingCatalogueResponse.class,
+                            headers
+                    ),
+                    0,
+                    3,
+                    100,CENTRAL_CATALOGUE_SEARCH
+            );
+
+            return response.getBody();
+
+        } catch (HttpClientErrorException httpClientErrorException) {
+            log.error("HttpClientErrorException while calling central catalogue product listing: {}",
+                    httpClientErrorException.getMessage(), httpClientErrorException);
+
+            throw new CentralCatalogueServiceException(
+                    "HttpClientErrorException while calling central catalogue product listing: "
+                            + httpClientErrorException.getMessage(),
+                    HttpStatus.valueOf(httpClientErrorException.getStatusCode().value())
+            );
+        }
+    }
+
+    @Override
+    public ProductListingCatalogueResponse productListingFacetsOnly(ProductListingRequest productListingRequest) {
+        try {
+
+            CentralCatalogueProductListingRequest ccplRequest = CentralCatalogueProductListingRequest.builder()
+                    .category_id(productListingRequest.getCategoryId())
+                    .slug(productListingRequest.getSlug())
+                    .storefront(productListingRequest.getStorefront())
+                    .facets_only(true)
+                    .locale("en-US")
+                    .build();
+
+            String url = commerceValueConfig.getCentralCatalogueBaseUrl()
+                    + commerceValueConfig.getCentralCatalogueProductListingEndpoint();
+
+            Map<String, String> headers = Map.of(
+                    X_API_KEY, commerceValueConfig.getCentralCatalogueApiKey(),
+                    CLIENT_ID, commerceValueConfig.getCentralCatalogueClientId(),
+                    CONTENT_TYPE, APPLICATION_JSON
+            );
+
+            log.info("Calling Central Catalogue Product Listing facetsOnly POST API: {}", url);
+
+            ResponseEntity<ProductListingCatalogueResponse> response = RetryUtil.retryHttpCalls(
+                    () -> restUtil.makeRestCall(
+                            url,
+                            ccplRequest,
+                            HttpMethod.POST,
+                            ProductListingCatalogueResponse.class,
+                            headers
+                    ),
+                    0,
+                    3,
+                    100,CENTRAL_CATALOGUE_SEARCH
+            );
+
+            return response.getBody();
+
+        } catch (HttpClientErrorException httpClientErrorException) {
+            log.error("HttpClientErrorException while calling central catalogue product listing facetsOnly: {}",
+                    httpClientErrorException.getMessage(), httpClientErrorException);
+
+            throw new CentralCatalogueServiceException(
+                    "HttpClientErrorException while calling central catalogue product listing facetsOnly: "
+                            + httpClientErrorException.getMessage(),
+                    HttpStatus.valueOf(httpClientErrorException.getStatusCode().value())
             );
         }
     }

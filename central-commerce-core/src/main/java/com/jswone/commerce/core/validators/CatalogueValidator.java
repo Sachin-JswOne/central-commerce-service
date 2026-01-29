@@ -1,6 +1,7 @@
 package com.jswone.commerce.core.validators;
 
 import com.jswone.commerce.core.exceptions.CentralCommerceServiceException;
+import com.jswone.commerce.core.model.request.ProductListingRequest;
 import com.jswone.commerce.core.model.request.Search.SearchRequest;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
@@ -17,6 +18,18 @@ public class CatalogueValidator {
         if (offset + limit >= 10_000) {
             throw new CentralCommerceServiceException(
                     "Invalid pagination parameters: (offset + limit) must be less than 10,000 due to Search constraints.",
+                    HttpStatus.BAD_REQUEST
+            );
+        }
+    }
+
+    public void validateProductListingRequest(ProductListingRequest productListingRequest) {
+        int offset = productListingRequest.getOffSet() == null ? 0 : productListingRequest.getOffSet();
+        int limit  = productListingRequest.getLimit() == null ? 21 : productListingRequest.getLimit();
+
+        if (offset + limit >= 10_000) {
+            throw new CentralCommerceServiceException(
+                    "Invalid pagination parameters: (offset + limit) must be less than 10,000 due to product listing constraints.",
                     HttpStatus.BAD_REQUEST
             );
         }

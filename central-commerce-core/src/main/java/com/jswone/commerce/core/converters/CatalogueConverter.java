@@ -3,7 +3,12 @@ package com.jswone.commerce.core.converters;
 import com.jswone.commerce.core.config.CatalogueDynamicConfig;
 import com.jswone.commerce.core.exceptions.CentralCommerceServiceException;
 import com.jswone.commerce.core.model.centralCatalogue.Product;
+import com.jswone.commerce.core.model.request.FilterRequestProvider;
+import com.jswone.commerce.core.model.request.ProductListingRequest;
 import com.jswone.commerce.core.model.request.Search.SearchRequest;
+import com.jswone.commerce.core.model.response.ProductListingResponse;
+import com.jswone.commerce.core.model.response.centralCatalogue.FacetsProvider;
+import com.jswone.commerce.core.model.response.centralCatalogue.ProductListingCatalogueResponse;
 import com.jswone.commerce.core.model.response.centralCatalogue.ProductSearchResponse;
 import com.jswone.commerce.core.model.response.plp.PLPAttribute;
 import com.jswone.commerce.core.model.response.plp.PLPCard;
@@ -166,7 +171,7 @@ public class CatalogueConverter {
     }
 
     // FILTER BUILDER ======================================================================================
-    private List<ProductFilterConditions> buildDynamicFilters(ProductSearchResponse facetResponse, SearchRequest searchRequest) {
+    private List<ProductFilterConditions> buildDynamicFilters(FacetsProvider facetResponse, FilterRequestProvider filterRequest) {
 
         List<ProductFilterConditions> out = new ArrayList<>();
 
@@ -199,9 +204,9 @@ public class CatalogueConverter {
 
 
         // Construct the output list only from the filters passed in the request.
-        if (searchRequest.getFilterConditions() != null && !searchRequest.getFilterConditions().isEmpty()) {
+        if (filterRequest.getFilterConditions() != null && !filterRequest.getFilterConditions().isEmpty()) {
             // READ SELECTED VALUES FROM FE
-            Map<String, List<String>> selectedFromRequestMap = getSelectedFromRequestMap(searchRequest);
+            Map<String, List<String>> selectedFromRequestMap = getSelectedFromRequestMap(filterRequest);
 
             // BUILD FINAL FILTERS
             facetValues.forEach((key, values) -> {
@@ -219,11 +224,11 @@ public class CatalogueConverter {
         return out;
     }
 
-    private static Map<String, List<String>> getSelectedFromRequestMap(SearchRequest searchRequest) {
+    private static Map<String, List<String>> getSelectedFromRequestMap(FilterRequestProvider filterRequest) {
         Map<String, List<String>> selectedFromRequestMap = new HashMap<>();
 
-        if (searchRequest.getFilterConditions() != null && !searchRequest.getFilterConditions().isEmpty()) {
-            for (ProductFilterConditions reqFilter : searchRequest.getFilterConditions()) {
+        if (filterRequest.getFilterConditions() != null && !filterRequest.getFilterConditions().isEmpty()) {
+            for (ProductFilterConditions reqFilter : filterRequest.getFilterConditions()) {
 
                 if (!"selection".equalsIgnoreCase(reqFilter.getType())) continue;
 
@@ -237,4 +242,34 @@ public class CatalogueConverter {
         return selectedFromRequestMap;
     }
 
+    // PRODUCT LISTING CONVERTER ======================================================================================
+    public ProductListingResponse convertCataloguePLPResponseToPLPResponse(
+            ProductListingCatalogueResponse listingCatalogueResponse, ProductListingCatalogueResponse facetsResponse, ProductListingRequest listingRequest) {
+
+        try {
+            List<Product> products = Optional.ofNullable(listingCatalogueResponse.getProducts())
+                    .orElse(Collections.emptyList());
+
+            ProductListingResponse response = new ProductListingResponse();
+
+            // Dynamic Filters
+            response.setFilterConditions(buildDynamicFilters(facetsResponse, listingRequest));
+            List<PLPCard> plpCards = products.stream()
+                    .map(this::convertToPLPCard)
+                    .collect(Collectors.toList());
+
+            response.setProducts(plpCards);
+            response.setCount((long) plpCards.size());
+            response.setTotal(listingCatalogueResponse.getTotalHits());
+            response.setCategoryId(listingRequest.getCategoryId());
+
+            return response;
+
+        } catch (Exception e) {
+            log.error("Exception while mapping product listing response: {}", e.getMessage(), e);
+            throw new CentralCommerceServiceException(
+                    "Exception occurred while mapping central catalogue product listing response: " + e.getMessage()
+            );
+        }
+    }
 }

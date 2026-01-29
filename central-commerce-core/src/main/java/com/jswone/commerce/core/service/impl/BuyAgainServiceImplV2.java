@@ -12,13 +12,13 @@ import com.jswone.commerce.core.model.Uom;
 import com.jswone.commerce.core.model.centralCatalogue.Product;
 import com.jswone.commerce.core.model.centralCatalogue.ProductTypeData;
 import com.jswone.commerce.core.model.centralCatalogue.Variant;
-import com.jswone.commerce.core.model.request.ProductBulkRequest;
 import com.jswone.commerce.core.model.request.ProductTypeBulkRequest;
 import com.jswone.commerce.core.model.response.centralCatalogue.ProductBulkResponse;
 import com.jswone.commerce.core.model.response.centralCatalogue.ProductTypeBulkResponse;
 import com.jswone.commerce.core.repository.ProductCatalogueStoreRepository;
 import com.jswone.commerce.core.rest.CentralCatalogueClient;
 import com.jswone.commerce.core.service.BuyAgainServiceV2;
+import com.jswone.commerce.core.service.CentralCatalogueService;
 import com.jswone.commerce.core.service.PurchasedSkuService;
 import com.jswone.commerce.core.util.JSWCustomerUtil;
 import com.jswone.commons.util.JwtTokenUtil;
@@ -34,7 +34,6 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import static com.jswone.commerce.core.config.ProfileAwareCacheConfig.getCacheNameWithProfile;
-import static com.jswone.commerce.core.constants.BuyAgainConstants.LOCALE_EN_US;
 import static com.jswone.commerce.core.constants.JSWProductConstants.EMPTY_STRING;
 import static com.jswone.commerce.core.constants.JWTConstants.HYPHEN;
 import static com.jswone.commerce.core.util.CatalogueUtil.extractImage;
@@ -46,15 +45,17 @@ public class BuyAgainServiceImplV2 implements BuyAgainServiceV2 {
 
     private static final String DATE_FORMAT = "yyyy-MM-dd HH:mm:ss";
     private final PurchasedSkuService purchasedSkuService;
+    private final CentralCatalogueService centralCatalogueService;
     private final ProductCatalogueStoreRepository productCatalogueStoreRepository;
     private final CentralCatalogueClient centralCatalogueClient;
     private final JSWCustomerUtil customerUtil;
     private final CacheManager cacheManager;
     private final CommerceValueConfig commerceValueConfig;
 
-    public BuyAgainServiceImplV2(PurchasedSkuService purchasedSkuService, ProductCatalogueStoreRepository productCatalogueStoreRepository,
+    public BuyAgainServiceImplV2(PurchasedSkuService purchasedSkuService, CentralCatalogueService centralCatalogueService, ProductCatalogueStoreRepository productCatalogueStoreRepository,
                                  CentralCatalogueClient centralCatalogueClient, JSWCustomerUtil customerUtil, CacheManager cacheManager, CommerceValueConfig commerceValueConfig) {
         this.purchasedSkuService = purchasedSkuService;
+        this.centralCatalogueService = centralCatalogueService;
         this.productCatalogueStoreRepository = productCatalogueStoreRepository;
         this.centralCatalogueClient = centralCatalogueClient;
         this.customerUtil = customerUtil;
@@ -146,8 +147,8 @@ public class BuyAgainServiceImplV2 implements BuyAgainServiceV2 {
                 .orElseGet(Collections::emptyList)
                 .stream()
                 .sorted(Comparator.comparing(
-                                PurchasedSku::getOrderPlacedDate,
-                                Comparator.nullsLast(Date::compareTo)).reversed())
+                        PurchasedSku::getOrderPlacedDate,
+                        Comparator.nullsLast(Date::compareTo)).reversed())
                 .collect(Collectors.toList());
         log.info("Buy_Again - Fetched {} purchased skus for customerId={}", purchasedSkus.size(), customerId);
         return purchasedSkus;
@@ -162,20 +163,16 @@ public class BuyAgainServiceImplV2 implements BuyAgainServiceV2 {
             return buildBuyAgainResponse(Collections.emptyList());
         }
 
-        Set<String> productKeys = purchasedSkus.stream()
-                .map(PurchasedSku::getProductKey)
-                .filter(Objects::nonNull)
-                .collect(Collectors.toSet());
+        Set<String> productMMIDList = getProductMMIDList(purchasedSkus);
 
         log.info("Buy_Again - Fetching Product Catalogue Store");
-        List<ProductCatalogueStore> productCatalogueStoreList = getProductDataStoreInBatches(productKeys);
-        log.info("Buy_Again - Fetched Product Catalogue Store for ProductKeyCount={}", productKeys.size());
+        List<ProductCatalogueStore> productCatalogueStoreList = getProductDataStoreInBatches(productMMIDList);
+        log.info("Buy_Again - Fetched Product Catalogue Store for ProductMMIDCount={}", productMMIDList.size());
         Map<String, ProductCatalogueStore> productCatalogueStoreMap = productCatalogueStoreList.stream()
-                .collect(Collectors.toMap(ProductCatalogueStore::getProductKey, Function.identity()));
+                .collect(Collectors.toMap(ProductCatalogueStore::getProductMaterialMasterId, Function.identity()));
 
-        Set<String> productMMIDList = getProductMMIDList(purchasedSkus, productCatalogueStoreMap);
         log.info("Buy_Again - Calling Cental Catalogue Product Bulk API with ProductMMIDCount={}", productMMIDList.size());
-        ProductBulkResponse productBulkMMIDResponse = fetchCentralCatalogueProductsWithRetry(productMMIDList);
+        ProductBulkResponse productBulkMMIDResponse = centralCatalogueService.fetchProductsByProductMMIDs(productMMIDList);
         Map<String, Product> centralCatalogueProductMap = mapCentralCatalogueProducts(productBulkMMIDResponse);
 
         Set<String> productTypeIds = productBulkMMIDResponse.getProducts().stream()
@@ -190,9 +187,14 @@ public class BuyAgainServiceImplV2 implements BuyAgainServiceV2 {
         log.info("Buy_Again - Preparing purchased line item response");
 
         for (PurchasedSku purchasedSku : purchasedSkus) {
+            String productMMID = resolveProductMMID(purchasedSku);
+            if (StringUtils.isEmpty(productMMID)) {
+                log.warn("Buy_Again - Skipping Purchased SKU as Product MMID is missing");
+                continue;
+            }
             log.info("Buy_Again - Preparing purchased line item response for Purchased SKU={} ", purchasedSku);
-            ProductCatalogueStore productCatalogueStore = productCatalogueStoreMap.get(purchasedSku.getProductKey());
-            String productMMID = resolveProductMMID(purchasedSku, productCatalogueStore);
+
+            ProductCatalogueStore productCatalogueStore = productCatalogueStoreMap.get(productMMID);
 
             Product centralCatalogueProduct = centralCatalogueProductMap.get(productMMID);
 
@@ -213,6 +215,7 @@ public class BuyAgainServiceImplV2 implements BuyAgainServiceV2 {
 
         return PurchasedLineItemResponse.builder()
                 .name(str(centralProduct.getAttributes().get("product_title")))
+                .productKey(purchasedSku.getProductKey())
                 .productSlug(str(centralProduct.getAttributes().get("slug")))
                 .attributes(Optional.ofNullable(matchVariant)
                         .map(Variant::getAttributes)
@@ -227,7 +230,7 @@ public class BuyAgainServiceImplV2 implements BuyAgainServiceV2 {
                 .ctUom(purchasedSku.getCtUom())
                 .orderPlacedDate(orderPlacedDate)
                 .productMMID(centralProduct.getProductMmid())
-                .productTypeKey(productStore.getProductTypeKey())
+                .productTypeKey(productStore != null && productStore.getProductTypeKey() != null ? productStore.getProductTypeKey() : EMPTY_STRING)
                 .variantMMID(generateVariantMMID(centralProduct))
                 .imageUrl(extractImage(centralProduct))
                 .build();
@@ -254,32 +257,11 @@ public class BuyAgainServiceImplV2 implements BuyAgainServiceV2 {
         return buildBuyAgainResponse(pagedPurchasedLineItems);
     }
 
-    private Set<String> getProductMMIDList(List<PurchasedSku> purchasedSkus, Map<String, ProductCatalogueStore> productCatalogueStoreMap) {
+    private Set<String> getProductMMIDList(List<PurchasedSku> purchasedSkus) {
         return purchasedSkus.stream()
-                .map(purchasedSku ->
-                        resolveProductMMID(purchasedSku, productCatalogueStoreMap.get(purchasedSku.getProductKey())))
-                .filter(Objects::nonNull)
+                .map(this::resolveProductMMID)
+                .filter(StringUtils::isNotEmpty)
                 .collect(Collectors.toSet());
-    }
-
-    private ProductBulkResponse fetchCentralCatalogueProductsWithRetry(Set<String> productMMIDList) {
-
-        if (productMMIDList == null || productMMIDList.isEmpty()) {
-            return new ProductBulkResponse(Collections.emptyList(), 0);
-        }
-
-        log.info("Buy_Again - Calling Central Catalogue Product Bulk API with ProductMMID Count={}",
-                productMMIDList.size());
-
-        try {
-            ProductBulkRequest request =
-                    new ProductBulkRequest(productMMIDList, "msme", LOCALE_EN_US);
-            return centralCatalogueClient.bulkMMIDResponse(request);
-        } catch (Exception e) {
-            log.error("Buy_Again - Central catalogue call failed (client retries already attempted): {}",
-                    e.getMessage(), e);
-            return new ProductBulkResponse(Collections.emptyList(), 0);
-        }
     }
 
     private ProductTypeBulkResponse fetchCentralCatalogueAdminProductsWithRetry(Set<String> productTypeIdList) {
@@ -324,12 +306,10 @@ public class BuyAgainServiceImplV2 implements BuyAgainServiceV2 {
                 : centralCatalogueProduct.getProductMmid() + HYPHEN + "10000000";
     }
 
-    private String resolveProductMMID(PurchasedSku purchasedSku, ProductCatalogueStore productCatalogueStore) {
+    private String resolveProductMMID(PurchasedSku purchasedSku) {
         if (purchasedSku == null) return null;
-        if (!StringUtils.isEmpty(purchasedSku.getProductMMID())) {
-            return purchasedSku.getProductMMID();
-        }
-        return productCatalogueStore == null ? null : productCatalogueStore.getProductMaterialMasterId();
+        String productMMID = purchasedSku.getProductMMID();
+        return StringUtils.isEmpty(productMMID) ? null : productMMID;
     }
 
     public Variant validateVariant(String variantKey, Product centralCatalogueProduct) {
@@ -353,16 +333,15 @@ public class BuyAgainServiceImplV2 implements BuyAgainServiceV2 {
                 .build();
     }
 
-
-    public List<ProductCatalogueStore> getProductDataStoreInBatches(Set<String> productKeys) {
+    public List<ProductCatalogueStore> getProductDataStoreInBatches(Set<String> productMMIds) {
         int batchSize = 30;
         List<ProductCatalogueStore> productStoreList = new ArrayList<>();
-        List<String> productKeyString = new ArrayList<>(productKeys);
-        for (int i = 0; i < productKeyString.size(); i += batchSize) {
+        List<String> productMMIDList = new ArrayList<>(productMMIds);
+        for (int i = 0; i < productMMIDList.size(); i += batchSize) {
             List<String> batch =
-                    productKeyString.subList(i, Math.min(i + batchSize, productKeyString.size()));
+                    productMMIDList.subList(i, Math.min(i + batchSize, productMMIDList.size()));
             List<ProductCatalogueStore> batchResults =
-                    productCatalogueStoreRepository.findProductCatalogueStoresByProductKeys(batch);
+                    productCatalogueStoreRepository.findProductCatalogueStoresByProductMaterialMasterIds(batch);
 
             productStoreList.addAll(batchResults);
         }
