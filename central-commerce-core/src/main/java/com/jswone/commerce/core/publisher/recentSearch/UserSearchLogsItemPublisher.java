@@ -103,7 +103,7 @@ public class UserSearchLogsItemPublisher {
 
         return Event.builder()
                 .eventId(UUID.randomUUID().toString())
-                .eventType(ElasticPublisherEventTypes.PUBLISH_USER_SEARCH_LOGS.getValue())
+                .eventType(ElasticPublisherEventTypes.PUBLISH_USER_SEARCH_LOGS.getValue().concat("new"))
                 .payload(requestMap)
                 .build();
     }
