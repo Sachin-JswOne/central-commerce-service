@@ -27,7 +27,7 @@ public class UserSearchLogsTrackerWorker {
         this.objectMapper = objectMapper;
         this.eventProcessor = eventProcessor;
         this.allowedEvents = List.of(
-                ElasticPublisherEventTypes.PUBLISH_USER_SEARCH_LOGS.getValue().concat("new")
+                ElasticPublisherEventTypes.PUBLISH_USER_SEARCH_LOGS.getValue()
         );
     }
 
