@@ -42,8 +42,6 @@ public class RecentSearchTrackerWorker {
             if (allowedEvents.contains(eventData.getEventType())) {
                 eventProcessor.processEvent(eventData.getEventType(), eventData.getPayload());
                 message.ack();
-            } else {
-                message.nack();
             }
         } catch (Exception e) {
             log.error("Elastic insert failed message:::{}, data:::{} error:{}", message.getProjectSubscriptionName(), data, e.getMessage(), e);
