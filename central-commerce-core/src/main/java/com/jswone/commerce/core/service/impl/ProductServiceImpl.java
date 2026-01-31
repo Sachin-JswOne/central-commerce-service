@@ -57,7 +57,7 @@ public class ProductServiceImpl implements ProductService {
     }
 
     @Override
-    public ProductSlug getProductFromSlug(String slug) {
+    public ProductSlug getProductFromSlug(String slug, String storeFront) {
         try{
 
             ProductBulkResponse productBulkResponse = centralCatalogueClient.getProductFromSlug(slug,"msme");
@@ -71,7 +71,7 @@ public class ProductServiceImpl implements ProductService {
             }
             String productTypeId = productBulkResponse.getProducts().getFirst().getProductTypeId();
 
-            ProductTypeBulkRequest request = new ProductTypeBulkRequest(Set.of(productTypeId), "msme");
+            ProductTypeBulkRequest request = new ProductTypeBulkRequest(Set.of(productTypeId), storeFront);
 
             ProductTypeBulkResponse productTypeBulkResponse = centralCatalogueClient.bulkTypeIdResponse(request);
 

@@ -4,9 +4,8 @@ package com.jswone.commerce.core.service;
 import com.jswone.commerce.core.model.centralCatalogue.ProductSlug;
 import com.jswone.commerce.core.model.request.ProductSkuRequest;
 import com.jswone.commerce.core.model.response.SkuInfo;
-import com.jswone.commerce.core.model.response.centralCatalogue.ProductBulkResponse;
 
 public interface ProductService {
     SkuInfo getMatchedVariantResponse(ProductSkuRequest productSkuRequest);
-    ProductSlug getProductFromSlug(String slug);
+    ProductSlug getProductFromSlug(String slug, String storeFront);
 }
