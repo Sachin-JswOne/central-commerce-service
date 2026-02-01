@@ -23,7 +23,7 @@ public class UomDataSourceInitializer {
         log.info("Initializing UOM DataSource...");
 
         try (Connection conn = uomDataSource.getConnection()) {
-            log.info("UOM DataSource initialized successfully. Catalog: {}", conn.getCatalog());
+            log.info("UOM DataSource initialized successfully. DataSource: {}", conn.getCatalog());
         } catch (Exception ex) {
             log.error("UOM DataSource initialization failed: {}", ex.getMessage());
         }
