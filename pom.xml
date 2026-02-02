@@ -148,6 +148,12 @@
                 <artifactId>elasticsearch-java</artifactId>
                 <version>8.19.5</version>
             </dependency>
+            <dependency>
+                <groupId>com.graphql-java</groupId>
+                <artifactId>graphql-java-extended-scalars</artifactId>
+                <version>24.0</version>
+                <scope>compile</scope>
+            </dependency>
         </dependencies>
     </dependencyManagement>
 

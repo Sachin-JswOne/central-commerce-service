@@ -4,6 +4,7 @@ import com.jswone.commerce.core.entity.PurchasedSku;
 import com.jswone.commerce.core.mapper.PurchasedSkuRowMapper;
 import com.jswone.commerce.core.service.PurchasedSkuService;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 
@@ -18,7 +19,7 @@ public class PurchasedSkuServiceImpl implements PurchasedSkuService {
     private final PurchasedSkuRowMapper purchasedSkuRowMapper;
 
     public PurchasedSkuServiceImpl(
-            JdbcTemplate jdbcTemplate, PurchasedSkuRowMapper purchasedSkuRowMapper) {
+            @Qualifier("historicalJdbcTemplate") JdbcTemplate jdbcTemplate, PurchasedSkuRowMapper purchasedSkuRowMapper) {
         this.jdbcTemplate = jdbcTemplate;
         this.purchasedSkuRowMapper = purchasedSkuRowMapper;
     }
