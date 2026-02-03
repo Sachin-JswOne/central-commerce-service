@@ -33,7 +33,7 @@ public class MouEligibilityServiceImpl implements MouEligibilityService {
 
         log.info("MoU eligibility evaluation started for gstin={}, financialYear={}", gstin, financialYear);
 
-        MouUtil.validateGstin(gstin);
+        MouUtil.validateGstIn(gstin);
         MouUtil.validateFinancialYear(financialYear);
 
         List<CustomerMouData> customerMouDataList = accountMasterService.getCustomerMouDetails(gstin, financialYear);
