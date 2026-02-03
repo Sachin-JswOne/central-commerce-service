@@ -34,7 +34,6 @@ public class AccountMasterServiceImpl implements AccountMasterService {
         this.restUtil = restUtil;
     }
 
-
     @Override
     public List<CustomerMouData> getCustomerMouDetails(String gstIn, String financialYear) {
         log.info("Fetching MOU customer details from Account Master for GST [{}], FY [{}]", gstIn, financialYear);
