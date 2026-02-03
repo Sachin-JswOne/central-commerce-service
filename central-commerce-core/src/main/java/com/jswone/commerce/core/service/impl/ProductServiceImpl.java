@@ -194,6 +194,7 @@ public class ProductServiceImpl implements ProductService {
                                     .variantMMID(variantMMId)
                                     .productTypeKey(productCatalogueStore.getProductTypeKey())
                                     .sku(variant.getSku())
+                                    .productKey(productCatalogueStore.getProductKey())
                                     .build());
                 }
             }
