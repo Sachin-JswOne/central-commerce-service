@@ -125,7 +125,7 @@ class ProductServiceImplTest {
                 .thenReturn(null);
 
         assertThrows(
-                ProductSelectorException.class,
+                CentralCommerceServiceException.class,
                 () -> productService.getMatchedVariantResponse(request)
         );
     }
@@ -273,7 +273,7 @@ class ProductServiceImplTest {
                 .build();
 
         assertThrows(
-                ProductSelectorException.class,
+                CentralCommerceServiceException.class,
                 () -> productService.getMatchedVariantResponse(request)
         );
     }
@@ -313,7 +313,7 @@ class ProductServiceImplTest {
                 .build();
 
         assertThrows(
-                ProductSelectorException.class,
+                CentralCommerceServiceException.class,
                 () -> productService.getMatchedVariantResponse(request)
         );
     }

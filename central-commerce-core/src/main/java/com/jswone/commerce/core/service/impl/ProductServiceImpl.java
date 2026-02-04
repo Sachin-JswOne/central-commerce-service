@@ -110,9 +110,12 @@ public class ProductServiceImpl implements ProductService {
             ProductCatalogueStore productCatalogueStore = null;
             productCatalogueStore = productCatalogueStoreRepository.findProductCatalogueStoresByProductMaterialMasterId(
                     productSkuRequest.getProductMaterialMasterId());
+            if(Objects.isNull(productCatalogueStore)){
+                throw new CentralCommerceServiceException("Product not available in catalogue store : "
+                        .concat(productSkuRequest.getProductMaterialMasterId()),HttpStatus.BAD_REQUEST);
+            }
             ProductSelectorSkuResponse productSkuRes =
-                    Objects.nonNull(productCatalogueStore)
-                            && Objects.nonNull(productSkuRequest.getProductAttributes())
+                    Objects.nonNull(productSkuRequest.getProductAttributes())
                             ? getVariant(
                             productCatalogueStore, productSkuRequest.getProductAttributes())
                             : null;
@@ -135,7 +138,9 @@ public class ProductServiceImpl implements ProductService {
                                             productSkuRequest,
                                             "Error while fetching variant using product-selector",
                                             HttpStatus.SERVICE_UNAVAILABLE));
-        }catch (Exception e) {
+        } catch (CentralCommerceServiceException e) {
+            throw new CentralCommerceServiceException(e.getLocalizedMessage(),HttpStatus.BAD_REQUEST);
+        } catch (Exception e) {
             throw new ProductSelectorException(productSkuRequest, e.getLocalizedMessage(), HttpStatus.BAD_GATEWAY);
         }
     }
