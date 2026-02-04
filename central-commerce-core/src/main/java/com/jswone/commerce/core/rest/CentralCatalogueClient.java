@@ -3,6 +3,7 @@ package com.jswone.commerce.core.rest;
 import com.jswone.commerce.core.model.CatalogueBreadCrumbData;
 import com.jswone.commerce.core.model.CatalogueCategoryTree;
 import com.jswone.commerce.core.model.ImageMetadata;
+import com.jswone.commerce.core.model.centralCatalogue.Product;
 import com.jswone.commerce.core.model.request.ProductBulkRequest;
 import com.jswone.commerce.core.model.request.ProductListingRequest;
 import com.jswone.commerce.core.model.request.ProductTypeBulkRequest;
@@ -28,4 +29,5 @@ public interface CentralCatalogueClient {
     ProductListingCatalogueResponse productListing(ProductListingRequest productListingRequest);
     ProductListingCatalogueResponse productListingFacetsOnly(ProductListingRequest productListingRequest);
     ProductBulkResponse getProductFromSlug(String slug, String storeFront);
+    List<Product> getAllProductsForCategoryId(String categoryId, String storefront);
 }

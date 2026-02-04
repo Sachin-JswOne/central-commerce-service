@@ -22,6 +22,7 @@ import com.jswone.commerce.core.model.response.centralCatalogue.ProductBulkRespo
 import com.jswone.commerce.core.model.response.centralCatalogue.ProductListingCatalogueResponse;
 import com.jswone.commerce.core.model.response.centralCatalogue.ProductSearchResponse;
 import com.jswone.commerce.core.model.response.centralCatalogue.ProductTypeBulkResponse;
+import com.jswone.commerce.core.model.centralCatalogue.Product;
 import com.jswone.commerce.core.rest.CentralCatalogueClient;
 import com.jswone.commerce.core.util.RestUtil;
 import com.jswone.commerce.core.util.RetryUtil;
@@ -29,27 +30,19 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.parameters.P;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.util.UriComponentsBuilder;
 import org.springframework.web.client.HttpServerErrorException;
 
-import java.net.URLEncoder;
-import java.nio.charset.StandardCharsets;
-import java.util.Map;
-import java.util.Set;
-import java.util.List;
-import java.util.Optional;
-import java.util.HashMap;
-import java.util.Collections;
-import java.util.Objects;
 
+import java.util.*;
+
+import static co.elastic.clients.util.ContentType.APPLICATION_JSON;
 import static com.jswone.commerce.core.constants.GenericConstants.*;
 import static com.jswone.commerce.core.constants.RestConstants.CLIENT_ID;
 import static com.jswone.commerce.core.constants.RestConstants.X_API_KEY;
 import static com.jswone.commerce.core.util.CatalogueUtil.extractErrorMessage;
-import static io.grpc.netty.shaded.io.netty.handler.codec.http.HttpHeaders.Values.APPLICATION_JSON;
 import static org.apache.http.HttpHeaders.CONTENT_TYPE;
 
 @Service
@@ -573,8 +566,97 @@ public class CentralCatalogueClientImpl implements CentralCatalogueClient {
         }
     }
 
+        @Override
+        public List<Product> getAllProductsForCategoryId (
+                String categoryId,
+                String storefront
+    ){
 
-    private String encode(String value) {
-        return URLEncoder.encode(value, StandardCharsets.UTF_8);
-    }
+            List<Product> allProducts = new ArrayList<>();
+
+            int page = 0;     // ✅ 0-based paging
+            int size = 100;   // safe page size
+            long totalHits = -1;
+
+            try {
+                while (true) {
+
+                    CentralCatalogueProductListingRequest ccplRequest =
+                            CentralCatalogueProductListingRequest.builder()
+                                    .page(page)
+                                    .size(size)
+                                    .category_id(categoryId)
+                                    .storefront(storefront)
+                                    .facets_only(false)
+                                    .locale("en-US")
+                                    .build();
+
+                    String url = commerceValueConfig.getCentralCatalogueBaseUrl()
+                            + commerceValueConfig.getCentralCatalogueProductListingEndpoint();
+
+                    Map<String, String> headers = Map.of(
+                            X_API_KEY, commerceValueConfig.getCentralCatalogueApiKey(),
+                            CLIENT_ID, commerceValueConfig.getCentralCatalogueClientId(),
+                            CONTENT_TYPE, APPLICATION_JSON
+                    );
+
+                    log.info(
+                            "Calling Central Catalogue Product Listing API | categoryId={} | page={} | size={}",
+                            categoryId, page, size
+                    );
+
+                    ResponseEntity<ProductListingCatalogueResponse> response =
+                            RetryUtil.retryHttpCalls(
+                                    () -> restUtil.makeRestCall(
+                                            url,
+                                            ccplRequest,
+                                            HttpMethod.POST,
+                                            ProductListingCatalogueResponse.class,
+                                            headers
+                                    ),
+                                    0,
+                                    3,
+                                    100,
+                                    CENTRAL_CATALOGUE_SEARCH
+                            );
+
+                    ProductListingCatalogueResponse body = response.getBody();
+
+                    if (body == null || body.getProducts() == null || body.getProducts().isEmpty()) {
+                        break;
+                    }
+
+                    // Capture totalHits once
+                    if (totalHits < 0) {
+                        totalHits = body.getTotalHits();
+                    }
+
+                    allProducts.addAll(body.getProducts());
+
+                    // Stop when we've fetched everything
+                    if (allProducts.size() >= totalHits) {
+                        break;
+                    }
+
+                    page++; // next page
+                }
+
+                return allProducts;
+
+            } catch (HttpClientErrorException httpClientErrorException) {
+
+                log.error(
+                        "HttpClientErrorException while calling central catalogue product listing | categoryId={}",
+                        categoryId,
+                        httpClientErrorException
+                );
+
+                throw new CentralCatalogueServiceException(
+                        "HttpClientErrorException while calling central catalogue product listing: "
+                                + httpClientErrorException.getMessage(),
+                        HttpStatus.valueOf(httpClientErrorException.getStatusCode().value())
+                );
+            }
+        }
+
 }

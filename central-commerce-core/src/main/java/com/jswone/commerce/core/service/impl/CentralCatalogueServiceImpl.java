@@ -30,7 +30,7 @@ import static com.jswone.commerce.core.constants.GenericConstants.BULK_IMAGE_CHU
 @Slf4j
 public class CentralCatalogueServiceImpl implements CentralCatalogueService {
 
-    private static final String STOREFRONT_MSME = "msme";
+    public static final String STOREFRONT_MSME = "msme";
     private final CentralCatalogueClient centralCatalogueClient;
     private final CatalogueConverter catalogueConverter;
     private final CatalogueValidator catalogueValidator;

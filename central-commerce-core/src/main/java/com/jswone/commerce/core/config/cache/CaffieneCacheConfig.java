@@ -32,12 +32,19 @@ public class CaffieneCacheConfig {
         CaffeineCacheManager cacheManager = new CaffeineCacheManager();
 
         cacheManager.registerCustomCache(
-                ProfileAwareCacheConfig.getCacheNameWithProfile(commerceValueConfig.getRedisCacheProfile(), CacheNames.BUY_AGAIN_PRODUCTS_CACHE_PREFIX_V2),
+                ProfileAwareCacheConfig.getCacheNameWithProfile(commerceValueConfig.getRedisCacheProfile(),
+                        CacheNames.BUY_AGAIN_PRODUCTS_CACHE_PREFIX_V2),
                 Caffeine.newBuilder().expireAfterWrite(24L, TimeUnit.HOURS).build());
 
         cacheManager.registerCustomCache(
-                ProfileAwareCacheConfig.getCacheNameWithProfile(commerceValueConfig.getRedisCacheProfile(), CacheNames.BUY_AGAIN_PRODUCTS_CACHE_PREFIX),
+                ProfileAwareCacheConfig.getCacheNameWithProfile(commerceValueConfig.getRedisCacheProfile(),
+                        CacheNames.BUY_AGAIN_PRODUCTS_CACHE_PREFIX),
                 Caffeine.newBuilder().expireAfterWrite(24L, TimeUnit.HOURS).build());
+
+        // SEO Category Locations cache for sitemap generation
+        cacheManager.registerCustomCache(
+                CacheNames.SEO_CATEGORY_LOCATIONS,
+                Caffeine.newBuilder().expireAfterWrite(1L, TimeUnit.HOURS).build());
 
         return cacheManager;
     }
