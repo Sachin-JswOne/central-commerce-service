@@ -230,7 +230,8 @@ public class DefaultSeoService implements SeoService {
                                                 .pageType(SeoPageType.PDP)
                                                 .categoryType(CategoryType.STANDARD)
                                                 .productId(product.getId())
-                                                .slug(productBaseSlug).location(location)
+                                                .slug(productBaseSlug)
+                                                .location(location)
                                                 .lastModifiedAt(productLastMod)
                                                 .operationType(SeoOperationType.URL_GENERATION)
                                                 .build();
