@@ -125,7 +125,7 @@ class ProductServiceImplTest {
                 .thenReturn(null);
 
         assertThrows(
-                ProductSelectorException.class,
+                CentralCommerceServiceException.class,
                 () -> productService.getMatchedVariantResponse(request)
         );
     }
@@ -273,7 +273,7 @@ class ProductServiceImplTest {
                 .build();
 
         assertThrows(
-                ProductSelectorException.class,
+                CentralCommerceServiceException.class,
                 () -> productService.getMatchedVariantResponse(request)
         );
     }
@@ -313,7 +313,7 @@ class ProductServiceImplTest {
                 .build();
 
         assertThrows(
-                ProductSelectorException.class,
+                CentralCommerceServiceException.class,
                 () -> productService.getMatchedVariantResponse(request)
         );
     }
@@ -472,7 +472,7 @@ class ProductServiceImplTest {
                 .thenReturn(mappedSlug);
 
         // -------- Call --------
-        ProductSlug result = productService.getProductFromSlug(slug);
+        ProductSlug result = productService.getProductFromSlug(slug, "msme");
 
         // -------- Assert --------
         assertNotNull(result);
@@ -486,7 +486,7 @@ class ProductServiceImplTest {
 
         assertThrows(
                 CentralCommerceServiceException.class,
-                () -> productService.getProductFromSlug("slug")
+                () -> productService.getProductFromSlug("slug", "msme")
         );
     }
 
@@ -500,7 +500,7 @@ class ProductServiceImplTest {
 
         assertThrows(
                 CentralCommerceServiceException.class,
-                () -> productService.getProductFromSlug("slug")
+                () -> productService.getProductFromSlug("slug", "msme")
         );
     }
 
@@ -517,7 +517,7 @@ class ProductServiceImplTest {
 
         assertThrows(
                 CentralCommerceServiceException.class,
-                () -> productService.getProductFromSlug("slug")
+                () -> productService.getProductFromSlug("slug", "msme")
         );
     }
 
@@ -536,7 +536,7 @@ class ProductServiceImplTest {
 
         assertThrows(
                 CentralCommerceServiceException.class,
-                () -> productService.getProductFromSlug("slug")
+                () -> productService.getProductFromSlug("slug", "msme")
         );
     }
 
@@ -574,7 +574,7 @@ class ProductServiceImplTest {
         // -------- Assert --------
         assertThrows(
                 CentralCommerceServiceException.class,
-                () -> productService.getProductFromSlug("slug")
+                () -> productService.getProductFromSlug("slug", "msme")
         );
     }
 
@@ -587,7 +587,7 @@ class ProductServiceImplTest {
         CentralCommerceServiceException ex =
                 assertThrows(
                         CentralCommerceServiceException.class,
-                        () -> productService.getProductFromSlug("slug")
+                        () -> productService.getProductFromSlug("slug", "msme")
                 );
 
         assertTrue(ex.getMessage().contains("Service down"));

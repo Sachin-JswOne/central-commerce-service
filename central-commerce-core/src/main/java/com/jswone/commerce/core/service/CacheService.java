@@ -11,4 +11,6 @@ public interface CacheService {
     ApiResponse<Map<String, Object>> fetchBuyAgainKeys();
 
     ApiResponse<Map<String, Object>> deleteBuyAgainKeys();
+
+    ApiResponse<Map<String, Object>> fetchRecentSearchesKeys();
 }

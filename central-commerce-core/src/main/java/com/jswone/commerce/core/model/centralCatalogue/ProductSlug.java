@@ -48,4 +48,6 @@ public class ProductSlug {
     private List<Map<String, Object>> customAttributes;
 
     private List<Map<String,Object>> productOverview;
+
+    private boolean pdpIdentifier;
 }

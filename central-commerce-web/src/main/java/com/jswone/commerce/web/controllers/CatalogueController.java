@@ -18,6 +18,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -47,6 +48,24 @@ public class CatalogueController implements CentralBaseController {
     public ApiResponse<ProductListingResponse> productListing(@Valid @RequestBody ProductListingRequest productListingRequest) {
         log.info("Received request for product listing :{} ", productListingRequest.toString());
         return ApiResponseUtil.createSuccessResponse(centralCatalogueService.productListing(productListingRequest), HttpStatus.OK);
+    }
+
+    @PostMapping(
+            value = "/products/listing/bulk",
+            produces = MediaType.APPLICATION_JSON_VALUE
+    )
+    public ApiResponse<Map<String, ProductListingResponse>> productListingBulk(
+            @RequestBody List<String> slugs) {
+
+        log.info(
+                "Received bulk product listing request for {} slugs",
+                slugs.size()
+        );
+
+        Map<String, ProductListingResponse> response =
+                centralCatalogueService.productListingBulk(slugs);
+
+        return ApiResponseUtil.createSuccessResponse(response, HttpStatus.OK);
     }
 
     @PostMapping(value = "/catalogue/product-details", produces = MediaType.APPLICATION_JSON_VALUE)

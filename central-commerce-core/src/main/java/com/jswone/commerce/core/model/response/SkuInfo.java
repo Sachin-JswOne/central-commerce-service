@@ -18,4 +18,5 @@ public class SkuInfo {
     private String variantMMID;
     private String productTypeKey;
     private String sku;
+    private String productKey;
 }
