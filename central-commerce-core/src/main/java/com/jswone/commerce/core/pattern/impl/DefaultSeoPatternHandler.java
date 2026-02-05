@@ -40,7 +40,7 @@ public class DefaultSeoPatternHandler implements SeoPatternHandler {
     public SeoData fetchData(SeoContext context) {
 
         if (context.getOperationType() == SeoOperationType.URL_GENERATION) {
-            return null; // No data needed for URL generation
+            return null;
         }
 
         try {
@@ -48,7 +48,6 @@ public class DefaultSeoPatternHandler implements SeoPatternHandler {
             String image = null;
             Map<String, String> defaultSelectedAttributes = null;
 
-            // ---------------- CATEGORY ----------------
             if (context.getEntityType() == SeoEntityType.CATEGORY
                     && context.getCategoryId() != null
                     && context.getSlug() != null) {
@@ -80,7 +79,6 @@ public class DefaultSeoPatternHandler implements SeoPatternHandler {
                 }
             }
 
-            // ---------------- PRODUCT ----------------
             else if (context.getEntityType() == SeoEntityType.PRODUCT
                     && context.getSlug() != null) {
 
@@ -93,7 +91,6 @@ public class DefaultSeoPatternHandler implements SeoPatternHandler {
                 }
             }
 
-            // ---------------- VARIANT ----------------
             else if (context.getEntityType() == SeoEntityType.VARIANT
                     && context.getVariantMmid() != null) {
 
@@ -114,7 +111,6 @@ public class DefaultSeoPatternHandler implements SeoPatternHandler {
                         if (matchedVariant != null) {
                             image = CatalogueUtil.extractImage(product);
                             // TODO: Extract defaultSelectedAttributes from matchedVariant
-                            // defaultSelectedAttributes = extract from matchedVariant.getAttributes()
                         }
                     }
                 }
@@ -237,7 +233,6 @@ public class DefaultSeoPatternHandler implements SeoPatternHandler {
         String entityTitle = getTitle(ctx, data);
         String location = ctx.getLocation() != null ? formatLocation(ctx.getLocation()) : "";
 
-        // Build metadata using templates based on entity type
         String title;
         String description;
 
@@ -310,8 +305,7 @@ public class DefaultSeoPatternHandler implements SeoPatternHandler {
      * TODO: Enhance with actual variant attribute extraction when available
      */
     private String extractVariantAttributes(SeoData data) {
-        // For now return empty - will be enhanced when variant data is available in
-        // SeoData
+
         return "";
     }
 
@@ -322,7 +316,6 @@ public class DefaultSeoPatternHandler implements SeoPatternHandler {
         if (location == null || location.isEmpty()) {
             return "";
         }
-        // Simple capitalization for display
         return location.substring(0, 1).toUpperCase() + location.substring(1);
     }
 
