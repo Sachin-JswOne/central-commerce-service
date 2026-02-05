@@ -20,32 +20,42 @@ import java.util.concurrent.TimeUnit;
 @Slf4j
 public class CaffieneCacheConfig {
 
-    private final CommerceValueConfig commerceValueConfig;
+        private final CommerceValueConfig commerceValueConfig;
 
-    public CaffieneCacheConfig(CommerceValueConfig commerceValueConfig) {
-        this.commerceValueConfig = commerceValueConfig;
-    }
+        public CaffieneCacheConfig(CommerceValueConfig commerceValueConfig) {
+                this.commerceValueConfig = commerceValueConfig;
+        }
 
-    @Bean
-    public CacheManager cacheManager() {
-        log.info("-----ENABLING CAFFEINE AS SPRING CACHE MANAGER-----");
-        CaffeineCacheManager cacheManager = new CaffeineCacheManager();
+        @Bean
+        public CacheManager cacheManager() {
+                log.info("-----ENABLING CAFFEINE AS SPRING CACHE MANAGER-----");
+                CaffeineCacheManager cacheManager = new CaffeineCacheManager();
 
-        cacheManager.registerCustomCache(
-                ProfileAwareCacheConfig.getCacheNameWithProfile(commerceValueConfig.getRedisCacheProfile(),
-                        CacheNames.BUY_AGAIN_PRODUCTS_CACHE_PREFIX_V2),
-                Caffeine.newBuilder().expireAfterWrite(24L, TimeUnit.HOURS).build());
+                cacheManager.registerCustomCache(
+                                ProfileAwareCacheConfig.getCacheNameWithProfile(
+                                                commerceValueConfig.getRedisCacheProfile(),
+                                                CacheNames.BUY_AGAIN_PRODUCTS_CACHE_PREFIX_V2),
+                                Caffeine.newBuilder().expireAfterWrite(24L, TimeUnit.HOURS).build());
 
-        cacheManager.registerCustomCache(
-                ProfileAwareCacheConfig.getCacheNameWithProfile(commerceValueConfig.getRedisCacheProfile(),
-                        CacheNames.BUY_AGAIN_PRODUCTS_CACHE_PREFIX),
-                Caffeine.newBuilder().expireAfterWrite(24L, TimeUnit.HOURS).build());
+                cacheManager.registerCustomCache(
+                                ProfileAwareCacheConfig.getCacheNameWithProfile(
+                                                commerceValueConfig.getRedisCacheProfile(),
+                                                CacheNames.BUY_AGAIN_PRODUCTS_CACHE_PREFIX),
+                                Caffeine.newBuilder().expireAfterWrite(24L, TimeUnit.HOURS).build());
 
-        // SEO Category Locations cache for sitemap generation
-        cacheManager.registerCustomCache(
-                CacheNames.SEO_CATEGORY_LOCATIONS,
-                Caffeine.newBuilder().expireAfterWrite(1L, TimeUnit.HOURS).build());
+                // SEO Category Locations cache for sitemap generation
+                cacheManager.registerCustomCache(
+                                CacheNames.SEO_CATEGORY_LOCATIONS,
+                                Caffeine.newBuilder().expireAfterWrite(1L, TimeUnit.HOURS).build());
 
-        return cacheManager;
-    }
+                // SEO Product Types cache for variant slug generation
+                cacheManager.registerCustomCache(
+                                CacheNames.SEO_PRODUCT_TYPES,
+                                Caffeine.newBuilder()
+                                                .expireAfterWrite(1L, TimeUnit.HOURS)
+                                                .maximumSize(1000)
+                                                .build());
+
+                return cacheManager;
+        }
 }
