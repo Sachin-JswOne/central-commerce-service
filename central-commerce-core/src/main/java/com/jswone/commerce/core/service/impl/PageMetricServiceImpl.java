@@ -18,11 +18,13 @@ public class PageMetricServiceImpl {
     try {
         Observation.createNotStarted("page.load", observationRegistry)
             .lowCardinalityKeyValue("pageName", request.getPageName())
+                .lowCardinalityKeyValue("loadTime", String.valueOf(request.getLoadTime()))
             .lowCardinalityKeyValue("env", request.getEnv())
             .lowCardinalityKeyValue("version", request.getAppVersion())
-            .lowCardinalityKeyValue("device", request.getAppDevice());
+            .lowCardinalityKeyValue("device", request.getAppDevice()).observe(()->{});
         return true;
     }catch (Exception e){
+        log.error("Experienced error in PageLoad Metric API : ", e);
         return false;
     }
     }

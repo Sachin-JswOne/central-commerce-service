@@ -18,13 +18,16 @@ public class ApiMetricServiceImpl {
 
         try {
             Observation.createNotStarted("api.request", observationRegistry).
+                    lowCardinalityKeyValue("path", request.getHttpPath()).
                     lowCardinalityKeyValue("method", request.getHttpMethodName()).
                     lowCardinalityKeyValue("status", String.valueOf(request.getHttpStatus())).
+                    lowCardinalityKeyValue("loadTime", request.getLoadTime()).
                     lowCardinalityKeyValue("env", request.getEnv()).
                     lowCardinalityKeyValue("version", request.getAppVersion()).
-                    lowCardinalityKeyValue("device", request.getAppDevice());
+                    lowCardinalityKeyValue("device", request.getAppDevice()).observe(()->{});
             return true;
         }catch (Exception e){
+            log.error("Experienced error in APIMetric API : ", e);
             return false;
         }
     }

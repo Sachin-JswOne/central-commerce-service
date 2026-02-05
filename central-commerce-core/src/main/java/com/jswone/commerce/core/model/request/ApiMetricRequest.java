@@ -9,6 +9,10 @@ public class ApiMetricRequest {
 
     private int httpStatus;
 
+    private String httpPath;
+
+    private String loadTime;
+
     private String env;
 
     private String appVersion;
