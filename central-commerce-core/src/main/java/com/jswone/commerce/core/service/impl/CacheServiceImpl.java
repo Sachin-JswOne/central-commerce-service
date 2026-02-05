@@ -29,6 +29,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
 import static com.jswone.commerce.core.config.ProfileAwareCacheConfig.getCacheNameWithProfile;
+import static com.jswone.commerce.core.constants.CacheNames.CLEAR_RECENT_SEARCHES_CACHE_PREFIX;
 import static com.jswone.commerce.core.constants.NotificationConstants.*;
 
 @Slf4j
@@ -373,12 +374,12 @@ public class CacheServiceImpl implements CacheService {
     }
 
     @Override
-    public ApiResponse<Map<String, Object>> fetchBuyAgainKeys() {
-        String buyAgainKeyPrefix = getCacheNameWithProfile(commerceValueConfig.getRedisCacheProfile(), getCacheName()).concat("*");
+    public ApiResponse<Map<String, Object>> fetchRecentSearchesKeys() {
+        String buyAgainKeyPrefix = getCacheNameWithProfile(commerceValueConfig.getRedisCacheProfile(), CLEAR_RECENT_SEARCHES_CACHE_PREFIX).concat("*");
         log.info("Fetching Buy Again Redis keys with pattern: {}", buyAgainKeyPrefix);
 
         if (!isRedisEnabled()) {
-            return fetchKeysFromCaffeineCache();
+            return fetchKeysFromCaffeineCache(CLEAR_RECENT_SEARCHES_CACHE_PREFIX);
         }
 
         Set<String> keys = new HashSet<>();
@@ -412,11 +413,51 @@ public class CacheServiceImpl implements CacheService {
         return ApiResponseUtil.createSuccessResponse(result, HttpStatus.OK);
     }
 
-    private ApiResponse<Map<String, Object>> fetchKeysFromCaffeineCache() {
+    @Override
+    public ApiResponse<Map<String, Object>> fetchBuyAgainKeys() {
+        String buyAgainKeyPrefix = getCacheNameWithProfile(commerceValueConfig.getRedisCacheProfile(), getCacheName()).concat("*");
+        log.info("Fetching Buy Again Redis keys with pattern: {}", buyAgainKeyPrefix);
+
+        if (!isRedisEnabled()) {
+            return fetchKeysFromCaffeineCache(getCacheName());
+        }
+
+        Set<String> keys = new HashSet<>();
+
+        try {
+            redisTemplate.execute((RedisCallback<Void>) connection -> {
+                ScanOptions options = ScanOptions.scanOptions()
+                        .match(buyAgainKeyPrefix)
+                        .count(1000)
+                        .build();
+
+                try (Cursor<byte[]> cursor = connection.scan(options)) {
+                    while (cursor.hasNext()) {
+                        keys.add(new String(cursor.next()));
+                    }
+                }
+                return null;
+            });
+        } catch (Exception e) {
+            log.error("Error while fetching buy-again Redis keys", e);
+            return ApiResponseUtil.createErrorResponse(
+                    "Unable to fetch Redis buy-again keys",
+                    HttpStatus.INTERNAL_SERVER_ERROR
+            );
+        }
+
+        Map<String, Object> result = new HashMap<>();
+        result.put("count", keys.size());
+        result.put("keys", keys);
+
+        return ApiResponseUtil.createSuccessResponse(result, HttpStatus.OK);
+    }
+
+    private ApiResponse<Map<String, Object>> fetchKeysFromCaffeineCache(String cacheName) {
         log.info("Caffeine cache enabled, fetching keys from Caffeine cache");
 
         String cacheNameWithProfile =
-                getCacheNameWithProfile(commerceValueConfig.getRedisCacheProfile(), getCacheName());
+                getCacheNameWithProfile(commerceValueConfig.getRedisCacheProfile(), cacheName);
         Cache cache = cacheManager.getCache(cacheNameWithProfile);
         if (cache == null) {
             log.error("Caffeine cache not found for name={}", cacheNameWithProfile);

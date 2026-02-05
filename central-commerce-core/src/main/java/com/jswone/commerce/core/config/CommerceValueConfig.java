@@ -189,4 +189,16 @@ public class CommerceValueConfig {
 
     @Value("${central.catalogue.product.slug.endpoint}")
     private String centralCatalogueProductSlugEndpoint;
+
+    @Value("${account.master.service.api.key}")
+    private String accountMasterServiceApiKey;
+
+//    @Value("${account.master.service.client.id}")
+//    private String accountMasterServiceClientId;
+
+    @Value("${account.master.service.base.url}")
+    private String accountMasterServiceBaseUrl;
+
+    @Value("${account.master.service.mou.endpoint}")
+    private String accountMasterServiceMouEndpoint;
 }

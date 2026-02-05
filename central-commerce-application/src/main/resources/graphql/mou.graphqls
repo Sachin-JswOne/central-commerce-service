@@ -1,0 +1,57 @@
+scalar JSON
+
+type Query {
+    mouDashboard(mouId: String!, financialYear: String!, mouType: String!): Mou
+
+    mouIncentiveDetails(mouId: String!, financialYear: String!, productCategory: String!, mouType: String!): MouProductCategoryIncentive
+}
+
+type Mou {
+    mouId: String
+    financialYear: String
+    uom: String
+    mouType: String
+    mouYearlySummary: MouYearlySummary
+    productCategories: [ProductCategory]
+}
+
+type MouYearlySummary {
+    mouId: String,
+    financialYear: String,
+    uom: String,
+    mouType: String,
+    lastUpdatedDate: String,
+    achievementPercentage: Float
+    achievedQuantity: Float
+    remainingQuantity: Float
+    targetQuantity: Float
+    savingsAchieved: Float
+    potentialSavings: Float
+}
+
+type ProductCategory {
+    mouId: String,
+    financialYear: String,
+    uom: String
+    mouType: String
+    productCategory: String
+    volumeIncentiveRate: Float
+    consistencyIncentiveRate: Float
+    msmeIncentiveRate: Float
+    achievementPercentage: Float
+    achievedQuantity: Float
+    remainingQuantity: Float
+    targetQuantity: Float
+    savingsAchieved: Float
+    potentialSavings: Float
+    # Optional
+    incentiveDetails: JSON
+}
+
+type MouProductCategoryIncentive {
+    mouId: String
+    financialYear: String
+    mouType: String
+    productCategory: String
+    incentiveDetails: JSON
+}

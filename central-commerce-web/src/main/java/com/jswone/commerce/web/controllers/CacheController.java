@@ -32,6 +32,12 @@ public class CacheController implements CentralBaseController {
         return cacheService.fetchBuyAgainKeys();
     }
 
+    @GetMapping("/recent-searches/cache/keys")
+    public ApiResponse<Map<String, Object>> getRecentSearchesCacheKeys() {
+        log.info("Fetching all recent-searches cache keys");
+        return cacheService.fetchRecentSearchesKeys();
+    }
+
     @DeleteMapping("/buy-again/cache/clear")
     public ApiResponse<Map<String, Object>> deleteBuyAgainCache() {
         log.info("Clearing buy-again cache");

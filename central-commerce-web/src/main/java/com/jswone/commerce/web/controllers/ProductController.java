@@ -31,9 +31,10 @@ public class ProductController implements CentralBaseController{
     }
 
     @GetMapping(value = "/product/slug/{slugId}", produces = MediaType.APPLICATION_JSON_VALUE)
-    public ApiResponse<ProductSlug> getProductFromSlug(@PathVariable String slugId) {
+    public ApiResponse<ProductSlug> getProductFromSlug(@PathVariable String slugId,
+                                                       @RequestParam(defaultValue = "msme") String storeFront) {
         log.debug("Received request to find product slug :{} ", slugId);
-        ProductSlug productSlug = productService.getProductFromSlug(slugId);
+        ProductSlug productSlug = productService.getProductFromSlug(slugId, storeFront);
 
         return ApiResponseUtil.createSuccessResponse(productSlug, HttpStatus.OK);
     }

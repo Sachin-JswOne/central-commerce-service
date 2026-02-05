@@ -1,6 +1,7 @@
 package com.jswone.commerce.core.publisher.recentSearch;
 
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.api.core.ApiFuture;
@@ -56,6 +57,11 @@ public class UserSearchLogsItemPublisher {
             if (userSearchLogs.isToBeShownInRecent()) {
                 event = event.toBuilder().eventType(ElasticPublisherEventTypes.PUBLISH_RECENT_SEARCH.getValue()).build();
                 publishRecentSearch(event);
+            }
+
+            if (userSearchLogs.getQuery().isValidQueryForTrendingSearch()) {
+                event = event.toBuilder().eventType(ElasticPublisherEventTypes.PUBLISH_TRENDING_SEARCH_TERM.getValue()).build();
+                publishTrendingSearchTerm(event);
             }
 
 
@@ -131,7 +137,7 @@ public class UserSearchLogsItemPublisher {
                 },
                 MoreExecutors.directExecutor()
         );
-        log.info("Published Recent Search message: {}", messageString);
+        log.debug("Published Recent Search message: {}", messageString);
         MDC.clear();
     }
 
@@ -158,8 +164,37 @@ public class UserSearchLogsItemPublisher {
                 },
                 MoreExecutors.directExecutor()
         );
-        log.info("Published User Search message: {}", messageString);
+        log.debug("Published User Search message: {}", messageString);
         MDC.clear();
+    }
+
+    private void publishTrendingSearchTerm(Event event) throws JsonProcessingException {
+
+        String messageString = objectMapper.writeValueAsString(event);
+        log.info("Elastic TRACKER_PUBLISHER_TOPIC: {} , Event type : {}", TRACKER_PUBLISHER_TOPIC, event.getEventType());
+        ByteString data = ByteString.copyFromUtf8(messageString);
+        // Create PubsubMessage with the serialized data
+        PubsubMessage pubsubMessage = PubsubMessage.newBuilder().setData(data).build();
+        ApiFuture<String> messageId = publisher.publish(pubsubMessage);
+        ApiFutures.addCallback(
+                messageId,
+                new ApiFutureCallback<>() {
+                    @Override
+                    public void onSuccess(String messageId) {
+                        log.info("Published Data to Topic: {} for eventType {} , messageId: {}", publisher.getTopicName(), event.getEventType(), messageId);
+                    }
+
+                    @Override
+                    public void onFailure(Throwable t) {
+                        log.error("Failed to publish Data to Topic: {} for eventType {}, message: {}", publisher.getTopicName(), event.getEventType(), t.getMessage());
+                    }
+
+                },
+                MoreExecutors.directExecutor()
+        );
+        log.debug("Published Trending Search Term message: {}", messageString);
+        MDC.clear();
+
     }
 
     @PreDestroy
