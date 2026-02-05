@@ -35,8 +35,13 @@ import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.util.UriComponentsBuilder;
 import org.springframework.web.client.HttpServerErrorException;
 
-
 import java.util.*;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ThreadFactory;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Collectors;
 
 import static co.elastic.clients.util.ContentType.APPLICATION_JSON;
 import static com.jswone.commerce.core.constants.GenericConstants.*;
@@ -52,10 +57,23 @@ public class CentralCatalogueClientImpl implements CentralCatalogueClient {
     private final RestUtil restUtil;
     private final CommerceValueConfig commerceValueConfig;
 
-    public CentralCatalogueClientImpl(RestUtil restUtil, CommerceValueConfig commerceValueConfig) {
-        this.restUtil = restUtil;
-        this.commerceValueConfig = commerceValueConfig;
-    }
+        // Dedicated thread pool for parallel pagination fetching
+        private final ExecutorService paginationExecutor = Executors.newFixedThreadPool(10,
+                new ThreadFactory() {
+                        private final AtomicInteger threadNumber = new AtomicInteger(1);
+
+                        @Override
+                        public Thread newThread(Runnable r) {
+                                Thread thread = new Thread(r, "pagination-worker-" + threadNumber.getAndIncrement());
+                                thread.setDaemon(true);
+                                return thread;
+                        }
+                });
+
+        public CentralCatalogueClientImpl(RestUtil restUtil, CommerceValueConfig commerceValueConfig) {
+                this.restUtil = restUtil;
+                this.commerceValueConfig = commerceValueConfig;
+        }
 
     @Override
     public ProductSearchResponse genericSearch(SearchRequest searchRequest) {
@@ -567,96 +585,148 @@ public class CentralCatalogueClientImpl implements CentralCatalogueClient {
     }
 
         @Override
-        public List<Product> getAllProductsForCategoryId (
+        public List<Product> getAllProductsForCategoryId(
                 String categoryId,
-                String storefront
-    ){
+                String storefront) {
 
-            List<Product> allProducts = new ArrayList<>();
+                int pageSize = 100; // safe page size
 
-            int page = 0;     // ✅ 0-based paging
-            int size = 100;   // safe page size
-            long totalHits = -1;
+                try {
+                        // Step 1: Get total count with a small initial request
+                        log.info("Fetching product count for category: {}", categoryId);
 
-            try {
-                while (true) {
+                        CentralCatalogueProductListingRequest countRequest = CentralCatalogueProductListingRequest
+                                .builder()
+                                .page(0)
+                                .size(1) // Minimal size to get count
+                                .category_id(categoryId)
+                                .storefront(storefront)
+                                .facets_only(true)
+                                .locale("en-US")
+                                .build();
 
-                    CentralCatalogueProductListingRequest ccplRequest =
-                            CentralCatalogueProductListingRequest.builder()
-                                    .page(page)
-                                    .size(size)
-                                    .category_id(categoryId)
-                                    .storefront(storefront)
-                                    .facets_only(false)
-                                    .locale("en-US")
-                                    .build();
+                        String url = commerceValueConfig.getCentralCatalogueBaseUrl()
+                                + commerceValueConfig.getCentralCatalogueProductListingEndpoint();
 
-                    String url = commerceValueConfig.getCentralCatalogueBaseUrl()
-                            + commerceValueConfig.getCentralCatalogueProductListingEndpoint();
+                        Map<String, String> headers = Map.of(
+                                X_API_KEY, commerceValueConfig.getCentralCatalogueApiKey(),
+                                CLIENT_ID, commerceValueConfig.getCentralCatalogueClientId(),
+                                CONTENT_TYPE, APPLICATION_JSON);
 
-                    Map<String, String> headers = Map.of(
-                            X_API_KEY, commerceValueConfig.getCentralCatalogueApiKey(),
-                            CLIENT_ID, commerceValueConfig.getCentralCatalogueClientId(),
-                            CONTENT_TYPE, APPLICATION_JSON
-                    );
+                        ResponseEntity<ProductListingCatalogueResponse> countResponse = RetryUtil.retryHttpCalls(
+                                () -> restUtil.makeRestCall(
+                                        url,
+                                        countRequest,
+                                        HttpMethod.POST,
+                                        ProductListingCatalogueResponse.class,
+                                        headers),
+                                0,
+                                3,
+                                100,
+                                CENTRAL_CATALOGUE_SEARCH);
 
-                    log.info(
-                            "Calling Central Catalogue Product Listing API | categoryId={} | page={} | size={}",
-                            categoryId, page, size
-                    );
+                        ProductListingCatalogueResponse countBody = countResponse.getBody();
+                        if (countBody == null || countBody.getTotalHits() <= 0) {
+                                log.info("No products found for category: {}", categoryId);
+                                return List.of();
+                        }
 
-                    ResponseEntity<ProductListingCatalogueResponse> response =
-                            RetryUtil.retryHttpCalls(
-                                    () -> restUtil.makeRestCall(
-                                            url,
-                                            ccplRequest,
-                                            HttpMethod.POST,
-                                            ProductListingCatalogueResponse.class,
-                                            headers
-                                    ),
-                                    0,
-                                    3,
-                                    100,
-                                    CENTRAL_CATALOGUE_SEARCH
-                            );
+                        long totalHits = countBody.getTotalHits();
+                        int totalPages = (int) Math.ceil((double) totalHits / pageSize);
 
-                    ProductListingCatalogueResponse body = response.getBody();
+                        log.info("Category {} has {} products across {} pages - fetching in parallel",
+                                categoryId, totalHits, totalPages);
 
-                    if (body == null || body.getProducts() == null || body.getProducts().isEmpty()) {
-                        break;
-                    }
+                        // Step 2: Fetch all pages in parallel
+                        List<CompletableFuture<List<Product>>> pageFutures = new ArrayList<>();
 
-                    // Capture totalHits once
-                    if (totalHits < 0) {
-                        totalHits = body.getTotalHits();
-                    }
+                        for (int page = 0; page < totalPages; page++) {
+                                final int currentPage = page;
 
-                    allProducts.addAll(body.getProducts());
+                                CompletableFuture<List<Product>> pageFuture = CompletableFuture.supplyAsync(() -> {
+                                        try {
+                                                return fetchProductPage(categoryId, storefront, currentPage, pageSize,
+                                                        url,
+                                                        headers);
+                                        } catch (Exception e) {
+                                                log.error("Error fetching page {} for category {}: {}",
+                                                        currentPage, categoryId, e.getMessage(), e);
+                                                return List.of();
+                                        }
+                                }, paginationExecutor);
 
-                    // Stop when we've fetched everything
-                    if (allProducts.size() >= totalHits) {
-                        break;
-                    }
+                                pageFutures.add(pageFuture);
+                        }
 
-                    page++; // next page
+                        // Step 3: Wait for all pages and merge results
+                        List<Product> allProducts = pageFutures.stream()
+                                .map(CompletableFuture::join)
+                                .flatMap(List::stream)
+                                .collect(Collectors.toList());
+
+                        log.info("Successfully fetched {} products for category {} using parallel pagination",
+                                allProducts.size(), categoryId);
+
+                        return allProducts;
+
+                } catch (HttpClientErrorException httpClientErrorException) {
+
+                        log.error(
+                                "HttpClientErrorException while calling central catalogue product listing | categoryId={}",
+                                categoryId,
+                                httpClientErrorException);
+
+                        throw new CentralCatalogueServiceException(
+                                "HttpClientErrorException while calling central catalogue product listing: "
+                                        + httpClientErrorException.getMessage(),
+                                HttpStatus.valueOf(httpClientErrorException.getStatusCode().value()));
                 }
-
-                return allProducts;
-
-            } catch (HttpClientErrorException httpClientErrorException) {
-
-                log.error(
-                        "HttpClientErrorException while calling central catalogue product listing | categoryId={}",
-                        categoryId,
-                        httpClientErrorException
-                );
-
-                throw new CentralCatalogueServiceException(
-                        "HttpClientErrorException while calling central catalogue product listing: "
-                                + httpClientErrorException.getMessage(),
-                        HttpStatus.valueOf(httpClientErrorException.getStatusCode().value())
-                );
-            }
         }
 
+        /**
+         * Fetch a single page of products for a category
+         */
+        private List<Product> fetchProductPage(
+                String categoryId,
+                String storefront,
+                int page,
+                int size,
+                String url,
+                Map<String, String> headers) {
+
+                CentralCatalogueProductListingRequest pageRequest = CentralCatalogueProductListingRequest.builder()
+                        .page(page)
+                        .size(size)
+                        .category_id(categoryId)
+                        .storefront(storefront)
+                        .facets_only(false)
+                        .locale("en-US")
+                        .build();
+
+                log.debug("Fetching page {} for category: {}", page, categoryId);
+
+                ResponseEntity<ProductListingCatalogueResponse> response = RetryUtil.retryHttpCalls(
+                        () -> restUtil.makeRestCall(
+                                url,
+                                pageRequest,
+                                HttpMethod.POST,
+                                ProductListingCatalogueResponse.class,
+                                headers),
+                        0,
+                        3,
+                        100,
+                        CENTRAL_CATALOGUE_SEARCH);
+
+                ProductListingCatalogueResponse body = response.getBody();
+
+                if (body == null || body.getProducts() == null) {
+                        log.warn("Empty response for page {} of category {}", page, categoryId);
+                        return List.of();
+                }
+
+                log.debug("Fetched {} products from page {} for category {}",
+                        body.getProducts().size(), page, categoryId);
+
+                return body.getProducts();
+        }
 }

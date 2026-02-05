@@ -10,15 +10,11 @@ import com.jswone.commerce.core.model.BuyAgainResponse;
 import com.jswone.commerce.core.model.PurchasedLineItemResponse;
 import com.jswone.commerce.core.model.Uom;
 import com.jswone.commerce.core.model.centralCatalogue.Product;
-import com.jswone.commerce.core.model.centralCatalogue.ProductTypeData;
 import com.jswone.commerce.core.model.centralCatalogue.Variant;
-import com.jswone.commerce.core.model.request.ProductTypeBulkRequest;
 import com.jswone.commerce.core.model.response.centralCatalogue.ProductBulkResponse;
-import com.jswone.commerce.core.model.response.centralCatalogue.ProductTypeBulkDTO;
-import com.jswone.commerce.core.model.response.centralCatalogue.ProductTypeBulkResponse;
 import com.jswone.commerce.core.repository.ProductCatalogueStoreRepository;
-import com.jswone.commerce.core.rest.CentralCatalogueClient;
 import com.jswone.commerce.core.service.BuyAgainServiceV2;
+import com.jswone.commerce.core.service.ProductTypeService;
 import com.jswone.commerce.core.service.CentralCatalogueService;
 import com.jswone.commerce.core.service.PurchasedSkuService;
 import com.jswone.commerce.core.util.JSWCustomerUtil;
@@ -48,20 +44,22 @@ public class BuyAgainServiceImplV2 implements BuyAgainServiceV2 {
     private final PurchasedSkuService purchasedSkuService;
     private final CentralCatalogueService centralCatalogueService;
     private final ProductCatalogueStoreRepository productCatalogueStoreRepository;
-    private final CentralCatalogueClient centralCatalogueClient;
     private final JSWCustomerUtil customerUtil;
     private final CacheManager cacheManager;
     private final CommerceValueConfig commerceValueConfig;
+    private final ProductTypeService productTypeService;
 
-    public BuyAgainServiceImplV2(PurchasedSkuService purchasedSkuService, CentralCatalogueService centralCatalogueService, ProductCatalogueStoreRepository productCatalogueStoreRepository,
-                                 CentralCatalogueClient centralCatalogueClient, JSWCustomerUtil customerUtil, CacheManager cacheManager, CommerceValueConfig commerceValueConfig) {
+    public BuyAgainServiceImplV2(PurchasedSkuService purchasedSkuService,
+            CentralCatalogueService centralCatalogueService,
+            ProductCatalogueStoreRepository productCatalogueStoreRepository, JSWCustomerUtil customerUtil, CacheManager cacheManager,
+            CommerceValueConfig commerceValueConfig, ProductTypeService productTypeService) {
         this.purchasedSkuService = purchasedSkuService;
         this.centralCatalogueService = centralCatalogueService;
         this.productCatalogueStoreRepository = productCatalogueStoreRepository;
-        this.centralCatalogueClient = centralCatalogueClient;
         this.customerUtil = customerUtil;
         this.cacheManager = cacheManager;
         this.commerceValueConfig = commerceValueConfig;
+        this.productTypeService = productTypeService;
     }
 
     /**
@@ -122,7 +120,6 @@ public class BuyAgainServiceImplV2 implements BuyAgainServiceV2 {
         return getPagedBuyAgainResponse(offset, limit, buyAgainResponse.getVariantList());
     }
 
-
     /**
      * Builds an immutable copy of the response so cached entries are not accidentally mutated by
      * callers.
@@ -181,8 +178,8 @@ public class BuyAgainServiceImplV2 implements BuyAgainServiceV2 {
                 .filter(Objects::nonNull)
                 .collect(Collectors.toSet());
         log.info("Buy_Again - Calling Cental Catalogue Admin Bulk API with Product Type Id Count={}", productTypeIds.size());
-        ProductTypeBulkResponse productTypeIdBulkResponse = fetchCentralCatalogueAdminProductsWithRetry(productTypeIds);
-        Map<String, com.jswone.commerce.core.model.centralCatalogue.QuantityCard> productQuantityCardMap = mapProductTypeIdToQuantityCard(productTypeIdBulkResponse);
+        Map<String, com.jswone.commerce.core.model.centralCatalogue.QuantityCard> productQuantityCardMap = productTypeService
+                .getQuantityCardsForProductTypes(productTypeIds, "msme");
 
         List<PurchasedLineItemResponse> lineItemResponseList = new ArrayList<>();
         log.info("Buy_Again - Preparing purchased line item response");
@@ -200,15 +197,20 @@ public class BuyAgainServiceImplV2 implements BuyAgainServiceV2 {
             Product centralCatalogueProduct = centralCatalogueProductMap.get(productMMID);
 
             if (Objects.nonNull(centralCatalogueProduct)) {
-                com.jswone.commerce.core.model.centralCatalogue.QuantityCard centralCatalogueQuantityCard = productQuantityCardMap.get(centralCatalogueProduct.getProductTypeId());
-                lineItemResponseList.add(buildPurchasedLineItemResponse(purchasedSku, centralCatalogueProduct, productCatalogueStore, centralCatalogueQuantityCard));
-                log.info("Buy_Again - Prepared purchased line item response list of size={}", lineItemResponseList.size());
+                com.jswone.commerce.core.model.centralCatalogue.QuantityCard centralCatalogueQuantityCard = productQuantityCardMap
+                        .get(centralCatalogueProduct.getProductTypeId());
+                lineItemResponseList.add(buildPurchasedLineItemResponse(purchasedSku, centralCatalogueProduct,
+                        productCatalogueStore, centralCatalogueQuantityCard));
+                log.info("Buy_Again - Prepared purchased line item response list of size={}",
+                        lineItemResponseList.size());
             }
         }
         return buildBuyAgainResponse(lineItemResponseList);
     }
 
-    private PurchasedLineItemResponse buildPurchasedLineItemResponse(PurchasedSku purchasedSku, Product centralProduct, ProductCatalogueStore productStore, com.jswone.commerce.core.model.centralCatalogue.QuantityCard centralCatalogueQuantityCard) {
+    private PurchasedLineItemResponse buildPurchasedLineItemResponse(PurchasedSku purchasedSku, Product centralProduct,
+            ProductCatalogueStore productStore,
+            com.jswone.commerce.core.model.centralCatalogue.QuantityCard centralCatalogueQuantityCard) {
         Variant matchVariant = validateVariant(purchasedSku.getVariantKey(), centralProduct);
 
         SimpleDateFormat sdf = new SimpleDateFormat(DATE_FORMAT);
@@ -231,7 +233,9 @@ public class BuyAgainServiceImplV2 implements BuyAgainServiceV2 {
                 .ctUom(purchasedSku.getCtUom())
                 .orderPlacedDate(orderPlacedDate)
                 .productMMID(centralProduct.getProductMmid())
-                .productTypeKey(productStore != null && productStore.getProductTypeKey() != null ? productStore.getProductTypeKey() : EMPTY_STRING)
+                .productTypeKey(productStore != null && productStore.getProductTypeKey() != null
+                        ? productStore.getProductTypeKey()
+                        : EMPTY_STRING)
                 .variantMMID(generateVariantMMID(centralProduct))
                 .imageUrl(extractImage(centralProduct))
                 .build();
@@ -265,30 +269,13 @@ public class BuyAgainServiceImplV2 implements BuyAgainServiceV2 {
                 .collect(Collectors.toSet());
     }
 
-    private ProductTypeBulkResponse fetchCentralCatalogueAdminProductsWithRetry(Set<String> productTypeIdList) {
 
-        if (productTypeIdList == null || productTypeIdList.isEmpty()) {
-            return new ProductTypeBulkResponse(200, "Success", new ProductTypeBulkDTO()
-            );
-        }
+    private QuantityCard resolveQuantityCard(
+            com.jswone.commerce.core.model.centralCatalogue.QuantityCard centralCatalogueQuantityCard) {
 
-        log.info("Buy_Again - Calling Central Catalogue Admin Product Bulk API with Product Type Id Count={}",
-                productTypeIdList.size());
-
-        try {
-            ProductTypeBulkRequest request = new ProductTypeBulkRequest(productTypeIdList, "msme");
-            return centralCatalogueClient.bulkTypeIdResponse(request);
-        } catch (Exception e) {
-            log.error("Buy_Again - Central catalogue call failed (client retries already attempted): {}",
-                    e.getMessage(), e);
-            return new ProductTypeBulkResponse(200, "Success", new ProductTypeBulkDTO()
-            );
-        }
-    }
-
-    private QuantityCard resolveQuantityCard(com.jswone.commerce.core.model.centralCatalogue.QuantityCard centralCatalogueQuantityCard) {
-
-        com.jswone.commerce.core.model.centralCatalogue.Uom uom = centralCatalogueQuantityCard != null ? centralCatalogueQuantityCard.getUom() : null;
+        com.jswone.commerce.core.model.centralCatalogue.Uom uom = centralCatalogueQuantityCard != null
+                ? centralCatalogueQuantityCard.getUom()
+                : null;
 
         return QuantityCard.builder()
                 .identifier(uom != null ? uom.getUiLabelQuantity() : "")
@@ -356,36 +343,6 @@ public class BuyAgainServiceImplV2 implements BuyAgainServiceV2 {
                 : Collections.emptyMap();
     }
 
-    private Map<String, com.jswone.commerce.core.model.centralCatalogue.QuantityCard> mapProductTypeIdToQuantityCard(ProductTypeBulkResponse productTypeBulkResponse) {
-
-        if (productTypeBulkResponse == null || productTypeBulkResponse.getData() == null
-                || productTypeBulkResponse.getData().getProductTypeDetail() == null ||
-                productTypeBulkResponse.getData().getProductTypeDetail().isEmpty()) {
-            return Collections.emptyMap();
-        }
-
-        return productTypeBulkResponse.getData().getProductTypeDetail()
-                .entrySet()
-                .stream()
-                .map(entry -> {
-                    String productTypeId = entry.getKey();
-                    ProductTypeData data = entry.getValue();
-
-                    if (data == null || data.getQuantityCards() == null) {
-                        return null;
-                    }
-
-                    // Find rank 0 card
-                    return data.getQuantityCards()
-                            .stream()
-                            .filter(card -> card.getRank() == 0)
-                            .findFirst()
-                            .map(card -> Map.entry(productTypeId, card))
-                            .orElse(null);
-                })
-                .filter(Objects::nonNull)
-                .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
-    }
 
     public Cache getBuyAgainCache() {
         Cache cache = cacheManager.getCache(getCacheNameWithProfile(commerceValueConfig.getRedisCacheProfile(), CacheNames.BUY_AGAIN_PRODUCTS_CACHE_PREFIX_V2));

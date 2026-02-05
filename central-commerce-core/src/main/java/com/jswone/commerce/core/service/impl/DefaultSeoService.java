@@ -14,8 +14,6 @@ import com.jswone.commerce.core.model.seo.CategoryResponse;
 import com.jswone.commerce.core.model.seo.ProductResponse;
 import com.jswone.commerce.core.model.seo.UrlGroup;
 import com.jswone.commerce.core.model.seo.VariantResponse;
-import com.jswone.commerce.core.model.request.ProductTypeBulkRequest;
-import com.jswone.commerce.core.model.response.centralCatalogue.ProductTypeBulkResponse;
 import com.jswone.commerce.core.model.seo.SeoContext;
 import com.jswone.commerce.core.model.seo.SeoData;
 import com.jswone.commerce.core.model.seo.SeoMeta;
@@ -24,7 +22,9 @@ import com.jswone.commerce.core.pattern.SeoPatternHandler;
 import com.jswone.commerce.core.resolver.SeoContextResolver;
 import com.jswone.commerce.core.rest.CentralCatalogueClient;
 import com.jswone.commerce.core.service.SeoService;
+import com.jswone.commerce.core.service.ProductTypeService;
 import com.jswone.commerce.core.constants.CacheNames;
+import com.jswone.commerce.core.constants.SeoConstants;
 import com.jswone.commerce.core.util.CatalogueUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -59,8 +59,8 @@ public class DefaultSeoService implements SeoService {
         private final SeoContextResolver contextResolver;
         private final CentralCatalogueClient centralCatalogueClient;
         private final CacheManager cacheManager;
+        private final ProductTypeService productTypeService;
 
-        // Thread pool for parallel product processing
         // Using available processors for optimal performance
         private final ExecutorService executorService = Executors.newFixedThreadPool(
                         Runtime.getRuntime().availableProcessors(),
@@ -136,7 +136,6 @@ public class DefaultSeoService implements SeoService {
                                         List.of()); // Empty product list for BRAND categories
                 }
 
-                // For STANDARD categories: process products and return product URLs
                 List<ProductResponse> products = processProducts(categoryId);
 
                 // Retrieve cached locations after processing all products
@@ -176,7 +175,6 @@ public class DefaultSeoService implements SeoService {
 
                 Map<String, ProductTypeData> productTypeMap = fetchProductTypes(productTypeIds);
 
-                // Process products concurrently using thread pool
                 List<CompletableFuture<ProductResponse>> futures = productsFromCC.stream()
                                 .map(product -> CompletableFuture.supplyAsync(() -> {
                                         try {
@@ -189,7 +187,6 @@ public class DefaultSeoService implements SeoService {
                                 }, executorService))
                                 .toList();
 
-                // Wait for all futures to complete and collect results
                 List<ProductResponse> productResponses = futures.stream()
                                 .map(future -> {
                                         try {
@@ -211,17 +208,14 @@ public class DefaultSeoService implements SeoService {
          */
         private ProductResponse processProduct(Product product, String categoryId,
                         Map<String, ProductTypeData> productTypeMap) {
-                // Null safety: skip products without valid attributes
-                if (product.getAttributes() == null || product.getAttributes().get("slug") == null) {
+                if (product.getAttributes() == null || product.getAttributes().get(SeoConstants.ATTR_SLUG) == null) {
                         log.warn("Skipping product {} - missing slug attribute", product.getId());
                         return null;
                 }
-
-                String productBaseSlug = CatalogueUtil.str(product.getAttributes().get("slug"));
-
-                // Build base product context
+                String productBaseSlug = CatalogueUtil.str(product.getAttributes().get(SeoConstants.ATTR_SLUG));
                 Instant productLastMod = parseLastModified(product.getLastModifiedAt());
 
+                // Build base product context
                 SeoContext productBaseContext = SeoContext.builder()
                                 .entityType(SeoEntityType.PRODUCT)
                                 .pageType(SeoPageType.PDP)
@@ -237,54 +231,19 @@ public class DefaultSeoService implements SeoService {
                 // Base product URL
                 UrlMeta baseUrl = handler.generateUrl(productBaseContext);
 
-                // Location URLs (derived from product locations)
-                Map<String, UrlMeta> locationUrls = new ConcurrentHashMap<>();
-
-                List<String> productLocationList = (product.getProductLocation() != null)
-                                ? product.getProductLocation()
-                                                .stream()
-                                                .flatMap(location -> Stream.of(
-                                                                location.getState(),
-                                                                location.getDistrict()))
-                                                .filter(loc -> loc != null && !loc.isBlank())
-                                                .distinct()
-                                                .toList()
-                                : List.of();
-
-                // Add locations to cache for category URL generation
-                for (String location : productLocationList) {
-                        // Skip 'all' location
-                        if ("all".equalsIgnoreCase(location)) {
-                                continue;
-                        }
-                        addLocationToCache(categoryId, location);
-
-                        SeoContext locationContext = SeoContext.builder()
-                                        .entityType(SeoEntityType.PRODUCT)
-                                        .pageType(SeoPageType.PDP)
-                                        .categoryType(CategoryType.STANDARD)
-                                        .productId(product.getId())
-                                        .slug(productBaseSlug)
-                                        .location(location)
-                                        .lastModifiedAt(productLastMod)
-                                        .operationType(SeoOperationType.URL_GENERATION)
-                                        .build();
-
-                        UrlMeta locationUrl = handler.generateUrl(locationContext);
-                        locationUrls.put(location, locationUrl);
-                }
+                // Build location-specific URLs
+                Map<String, UrlMeta> locationUrls = buildProductLocationUrls(
+                                product, productBaseSlug, productLastMod, categoryId, handler);
 
                 UrlGroup productUrls = new UrlGroup(baseUrl, locationUrls);
 
-                // Variants (location-only URLs)
+                // Build variant URLs
                 List<VariantResponse> variants = new ArrayList<>();
 
-                // Check if product has type ID - required for variant URL generation
                 if (product.getProductTypeId() == null || product.getProductTypeId().isBlank()) {
                         log.error("Skipping variant URL generation for product {} - missing product type ID",
                                         product.getId());
                 } else if (product.getVariants() != null && !product.getVariants().isEmpty()) {
-                        // Get product type data for variant selectors
                         ProductTypeData productTypeData = productTypeMap.get(product.getProductTypeId());
 
                         if (productTypeData == null) {
@@ -292,43 +251,9 @@ public class DefaultSeoService implements SeoService {
                                                 product.getProductTypeId(), product.getId());
                         }
 
-                        for (Variant variant : product.getVariants()) {
-
-                                Map<String, UrlMeta> variantLocationUrls = new ConcurrentHashMap<>();
-
-                                for (String location : productLocationList) {
-                                        // Skip 'all' location
-                                        if ("all".equalsIgnoreCase(location)) {
-                                                continue;
-                                        }
-
-                                        String variantBaseSlug = buildVariantAttributeSlug(product, variant,
-                                                        productTypeData);
-
-                                        SeoContext variantContext = SeoContext.builder()
-                                                        .entityType(SeoEntityType.VARIANT)
-                                                        .pageType(SeoPageType.PDP)
-                                                        .categoryType(CategoryType.STANDARD)
-                                                        .productId(product.getId())
-                                                        .slug(variantBaseSlug)
-                                                        .variantMmid(variant.getVariantMmid())
-                                                        .location(location)
-                                                        .lastModifiedAt(productLastMod)
-                                                        .operationType(SeoOperationType.URL_GENERATION)
-                                                        .build();
-
-                                        UrlMeta variantUrl = handler.generateUrl(variantContext);
-                                        variantLocationUrls.put(location, variantUrl);
-                                }
-
-                                if (!variantLocationUrls.isEmpty()) {
-                                        variants.add(
-                                                        new VariantResponse(
-                                                                        variant.getVariantMmid(),
-                                                                        new UrlGroup(null,
-                                                                                        variantLocationUrls)));
-                                }
-                        }
+                        List<String> productLocations = extractProductLocations(product);
+                        variants = buildVariantUrls(product, productLocations, productLastMod, productTypeData,
+                                        handler);
                 }
 
                 return new ProductResponse(
@@ -345,68 +270,12 @@ public class DefaultSeoService implements SeoService {
          * - Caches each fetched type individually for cross-category reuse
          */
         private Map<String, ProductTypeData> fetchProductTypes(Set<String> productTypeIds) {
-                if (productTypeIds.isEmpty()) {
-                        return Map.of();
+                if (productTypeIds == null || productTypeIds.isEmpty()) {
+                        return new HashMap<>();
                 }
 
-                Map<String, ProductTypeData> resultMap = new ConcurrentHashMap<>();
-                Set<String> uncachedIds = new HashSet<>();
-
-                // Check cache for each type ID
-                Cache cache = cacheManager.getCache(CacheNames.SEO_PRODUCT_TYPES);
-                for (String typeId : productTypeIds) {
-                        if (cache != null) {
-                                ProductTypeData cached = cache.get(typeId, ProductTypeData.class);
-                                if (cached != null) {
-                                        resultMap.put(typeId, cached);
-                                        log.debug("Cache HIT for product type: {}", typeId);
-                                } else {
-                                        uncachedIds.add(typeId);
-                                }
-                        } else {
-                                uncachedIds.add(typeId);
-                        }
-                }
-
-                // If all are cached, return immediately
-                if (uncachedIds.isEmpty()) {
-                        log.debug("All {} product types retrieved from cache", productTypeIds.size());
-                        return resultMap;
-                }
-
-                log.info("Cache MISS for {} product types, fetching from API", uncachedIds.size());
-
-                // Make ONE bulk API call for all uncached IDs
-                try {
-                        ProductTypeBulkRequest typeRequest = new ProductTypeBulkRequest(uncachedIds, "msme");
-                        ProductTypeBulkResponse typeResponse = centralCatalogueClient.bulkTypeIdResponse(typeRequest);
-
-                        if (typeResponse != null
-                                        && typeResponse.getData() != null
-                                        && typeResponse.getData().getProductTypeDetail() != null) {
-
-                                Map<String, ProductTypeData> fetchedTypes = typeResponse.getData()
-                                                .getProductTypeDetail();
-                                log.info("Fetched {} product types from API", fetchedTypes.size());
-
-                                // Cache each type individually for cross-category reuse
-                                for (Map.Entry<String, ProductTypeData> entry : fetchedTypes.entrySet()) {
-                                        String typeId = entry.getKey();
-                                        ProductTypeData typeData = entry.getValue();
-
-                                        if (cache != null && typeData != null) {
-                                                cache.put(typeId, typeData);
-                                                log.debug("Cached product type: {}", typeId);
-                                        }
-
-                                        resultMap.put(typeId, typeData);
-                                }
-                        }
-                } catch (Exception e) {
-                        log.error("Failed to fetch product types in bulk for IDs: {}", uncachedIds, e);
-                }
-
-                return resultMap;
+                // Use ProductTypeService which handles caching internally
+                return productTypeService.getProductTypes(productTypeIds, "msme");
         }
 
         /**
@@ -597,7 +466,7 @@ public class DefaultSeoService implements SeoService {
 
                 for (CatalogueCategoryTree root : categoryTree) {
 
-                        CategoryType categoryType = "Brands".equalsIgnoreCase(root.getKey())
+                        CategoryType categoryType = SeoConstants.CATEGORY_TYPE_BRANDS.equalsIgnoreCase(root.getKey())
                                         ? CategoryType.BRAND
                                         : CategoryType.STANDARD;
 
@@ -635,5 +504,107 @@ public class DefaultSeoService implements SeoService {
                 for (CatalogueCategoryTree child : node.getSub_menu()) {
                         collectSubCategories(child, categoryType, result);
                 }
+        }
+
+        /**
+         * Extract unique location list from product's location data
+         */
+        private List<String> extractProductLocations(Product product) {
+                if (product.getProductLocation() == null) {
+                        return List.of();
+                }
+
+                return product.getProductLocation()
+                                .stream()
+                                .flatMap(location -> Stream.of(
+                                                location.getState(),
+                                                location.getDistrict()))
+                                .filter(loc -> loc != null && !loc.isBlank())
+                                .filter(loc -> !SeoConstants.LOCATION_ALL.equalsIgnoreCase(loc)) // Skip 'all' location
+                                .distinct()
+                                .toList();
+        }
+
+        /**
+         * Build location-specific URLs for a product and cache locations
+         */
+        private Map<String, UrlMeta> buildProductLocationUrls(
+                        Product product,
+                        String productBaseSlug,
+                        Instant productLastMod,
+                        String categoryId,
+                        SeoPatternHandler handler) {
+
+                Map<String, UrlMeta> locationUrls = new ConcurrentHashMap<>();
+                List<String> locations = extractProductLocations(product);
+
+                for (String location : locations) {
+                        // Add to cache for category URL generation
+                        addLocationToCache(categoryId, location);
+
+                        SeoContext locationContext = SeoContext.builder()
+                                        .entityType(SeoEntityType.PRODUCT)
+                                        .pageType(SeoPageType.PDP)
+                                        .categoryType(CategoryType.STANDARD)
+                                        .productId(product.getId())
+                                        .slug(productBaseSlug)
+                                        .location(location)
+                                        .lastModifiedAt(productLastMod)
+                                        .operationType(SeoOperationType.URL_GENERATION)
+                                        .build();
+
+                        UrlMeta locationUrl = handler.generateUrl(locationContext);
+                        locationUrls.put(location, locationUrl);
+                }
+
+                return locationUrls;
+        }
+
+        /**
+         * Build variant URLs for all variants of a product
+         */
+        private List<VariantResponse> buildVariantUrls(
+                        Product product,
+                        List<String> productLocations,
+                        Instant productLastMod,
+                        ProductTypeData productTypeData,
+                        SeoPatternHandler handler) {
+
+                List<VariantResponse> variants = new ArrayList<>();
+
+                if (product.getVariants() == null || product.getVariants().isEmpty()) {
+                        return variants;
+                }
+
+                for (Variant variant : product.getVariants()) {
+                        Map<String, UrlMeta> variantLocationUrls = new ConcurrentHashMap<>();
+
+                        for (String location : productLocations) {
+                                String variantBaseSlug = buildVariantAttributeSlug(product, variant, productTypeData);
+
+                                SeoContext variantContext = SeoContext.builder()
+                                                .entityType(SeoEntityType.VARIANT)
+                                                .pageType(SeoPageType.PDP)
+                                                .categoryType(CategoryType.STANDARD)
+                                                .productId(product.getId())
+                                                .slug(variantBaseSlug)
+                                                .variantMmid(variant.getVariantMmid())
+                                                .location(location)
+                                                .lastModifiedAt(productLastMod)
+                                                .operationType(SeoOperationType.URL_GENERATION)
+                                                .build();
+
+                                UrlMeta variantUrl = handler.generateUrl(variantContext);
+                                variantLocationUrls.put(location, variantUrl);
+                        }
+
+                        if (!variantLocationUrls.isEmpty()) {
+                                variants.add(new VariantResponse(
+                                                variant.getVariantMmid(),
+                                                new UrlGroup(null, variantLocationUrls)));
+                        }
+                }
+
+                return variants;
         }
 }

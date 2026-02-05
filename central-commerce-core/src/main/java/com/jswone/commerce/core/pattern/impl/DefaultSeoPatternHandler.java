@@ -1,5 +1,6 @@
 package com.jswone.commerce.core.pattern.impl;
 
+import com.jswone.commerce.core.config.SeoUrlProperties;
 import com.jswone.commerce.core.enums.seo.CategoryType;
 import com.jswone.commerce.core.enums.seo.SeoEntityType;
 import com.jswone.commerce.core.enums.seo.SeoOperationType;
@@ -14,6 +15,7 @@ import com.jswone.commerce.core.model.seo.UrlMeta;
 import com.jswone.commerce.core.pattern.SeoPatternHandler;
 import com.jswone.commerce.core.rest.CentralCatalogueClient;
 import com.jswone.commerce.core.template.UrlTemplateResolver;
+import com.jswone.commerce.core.constants.SeoConstants;
 import com.jswone.commerce.core.util.CatalogueUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -22,8 +24,8 @@ import org.springframework.stereotype.Component;
 import java.time.Instant;
 import java.util.*;
 
-import static com.jswone.commerce.core.constants.BuyAgainConstants.LOCALE_EN_US;
-import static com.jswone.commerce.core.service.impl.CentralCatalogueServiceImpl.STOREFRONT_MSME;
+import static com.jswone.commerce.core.constants.SeoConstants.LOCALE_EN_US;
+import static com.jswone.commerce.core.constants.SeoConstants.STOREFRONT_MSME;
 
 @Slf4j
 @Component
@@ -32,6 +34,7 @@ public class DefaultSeoPatternHandler implements SeoPatternHandler {
 
     private final UrlTemplateResolver templateResolver;
     private final CentralCatalogueClient catalogueClient;
+    private final SeoUrlProperties seoUrlProperties;
 
     @Override
     public SeoData fetchData(SeoContext context) {
@@ -85,7 +88,7 @@ public class DefaultSeoPatternHandler implements SeoPatternHandler {
 
                 if (product != null && product.getAttributes() != null) {
                     title = CatalogueUtil.str(
-                            product.getAttributes().get("product_title"));
+                            product.getAttributes().get(SeoConstants.ATTR_PRODUCT_TITLE));
                     image = CatalogueUtil.extractImage(product);
                 }
             }
@@ -231,36 +234,47 @@ public class DefaultSeoPatternHandler implements SeoPatternHandler {
     @Override
     public SeoMeta generateMeta(SeoContext ctx, SeoData data) {
 
+        String entityTitle = getTitle(ctx, data);
+        String location = ctx.getLocation() != null ? formatLocation(ctx.getLocation()) : "";
+
+        // Build metadata using templates based on entity type
         String title;
         String description;
 
-        // data
+        switch (ctx.getEntityType()) {
+            case CATEGORY:
+                title = buildFromTemplate(
+                        seoUrlProperties.getMetadata().getCategory().getTitle(),
+                        entityTitle, location, data, ctx);
+                description = buildFromTemplate(
+                        seoUrlProperties.getMetadata().getCategory().getDescription(),
+                        entityTitle, location, data, ctx);
+                break;
 
-        String entityTitle = getTitle(ctx, data);
+            case VARIANT:
+                String variantAttrs = extractVariantAttributes(data);
+                title = buildFromTemplate(
+                        seoUrlProperties.getMetadata().getVariant().getTitle(),
+                        entityTitle, location, data, ctx)
+                        .replace(SeoConstants.PLACEHOLDER_VARIANT_ATTRIBUTES, variantAttrs);
+                description = buildFromTemplate(
+                        seoUrlProperties.getMetadata().getVariant().getDescription(),
+                        entityTitle, location, data, ctx)
+                        .replace(SeoConstants.PLACEHOLDER_VARIANT_ATTRIBUTES, variantAttrs);
+                break;
 
-        // Generate title and description based on location
-        if (ctx.getLocation() != null && !ctx.getLocation().isEmpty()) {
-            // Location-based templates
-            // Title: "Buy {title} online in {location} | JSW One MSME"
-            title = String.format("Buy %s online in %s | JSW One MSME",
-                    entityTitle,
-                    formatLocation(ctx.getLocation()));
-
-            // Description: "Shop for {title} online in {location} on JSW One MSME.
-            // Available online, best prices assured."
-            description = String.format(
-                    "Shop for %s online in %s on JSW One MSME. Available online, best prices assured.",
-                    entityTitle,
-                    formatLocation(ctx.getLocation()));
-        } else {
-            // Base case - simple title and description
-            title = entityTitle + " | JSW One MSME";
-            description = "Shop for " + entityTitle + " on JSW One MSME. Available online, best prices assured.";
+            case PRODUCT:
+            default:
+                title = buildFromTemplate(
+                        seoUrlProperties.getMetadata().getProduct().getTitle(),
+                        entityTitle, location, data, ctx);
+                description = buildFromTemplate(
+                        seoUrlProperties.getMetadata().getProduct().getDescription(),
+                        entityTitle, location, data, ctx);
+                break;
         }
 
         String canonical = templateResolver.productBase();
-
-        // Get og:image
         String ogImage = getImage(data);
 
         return new SeoMeta(
@@ -272,6 +286,33 @@ public class DefaultSeoPatternHandler implements SeoPatternHandler {
                 canonical,
                 ogImage,
                 description);
+    }
+
+    /**
+     * Build metadata string from template by replacing placeholders
+     */
+    private String buildFromTemplate(String template, String entityTitle, String location, SeoData data,
+            SeoContext ctx) {
+        if (template == null || template.isEmpty()) {
+            return entityTitle;
+        }
+
+        return template
+                .replace(SeoConstants.PLACEHOLDER_CATEGORY_NAME, entityTitle)
+                .replace(SeoConstants.PLACEHOLDER_PRODUCT_NAME, entityTitle)
+                .replace(SeoConstants.PLACEHOLDER_LOCATION,
+                        location != null && !location.isEmpty() ? location : SeoConstants.DEFAULT_LOCATION)
+                .replace(SeoConstants.PLACEHOLDER_SLUG, ctx.getSlug() != null ? ctx.getSlug() : "");
+    }
+
+    /**
+     * Extract variant attributes as a formatted string for metadata
+     * TODO: Enhance with actual variant attribute extraction when available
+     */
+    private String extractVariantAttributes(SeoData data) {
+        // For now return empty - will be enhanced when variant data is available in
+        // SeoData
+        return "";
     }
 
     /**
