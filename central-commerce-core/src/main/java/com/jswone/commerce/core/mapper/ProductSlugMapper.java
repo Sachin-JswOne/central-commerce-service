@@ -19,7 +19,8 @@ public interface ProductSlugMapper {
     ProductSlug toProductSlug(Product product, List<QuantityCard> quantityCards);
 
     default Map<String, VariantSelector> updateVariantSelectors(Map<String, VariantSelector> existingSelectors,
-                                                                Map<String, Object> attributes, Map<String, String> variantNames) {
+                                                                Map<String, Object> attributes, Map<String, String> variantNames,
+                                                                Map<String,String> standardAttributeUnit) {
         if (Objects.isNull(existingSelectors) || existingSelectors.isEmpty()) {
             return existingSelectors;
         }
@@ -29,6 +30,7 @@ public interface ProductSlugMapper {
                     .map(Double.class::cast).orElse(null));
             variantSelector.setMax(Optional.ofNullable(attributes.get(key + GenericConstants.CENTRAL_CATALOGUE_MAX_SUFFIX)).filter(Number.class::isInstance)
                     .map(Double.class::cast).orElse(null));
+            variantSelector.setUnitKey(standardAttributeUnit.get(key));
         });
         return existingSelectors;
     }
@@ -41,6 +43,8 @@ public interface ProductSlugMapper {
             String attributeKey = (String) customAttributeMap.get(GenericConstants.CENTRAL_CATALOGUE_CUSTOM_ATTRIBUTE_KEY);
             if (values.containsKey(attributeKey)) {
                 customAttributeMap.put(GenericConstants.CENTRAL_CATALOGUE_CUSTOM_ATTRIBUTE_VALUE, values.get(attributeKey));
+            }else {
+                customAttributeMap.put(GenericConstants.CENTRAL_CATALOGUE_CUSTOM_ATTRIBUTE_VALUE, null);
             }
         });
         return customAttributes;

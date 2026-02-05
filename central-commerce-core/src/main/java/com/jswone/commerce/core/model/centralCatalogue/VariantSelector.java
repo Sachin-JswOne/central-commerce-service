@@ -15,4 +15,5 @@ public class VariantSelector {
     private Double min;
     private Double max;
     private String displayName;
+    private String unitKey;
 }

@@ -120,7 +120,12 @@ public class ProductServiceImpl implements ProductService {
                 standardAttribute -> (String) standardAttribute.get("ui_label")
         ));
 
-        productSlugMapper.updateVariantSelectors(variantSelectors, productSlug.getAttributes(), standardAttributeNames);
+        Map<String,String> standardAttributeUnit = standardAttributes.stream().collect(Collectors.toMap(
+                standardAttribute -> (String) standardAttribute.get("name"),
+                standardAttribute -> (String) standardAttribute.get("unit_key")
+        ));
+
+        productSlugMapper.updateVariantSelectors(variantSelectors, productSlug.getAttributes(), standardAttributeNames, standardAttributeUnit);
         productSlugMapper.updateCustomAttributes(customAttributes, productSlug.getAttributes());
 
         productSlug.setVariantSelectors(variantSelectors);
