@@ -23,7 +23,9 @@ import com.jswone.commerce.core.rest.CentralCatalogueClient;
 import com.jswone.commerce.core.service.ProductService;
 import com.jswone.commerce.core.util.ProductAttributeUtil;
 import com.jswone.commons.constants.JSWGenericConstants;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.tuple.Pair;
 import org.springframework.http.HttpStatus;
@@ -33,19 +35,13 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 @Service
-@Log4j2
+@Slf4j
+@RequiredArgsConstructor
 public class ProductServiceImpl implements ProductService {
     private final ProductCatalogueStoreRepository productCatalogueStoreRepository;
     private final ProductAttributeUtil productAttributeUtil;
     private final CentralCatalogueClient centralCatalogueClient;
     private final ProductSlugMapper productSlugMapper;
-
-    public ProductServiceImpl(ProductCatalogueStoreRepository productCatalogueStoreRepository, ProductAttributeUtil productAttributeUtil, CentralCatalogueClient centralCatalogueClient, ProductSlugMapper productSlugMapper) {
-        this.productCatalogueStoreRepository = productCatalogueStoreRepository;
-        this.productAttributeUtil = productAttributeUtil;
-        this.centralCatalogueClient = centralCatalogueClient;
-        this.productSlugMapper = productSlugMapper;
-    }
 
 
     @Override
@@ -87,19 +83,49 @@ public class ProductServiceImpl implements ProductService {
 
             ProductSlug productSlug = productSlugMapper.toProductSlug(productBulkResponse.getProducts().getFirst(),quantityCards);
 
-            productSlug.setVariantSelectors(productTypeBulkResponse.getData().getProductTypeDetail().get(productTypeId).getVariantSelectors());
-
-            productSlug.setStandardAttributes(productTypeBulkResponse.getData().getProductTypeDetail().get(productTypeId).getStandardAttributes());
-
-            productSlug.setCustomAttributes(productTypeBulkResponse.getData().getProductTypeDetail().get(productTypeId).getAttributes());
-
+            handleAttributeMappingsAndUpdateProductSlug(productTypeBulkResponse, productTypeId, productSlug);
             productSlug.setProductOverview(productTypeBulkResponse.getData().getProductOverview());
+            productSlug.setPdpIdentifier(pdpIdentifier(productSlug.getVariantSelectors()));
 
             return productSlug;
 
         } catch (Exception e) {
             throw new CentralCommerceServiceException(e.getLocalizedMessage(), HttpStatus.BAD_GATEWAY);
         }
+    }
+
+    private boolean pdpIdentifier(Map<String, VariantSelector> variantSelectors){
+        List<String> uniqueInputTypes =
+                Optional.ofNullable(variantSelectors)
+                        .map(Map::values)
+                        .orElse(Collections.emptyList())
+                        .stream()
+                        .map(VariantSelector::getInputType)
+                        .filter(Objects::nonNull)
+                        .distinct()
+                        .toList();
+        return uniqueInputTypes.stream()
+                .anyMatch(s -> s.equalsIgnoreCase("Table with quantity fields"));
+    }
+
+    private void handleAttributeMappingsAndUpdateProductSlug(ProductTypeBulkResponse productTypeBulkResponse, String productTypeId, ProductSlug productSlug) {
+        var variantSelectors = productTypeBulkResponse.getData().getProductTypeDetail().get(productTypeId).getVariantSelectors();
+
+        var standardAttributes = productTypeBulkResponse.getData().getProductTypeDetail().get(productTypeId).getStandardAttributes();
+
+        var customAttributes = productTypeBulkResponse.getData().getProductTypeDetail().get(productTypeId).getAttributes();
+
+        Map<String,String> standardAttributeNames = standardAttributes.stream().collect(Collectors.toMap(
+                standardAttribute -> (String) standardAttribute.get("name"),
+                standardAttribute -> (String) standardAttribute.get("ui_label")
+        ));
+
+        productSlugMapper.updateVariantSelectors(variantSelectors, productSlug.getAttributes(), standardAttributeNames);
+        productSlugMapper.updateCustomAttributes(customAttributes, productSlug.getAttributes());
+
+        productSlug.setVariantSelectors(variantSelectors);
+        productSlug.setStandardAttributes(standardAttributes);
+        productSlug.setCustomAttributes(customAttributes);
     }
 
     private SkuInfo getMatchedVariant(ProductSkuRequest productSkuRequest) {
