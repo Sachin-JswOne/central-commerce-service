@@ -27,7 +27,6 @@ public class ProductTypeServiceImpl implements ProductTypeService {
     private final CentralCatalogueClient centralCatalogueClient;
     private final CommerceValueConfig commerceValueConfig;
 
-    // Cache TTL: 24 hours
     private static final long CACHE_TTL_HOURS = 24;
 
     public ProductTypeServiceImpl(
@@ -69,14 +68,11 @@ public class ProductTypeServiceImpl implements ProductTypeService {
         log.info("ProductTypeService - Cache hits: {}, Cache misses: {}",
                 resultMap.size(), cacheMisses.size());
 
-        // Step 2: Fetch missing product types via bulk API
         if (!cacheMisses.isEmpty()) {
             Map<String, ProductTypeData> fetchedData = fetchProductTypesFromAPI(cacheMisses, storefront);
 
-            // Step 3: Cache the fetched data
             cacheProductTypes(fetchedData, storefront);
 
-            // Step 4: Merge with existing results
             resultMap.putAll(fetchedData);
         }
 
