@@ -19,7 +19,8 @@ public interface ProductSlugMapper {
     ProductSlug toProductSlug(Product product, List<QuantityCard> quantityCards);
 
     default Map<String, VariantSelector> updateVariantSelectors(Map<String, VariantSelector> existingSelectors,
-                                                                Map<String, Object> attributes, Map<String, String> variantNames,
+                                                                Map<String, Object> attributes,
+                                                                Map<String, String> variantNames,
                                                                 Map<String,String> standardAttributeUnit) {
         if (Objects.isNull(existingSelectors) || existingSelectors.isEmpty()) {
             return existingSelectors;

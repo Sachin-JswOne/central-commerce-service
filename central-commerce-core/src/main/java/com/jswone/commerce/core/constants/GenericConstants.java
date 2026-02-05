@@ -25,5 +25,6 @@ public class GenericConstants {
     public static final String CENTRAL_CATALOGUE_CUSTOM_ATTRIBUTE_VALUE = "value";
     public static final String CENTRAL_CATALOGUE_STANDARD_ATTRIBUTE_NAME_KEY = "name";
     public static final String CENTRAL_CATALOGUE_STANDARD_ATTRIBUTE_LABEL_KEY = "ui_label";
-    public static final String CENTRAL_CATALOGUE_PDP_IDENTIFIER = "Table with quantity fields";
+    public static final String CENTRAL_CATALOGUE_PDP_IDENTIFIER = "TABLE_WITH_QUANTITY_FIELDS";
+    public static final String CENTRAL_CATALOGUE_STANDARD_ATTRIBUTE_UNIT_KEY = "unit_key";
 }

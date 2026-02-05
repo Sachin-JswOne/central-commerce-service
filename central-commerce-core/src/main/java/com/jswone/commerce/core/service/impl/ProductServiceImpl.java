@@ -34,6 +34,8 @@ import org.springframework.stereotype.Service;
 import java.util.*;
 import java.util.stream.Collectors;
 
+import static com.jswone.commerce.core.constants.GenericConstants.*;
+
 @Service
 @Slf4j
 @RequiredArgsConstructor
@@ -105,7 +107,7 @@ public class ProductServiceImpl implements ProductService {
                         .distinct()
                         .toList();
         return uniqueInputTypes.stream()
-                .anyMatch(s -> s.equalsIgnoreCase("Table with quantity fields"));
+                .anyMatch(s -> s.equalsIgnoreCase(CENTRAL_CATALOGUE_PDP_IDENTIFIER));
     }
 
     private void handleAttributeMappingsAndUpdateProductSlug(ProductTypeBulkResponse productTypeBulkResponse, String productTypeId, ProductSlug productSlug) {
@@ -116,13 +118,13 @@ public class ProductServiceImpl implements ProductService {
         var customAttributes = productTypeBulkResponse.getData().getProductTypeDetail().get(productTypeId).getAttributes();
 
         Map<String,String> standardAttributeNames = standardAttributes.stream().collect(Collectors.toMap(
-                standardAttribute -> (String) standardAttribute.get("name"),
-                standardAttribute -> (String) standardAttribute.get("ui_label")
+                standardAttribute -> (String) standardAttribute.get(CENTRAL_CATALOGUE_STANDARD_ATTRIBUTE_NAME_KEY),
+                standardAttribute -> (String) standardAttribute.get(CENTRAL_CATALOGUE_STANDARD_ATTRIBUTE_LABEL_KEY)
         ));
 
         Map<String,String> standardAttributeUnit = standardAttributes.stream().collect(Collectors.toMap(
-                standardAttribute -> (String) standardAttribute.get("name"),
-                standardAttribute -> (String) standardAttribute.get("unit_key")
+                standardAttribute -> (String) standardAttribute.get(CENTRAL_CATALOGUE_STANDARD_ATTRIBUTE_NAME_KEY),
+                standardAttribute -> (String) standardAttribute.get(CENTRAL_CATALOGUE_STANDARD_ATTRIBUTE_UNIT_KEY)
         ));
 
         productSlugMapper.updateVariantSelectors(variantSelectors, productSlug.getAttributes(), standardAttributeNames, standardAttributeUnit);
