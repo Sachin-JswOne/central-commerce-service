@@ -22,6 +22,11 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 
 import java.util.*;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 import static com.jswone.commerce.core.constants.BuyAgainConstants.LOCALE_EN_US;
 import static com.jswone.commerce.core.constants.GenericConstants.BULK_IMAGE_CHUNK_SIZE;
@@ -35,6 +40,7 @@ public class CentralCatalogueServiceImpl implements CentralCatalogueService {
     private final CatalogueConverter catalogueConverter;
     private final CatalogueValidator catalogueValidator;
     private final UserSearchLogsItemPublisher userSearchLogsItemPublisher;
+    private final ExecutorService executorService = Executors.newFixedThreadPool(10);
 
     public CentralCatalogueServiceImpl(CentralCatalogueClient centralCatalogueClient, CatalogueConverter catalogueConverter, CatalogueValidator catalogueValidator, UserSearchLogsItemPublisher userSearchLogsItemPublisher) {
         this.centralCatalogueClient = centralCatalogueClient;
@@ -89,6 +95,45 @@ public class CentralCatalogueServiceImpl implements CentralCatalogueService {
         ProductListingCatalogueResponse facetsResponse = centralCatalogueClient.productListingFacetsOnly(productListingRequest);
         return catalogueConverter.convertCataloguePLPResponseToPLPResponse(catalogueResponse, facetsResponse, productListingRequest);
     }
+
+    @Override
+    public Map<String, ProductListingResponse> productListingBulk(
+            List<String> slugs) {
+
+        List<CompletableFuture<ProductListingResponse>> futures =
+                slugs.stream()
+                        .map(
+                                slug ->
+                                        CompletableFuture.supplyAsync(
+                                                        () -> {
+                                                            ProductListingRequest request =
+                                                                    new ProductListingRequest();
+                                                            request.setSlug(slug);
+                                                            return productListing(request);
+                                                        },
+                                                        executorService)
+                                                .handle(
+                                                        (result, ex) -> {
+                                                            if (ex != null) {
+                                                                log.error(
+                                                                        "Error occurred while fetching products for slug: {}",
+                                                                        slug,
+                                                                        ex);
+                                                                result = new ProductListingResponse();
+                                                            }
+                                                            result.setCategoryId(slug);
+                                                            return result; // recover and continue
+                                                        }))
+                        .toList();
+        // Wait for all tasks to complete (same as reference)
+        return futures.stream()
+                .map(CompletableFuture::join)
+                .collect(
+                        Collectors.toMap(
+                                ProductListingResponse::getCategoryId,
+                                Function.identity()));
+    }
+
 
     @Override
     public ProductBulkResponse fetchProductsByProductMMIDs(Set<String> productMMIDList) {
