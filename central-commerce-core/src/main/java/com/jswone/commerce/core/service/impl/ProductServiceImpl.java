@@ -117,15 +117,19 @@ public class ProductServiceImpl implements ProductService {
 
         var customAttributes = productTypeBulkResponse.getData().getProductTypeDetail().get(productTypeId).getAttributes();
 
-        Map<String,String> standardAttributeNames = standardAttributes.stream().collect(Collectors.toMap(
-                standardAttribute -> (String) standardAttribute.get(CENTRAL_CATALOGUE_STANDARD_ATTRIBUTE_NAME_KEY),
-                standardAttribute -> (String) standardAttribute.get(CENTRAL_CATALOGUE_STANDARD_ATTRIBUTE_LABEL_KEY)
-        ));
+        Map<String,String> standardAttributeNames = standardAttributes.stream().filter(Objects::nonNull)
+                .filter(sa -> sa.get(CENTRAL_CATALOGUE_STANDARD_ATTRIBUTE_NAME_KEY) != null)
+                .collect(Collectors.toMap(
+                        sa -> String.valueOf(sa.get(CENTRAL_CATALOGUE_STANDARD_ATTRIBUTE_NAME_KEY)),
+                        sa -> String.valueOf(sa.get(CENTRAL_CATALOGUE_STANDARD_ATTRIBUTE_LABEL_KEY))
+                ));
 
-        Map<String,String> standardAttributeUnit = standardAttributes.stream().collect(Collectors.toMap(
-                standardAttribute -> (String) standardAttribute.get(CENTRAL_CATALOGUE_STANDARD_ATTRIBUTE_NAME_KEY),
-                standardAttribute -> (String) standardAttribute.get(CENTRAL_CATALOGUE_STANDARD_ATTRIBUTE_UNIT_KEY)
-        ));
+        Map<String,String> standardAttributeUnit = standardAttributes.stream().filter(Objects::nonNull)
+                .filter(sa -> sa.get(CENTRAL_CATALOGUE_STANDARD_ATTRIBUTE_NAME_KEY) != null)
+                .collect(Collectors.toMap(
+                        sa -> String.valueOf(sa.get(CENTRAL_CATALOGUE_STANDARD_ATTRIBUTE_NAME_KEY)),
+                        sa -> String.valueOf(sa.get(CENTRAL_CATALOGUE_STANDARD_ATTRIBUTE_UNIT_KEY))
+                ));
 
         productSlugMapper.updateVariantSelectors(variantSelectors, productSlug.getAttributes(), standardAttributeNames, standardAttributeUnit);
         productSlugMapper.updateCustomAttributes(customAttributes, productSlug.getAttributes());

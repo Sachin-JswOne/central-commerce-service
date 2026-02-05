@@ -26,12 +26,12 @@ public interface ProductSlugMapper {
             return existingSelectors;
         }
         existingSelectors.forEach((key, variantSelector) -> {
-            variantSelector.setDisplayName(variantNames.get(key));
+            variantSelector.setDisplayName(variantNames.getOrDefault(key,null));
             variantSelector.setMin(Optional.ofNullable(attributes.get(key + GenericConstants.CENTRAL_CATALOGUE_MIN_SUFFIX)).filter(Number.class::isInstance)
                     .map(Double.class::cast).orElse(null));
             variantSelector.setMax(Optional.ofNullable(attributes.get(key + GenericConstants.CENTRAL_CATALOGUE_MAX_SUFFIX)).filter(Number.class::isInstance)
                     .map(Double.class::cast).orElse(null));
-            variantSelector.setUnitKey(standardAttributeUnit.get(key));
+            variantSelector.setUnitKey(standardAttributeUnit.getOrDefault(key,null));
         });
         return existingSelectors;
     }
@@ -42,11 +42,7 @@ public interface ProductSlugMapper {
         }
         customAttributes.forEach(customAttributeMap -> {
             String attributeKey = (String) customAttributeMap.get(GenericConstants.CENTRAL_CATALOGUE_CUSTOM_ATTRIBUTE_KEY);
-            if (values.containsKey(attributeKey)) {
-                customAttributeMap.put(GenericConstants.CENTRAL_CATALOGUE_CUSTOM_ATTRIBUTE_VALUE, values.get(attributeKey));
-            }else {
-                customAttributeMap.put(GenericConstants.CENTRAL_CATALOGUE_CUSTOM_ATTRIBUTE_VALUE, null);
-            }
+            customAttributeMap.put(GenericConstants.CENTRAL_CATALOGUE_CUSTOM_ATTRIBUTE_VALUE, values.getOrDefault(attributeKey, null));
         });
         return customAttributes;
     }
