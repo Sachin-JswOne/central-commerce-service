@@ -158,7 +158,8 @@ public class DefaultSeoService implements SeoService {
         private List<ProductResponse> processProducts(String categoryId) {
 
                 log.debug("Fetching products for category: {}", categoryId);
-                List<Product> productsFromCC = centralCatalogueClient.getAllProductsForCategoryId(categoryId, "msme");
+                List<Product> productsFromCC = centralCatalogueClient.getAllProductsForCategoryId(categoryId,
+                                SeoConstants.STOREFRONT_MSME);
 
                 if (productsFromCC == null || productsFromCC.isEmpty()) {
                         log.debug("No products found for category: {}", categoryId);
@@ -275,7 +276,7 @@ public class DefaultSeoService implements SeoService {
                 }
 
                 // Use ProductTypeService which handles caching internally
-                return productTypeService.getProductTypes(productTypeIds, "msme");
+                return productTypeService.getProductTypes(productTypeIds, SeoConstants.STOREFRONT_MSME);
         }
 
         /**
@@ -293,7 +294,7 @@ public class DefaultSeoService implements SeoService {
 
         private String buildVariantAttributeSlug(Product product, Variant variant, ProductTypeData productTypeData) {
 
-                String baseSlug = CatalogueUtil.str(product.getAttributes().get("slug"));
+                String baseSlug = CatalogueUtil.str(product.getAttributes().get(SeoConstants.ATTR_SLUG));
 
                 // If no variant attributes, return base slug
                 if (variant.getAttributes() == null || variant.getAttributes().isEmpty()) {
@@ -346,7 +347,7 @@ public class DefaultSeoService implements SeoService {
                 // Generate location-based category URLs from cached locations
                 for (String location : locations) {
                         // Skip 'all' location
-                        if ("all".equalsIgnoreCase(location)) {
+                        if (SeoConstants.LOCATION_ALL.equalsIgnoreCase(location)) {
                                 continue;
                         }
                         SeoContext locationContext = SeoContext.builder()

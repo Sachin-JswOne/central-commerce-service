@@ -99,7 +99,7 @@ public class DefaultSeoPatternHandler implements SeoPatternHandler {
 
                 if (product != null && product.getAttributes() != null) {
                     title = CatalogueUtil.str(
-                            product.getAttributes().get("product_title"));
+                            product.getAttributes().get(SeoConstants.ATTR_PRODUCT_TITLE));
 
                     // Find the matched variant
                     if (product.getVariants() != null) {
