@@ -4,8 +4,10 @@ import com.jswone.commerce.core.enums.seo.CategoryType;
 import com.jswone.commerce.core.enums.seo.SeoEntityType;
 import com.jswone.commerce.core.enums.seo.SeoOperationType;
 import com.jswone.commerce.core.enums.seo.SeoPageType;
+import com.jswone.commerce.core.exceptions.CentralCommerceServiceException;
 import com.jswone.commerce.core.model.seo.SeoContext;
 import com.jswone.commerce.core.resolver.SeoContextResolver;
+import com.jswone.commerce.core.constants.SeoConstants;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
@@ -37,7 +39,7 @@ public class DefaultSeoContextResolver implements SeoContextResolver {
             return resolveProduct(vars);
         }
 
-        throw new IllegalArgumentException("Unsupported SEO URL: " + path);
+        throw new CentralCommerceServiceException("Unsupported SEO URL: " + path);
     }
 
     /*
@@ -53,8 +55,8 @@ public class DefaultSeoContextResolver implements SeoContextResolver {
                 .entityType(SeoEntityType.CATEGORY)
                 .pageType(SeoPageType.PLP)
                 .categoryType(CategoryType.BRAND)
-                .slug(vars.get("slug"))
-                .location(vars.get("location"))
+                .slug(vars.get(SeoConstants.ATTR_SLUG))
+                .location(vars.get(SeoConstants.ATTR_LOCATION))
                 .operationType(SeoOperationType.METADATA_RESOLUTION)
                 .build();
     }
@@ -72,8 +74,8 @@ public class DefaultSeoContextResolver implements SeoContextResolver {
                 .entityType(SeoEntityType.CATEGORY)
                 .pageType(SeoPageType.PLP)
                 .categoryType(CategoryType.STANDARD)
-                .slug(vars.get("slug"))
-                .location(vars.get("location"))
+                .slug(vars.get(SeoConstants.ATTR_SLUG))
+                .location(vars.get(SeoConstants.ATTR_LOCATION))
                 .operationType(SeoOperationType.METADATA_RESOLUTION)
                 .build();
     }
@@ -88,7 +90,7 @@ public class DefaultSeoContextResolver implements SeoContextResolver {
      */
     private SeoContext resolveProduct(Map<String, String> vars) {
 
-        String mmid = vars.get("mmid");
+        String mmid = vars.get(SeoConstants.ATTR_MMID);
 
         SeoEntityType entityType = mmid != null ? SeoEntityType.VARIANT : SeoEntityType.PRODUCT;
 
@@ -96,8 +98,8 @@ public class DefaultSeoContextResolver implements SeoContextResolver {
                 .entityType(entityType)
                 .pageType(SeoPageType.PDP)
                 .categoryType(CategoryType.STANDARD)
-                .slug(vars.get("slug"))
-                .location(vars.get("location"))
+                .slug(vars.get(SeoConstants.ATTR_SLUG))
+                .location(vars.get(SeoConstants.ATTR_LOCATION))
                 .variantMmid(mmid)
                 .operationType(SeoOperationType.METADATA_RESOLUTION)
                 .build();

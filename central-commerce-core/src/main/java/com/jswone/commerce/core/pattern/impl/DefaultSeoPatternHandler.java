@@ -4,6 +4,7 @@ import com.jswone.commerce.core.config.SeoUrlProperties;
 import com.jswone.commerce.core.enums.seo.CategoryType;
 import com.jswone.commerce.core.enums.seo.SeoEntityType;
 import com.jswone.commerce.core.enums.seo.SeoOperationType;
+import com.jswone.commerce.core.exceptions.CentralCommerceServiceException;
 import com.jswone.commerce.core.model.CatalogueBreadCrumbData;
 import com.jswone.commerce.core.model.centralCatalogue.Product;
 import com.jswone.commerce.core.model.request.ProductBulkRequest;
@@ -166,7 +167,7 @@ public class DefaultSeoPatternHandler implements SeoPatternHandler {
         String[] parts = variantMmid.split("-");
 
         if (parts.length < 2) {
-            throw new IllegalArgumentException("Invalid variant MMID: " + variantMmid);
+            throw new CentralCommerceServiceException("Invalid variant MMID: " + variantMmid);
         }
 
         return parts[0] + "-" + parts[1];

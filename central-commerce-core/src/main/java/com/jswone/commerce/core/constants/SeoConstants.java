@@ -15,6 +15,8 @@ public final class SeoConstants {
     public static final String ATTR_META_IMAGE = "meta_image";
     public static final String ATTR_META_TITLE = "meta_title";
     public static final String ATTR_META_DESCRIPTION = "meta_description";
+    public static final String ATTR_LOCATION = "location";
+    public static final String ATTR_MMID = "mmid";
 
     // ============ Category Types ============
     public static final String CATEGORY_TYPE_BRANDS = "Brands";
