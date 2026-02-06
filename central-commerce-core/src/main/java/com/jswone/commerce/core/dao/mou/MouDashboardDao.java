@@ -29,7 +29,7 @@ public class MouDashboardDao {
                     SELECT last_updated_at, uom, achieved_qty_perc, achieved_qty,
                            remaining_qty, target_qty,
                            total_savings, potential_savings
-                    FROM yearly_mou_target_and_achievement_jsw_steel
+                    FROM yearly_mou_target_and_achievement_jsw_steel_mv
                     WHERE mou_id = ? AND financial_year = ? AND mou_type = ?
                 """;
 

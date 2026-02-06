@@ -27,13 +27,13 @@ public class IncentiveDao {
 
         String sql = """
                     SELECT incentive_details_json
-                    FROM mou_id_category_target_and_achievement_jsw_steel
-                    WHERE mou_id = ? AND category = ? AND mou_type = ?
+                    FROM mou_id_category_target_and_achievement_jsw_steel_mv
+                    WHERE mou_id = ? AND financial_year = ? AND category = ? AND mou_type = ?
                 """;
 
         try {
             String json = jdbcTemplate.query(sql, rs -> rs.next() ? rs.getString(1) : null,
-                    mouId, productCategory, mouType);
+                    mouId, financialYear, productCategory, mouType);
 
             if (json == null || json.isBlank()) {
                 return objectMapper.createObjectNode();
