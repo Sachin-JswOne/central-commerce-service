@@ -115,17 +115,14 @@ public class DefaultSeoService implements SeoService {
 
                 // For BRAND categories: track locations but don't return product URLs
                 if (categoryType == CategoryType.BRAND) {
-                        // Fetch products to populate location cache, but don't generate product URLs
                         processProducts(categoryId);
 
-                        // Retrieve cached locations after processing products
                         Set<String> cachedLocations = getLocationsFromCache(categoryId);
                         log.debug("Retrieved {} locations from cache for BRAND category: {}", cachedLocations.size(),
                                         categoryId);
 
                         UrlGroup categoryUrls = buildCategoryUrls(categoryContext, handler, cachedLocations);
 
-                        // Clear cache for this category after URL generation is complete
                         clearCategoryLocationCache(categoryId);
 
                         return new CategoryResponse(
@@ -138,13 +135,11 @@ public class DefaultSeoService implements SeoService {
 
                 List<ProductResponse> products = processProducts(categoryId);
 
-                // Retrieve cached locations after processing all products
                 Set<String> cachedLocations = getLocationsFromCache(categoryId);
                 log.debug("Retrieved {} locations from cache for category: {}", cachedLocations.size(), categoryId);
 
                 UrlGroup categoryUrls = buildCategoryUrls(categoryContext, handler, cachedLocations);
 
-                // Clear cache for this category after URL generation is complete
                 clearCategoryLocationCache(categoryId);
 
                 return new CategoryResponse(
@@ -264,33 +259,16 @@ public class DefaultSeoService implements SeoService {
                                 variants);
         }
 
-        /**
-         * Fetches product types for a set of IDs with smart caching.
-         * - First checks cache for each ID
-         * - Makes ONE bulk API call for all uncached IDs
-         * - Caches each fetched type individually for cross-category reuse
-         */
+
         private Map<String, ProductTypeData> fetchProductTypes(Set<String> productTypeIds) {
                 if (productTypeIds == null || productTypeIds.isEmpty()) {
                         return new HashMap<>();
                 }
 
-                // Use ProductTypeService which handles caching internally
+                // Uses ProductTypeService which handles caching internally
                 return productTypeService.getProductTypes(productTypeIds, SeoConstants.STOREFRONT_MSME);
         }
 
-        /**
-         * @deprecated Use fetchProductTypes() instead - this method is kept for
-         *             backward compatibility
-         *             but should not be called directly as it bypasses the optimized
-         *             bulk fetch logic
-         */
-        @Cacheable(value = CacheNames.SEO_PRODUCT_TYPES, key = "#typeId")
-        private ProductTypeData fetchSingleProductType(String typeId) {
-                // This method should no longer be called directly
-                // It exists only to maintain the @Cacheable contract for Spring
-                return null;
-        }
 
         private String buildVariantAttributeSlug(Product product, Variant variant, ProductTypeData productTypeData) {
 
