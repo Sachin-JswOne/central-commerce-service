@@ -43,11 +43,9 @@ public class DefaultSeoContextResolver implements SeoContextResolver {
     }
 
     /*
-     * =========================================================
      * BRAND
      * /brand/{slug}
      * /brand/{location}/{slug}
-     * =========================================================
      */
     private SeoContext resolveBrand(Map<String, String> vars) {
 
@@ -62,11 +60,10 @@ public class DefaultSeoContextResolver implements SeoContextResolver {
     }
 
     /*
-     * =========================================================
+     * ==
      * CATEGORY
      * /category/{slug}
      * /category/{location}/{slug}
-     * =========================================================
      */
     private SeoContext resolveCategory(Map<String, String> vars) {
 
@@ -81,12 +78,10 @@ public class DefaultSeoContextResolver implements SeoContextResolver {
     }
 
     /*
-     * =========================================================
      * PRODUCT / VARIANT
      * /product-detail/{slug}
      * /product-detail/{location}/{slug}
      * /product-detail/{location}/{slug}/{mmid}
-     * =========================================================
      */
     private SeoContext resolveProduct(Map<String, String> vars) {
 
