@@ -330,6 +330,6 @@ public class DefaultSeoPatternHandler implements SeoPatternHandler {
     }
 
     private double priority(SeoContext ctx) {
-        return ctx.getEntityType() == SeoEntityType.CATEGORY ? 0.6 : 0.8;
+        return ctx.getEntityType() == SeoEntityType.CATEGORY ? 0.8 : 0.7;
     }
 }
