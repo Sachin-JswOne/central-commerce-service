@@ -124,7 +124,7 @@ public class DefaultSeoPatternHandler implements SeoPatternHandler {
                     .build();
 
         } catch (Exception e) {
-            log.warn(
+            log.error(
                     "SEO data fetch failed | entityType={} | slug={} | categoryId={} | variantMmid={}",
                     context.getEntityType(),
                     context.getSlug(),
