@@ -154,7 +154,7 @@ public class ProductTypeServiceImpl implements ProductTypeService {
             String cacheKey = buildCacheKey(storefront, productTypeId);
 
             try {
-                redisTemplate.opsForValue().set(cacheKey, productTypeData, CACHE_TTL_HOURS, TimeUnit.HOURS);
+                redisTemplate.opsForValue().set(cacheKey, productTypeData);
                 log.debug("ProductTypeService - Cached product type: {}", productTypeId);
             } catch (Exception e) {
                 log.error("ProductTypeService - Error caching product type {}: {}",
