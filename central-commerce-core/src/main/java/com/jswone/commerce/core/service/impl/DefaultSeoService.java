@@ -1,0 +1,589 @@
+package com.jswone.commerce.core.service.impl;
+
+import com.jswone.commerce.core.enums.seo.CategoryType;
+import com.jswone.commerce.core.enums.seo.SeoEntityType;
+import com.jswone.commerce.core.enums.seo.SeoOperationType;
+import com.jswone.commerce.core.enums.seo.SeoPageType;
+import com.jswone.commerce.core.factory.SeoPatternFactory;
+import com.jswone.commerce.core.model.CatalogueCategoryTree;
+import com.jswone.commerce.core.model.centralCatalogue.Product;
+import com.jswone.commerce.core.model.centralCatalogue.ProductTypeData;
+import com.jswone.commerce.core.model.centralCatalogue.Variant;
+import com.jswone.commerce.core.model.seo.CategoryIdentifier;
+import com.jswone.commerce.core.model.seo.CategoryResponse;
+import com.jswone.commerce.core.model.seo.ProductResponse;
+import com.jswone.commerce.core.model.seo.UrlGroup;
+import com.jswone.commerce.core.model.seo.VariantResponse;
+import com.jswone.commerce.core.model.seo.SeoContext;
+import com.jswone.commerce.core.model.seo.SeoData;
+import com.jswone.commerce.core.model.seo.SeoMeta;
+import com.jswone.commerce.core.model.seo.UrlMeta;
+import com.jswone.commerce.core.pattern.SeoPatternHandler;
+import com.jswone.commerce.core.resolver.SeoContextResolver;
+import com.jswone.commerce.core.rest.CentralCatalogueClient;
+import com.jswone.commerce.core.service.SeoService;
+import com.jswone.commerce.core.service.ProductTypeService;
+import com.jswone.commerce.core.constants.CacheNames;
+import com.jswone.commerce.core.constants.SeoConstants;
+import com.jswone.commerce.core.util.CatalogueUtil;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.cache.Cache;
+import org.springframework.cache.CacheManager;
+import org.springframework.cache.annotation.Cacheable;
+import org.springframework.stereotype.Service;
+
+import java.time.Instant;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ThreadFactory;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
+
+@Slf4j
+@Service
+@RequiredArgsConstructor
+public class DefaultSeoService implements SeoService {
+
+        private final SeoPatternFactory patternFactory;
+        private final SeoContextResolver contextResolver;
+        private final CentralCatalogueClient centralCatalogueClient;
+        private final CacheManager cacheManager;
+        private final ProductTypeService productTypeService;
+
+        // Using available processors for optimal performance
+        private final ExecutorService executorService = Executors.newFixedThreadPool(
+                        Runtime.getRuntime().availableProcessors(),
+                        new ThreadFactory() {
+                                private final AtomicInteger threadNumber = new AtomicInteger(1);
+
+                                @Override
+                                public Thread newThread(Runnable r) {
+                                        Thread thread = new Thread(r, "seo-worker-" + threadNumber.getAndIncrement());
+                                        thread.setDaemon(true);
+                                        return thread;
+                                }
+                        });
+
+        /*
+         * SITEMAP GENERATION
+         */
+
+        @Override
+        public List<CategoryResponse> generateSitemap() {
+                log.info("Starting sitemap generation...");
+                List<CategoryResponse> sitemap = new ArrayList<>();
+                List<CategoryIdentifier> categoryIdentifierList = fetchAllCategoryIdsFromCC();
+                log.info("Found {} categories to process", categoryIdentifierList.size());
+
+                for (CategoryIdentifier category : categoryIdentifierList) {
+                        log.info("Processing category: {} ({})", category.getCategorySlug(),
+                                        category.getCategoryType());
+                        sitemap.add(processCategory(category.getCategoryId(), category.getCategorySlug(),
+                                        category.getCategoryType()));
+                }
+
+                log.info("Sitemap generation complete. Total categories: {}", sitemap.size());
+                return sitemap;
+        }
+
+        private CategoryResponse processCategory(String categoryId, String categorySlug, CategoryType categoryType) {
+
+                // Initialize cache for this category
+                initializeCategoryLocationCache(categoryId);
+
+                SeoContext categoryContext = SeoContext.builder()
+                                .entityType(SeoEntityType.CATEGORY)
+                                .pageType(SeoPageType.PLP)
+                                .categoryType(categoryType)
+                                .categoryId(categoryId)
+                                .slug(categorySlug)
+                                .operationType(SeoOperationType.URL_GENERATION)
+                                .build();
+
+                SeoPatternHandler handler = patternFactory.resolve(categoryContext);
+
+                // For BRAND categories: track locations but don't return product URLs
+                if (categoryType == CategoryType.BRAND) {
+                        processProducts(categoryId);
+
+                        Set<String> cachedLocations = getLocationsFromCache(categoryId);
+                        log.debug("Retrieved {} locations from cache for BRAND category: {}", cachedLocations.size(),
+                                        categoryId);
+
+                        UrlGroup categoryUrls = buildCategoryUrls(categoryContext, handler, cachedLocations);
+
+                        clearCategoryLocationCache(categoryId);
+
+                        return new CategoryResponse(
+                                        categoryId,
+                                        categoryType,
+                                        categorySlug,
+                                        categoryUrls,
+                                        List.of()); // Empty product list for BRAND categories
+                }
+
+                List<ProductResponse> products = processProducts(categoryId);
+
+                Set<String> cachedLocations = getLocationsFromCache(categoryId);
+                log.debug("Retrieved {} locations from cache for category: {}", cachedLocations.size(), categoryId);
+
+                UrlGroup categoryUrls = buildCategoryUrls(categoryContext, handler, cachedLocations);
+
+                clearCategoryLocationCache(categoryId);
+
+                return new CategoryResponse(
+                                categoryId,
+                                categoryType,
+                                categorySlug,
+                                categoryUrls,
+                                products);
+        }
+
+        private List<ProductResponse> processProducts(String categoryId) {
+
+                log.debug("Fetching products for category: {}", categoryId);
+                List<Product> productsFromCC = centralCatalogueClient.getAllProductsForCategoryId(categoryId,
+                                SeoConstants.STOREFRONT_MSME);
+
+                if (productsFromCC == null || productsFromCC.isEmpty()) {
+                        log.debug("No products found for category: {}", categoryId);
+                        return List.of();
+                }
+
+                log.info("Processing {} products for category: {}", productsFromCC.size(), categoryId);
+
+                // Fetch product types in bulk for all products
+                Set<String> productTypeIds = productsFromCC.stream()
+                                .map(Product::getProductTypeId)
+                                .filter(Objects::nonNull)
+                                .collect(Collectors.toSet());
+
+                Map<String, ProductTypeData> productTypeMap = fetchProductTypes(productTypeIds);
+
+                List<CompletableFuture<ProductResponse>> futures = productsFromCC.stream()
+                                .map(product -> CompletableFuture.supplyAsync(() -> {
+                                        try {
+                                                return processProduct(product, categoryId, productTypeMap);
+                                        } catch (Exception e) {
+                                                log.error("Error processing product {}: {}", product.getId(),
+                                                                e.getMessage(), e);
+                                                return null;
+                                        }
+                                }, executorService))
+                                .toList();
+
+                List<ProductResponse> productResponses = futures.stream()
+                                .map(future -> {
+                                        try {
+                                                return future.join();
+                                        } catch (Exception e) {
+                                                log.error("Error collecting product response: {}", e.getMessage());
+                                                return null;
+                                        }
+                                })
+                                .filter(Objects::nonNull)
+                                .collect(Collectors.toList());
+
+                log.info("Completed processing {} products for category: {}", productResponses.size(), categoryId);
+                return productResponses;
+        }
+
+        /**
+         * Process a single product to generate all URLs (product + variants)
+         */
+        private ProductResponse processProduct(Product product, String categoryId,
+                        Map<String, ProductTypeData> productTypeMap) {
+                if (product.getAttributes() == null || product.getAttributes().get(SeoConstants.ATTR_SLUG) == null) {
+                        log.warn("Skipping product {} - missing slug attribute", product.getId());
+                        return null;
+                }
+                String productBaseSlug = CatalogueUtil.str(product.getAttributes().get(SeoConstants.ATTR_SLUG));
+                Instant productLastMod = parseLastModified(product.getLastModifiedAt());
+
+                // Build base product context
+                SeoContext productBaseContext = SeoContext.builder()
+                                .entityType(SeoEntityType.PRODUCT)
+                                .pageType(SeoPageType.PDP)
+                                .categoryType(CategoryType.STANDARD)
+                                .productId(product.getId())
+                                .slug(productBaseSlug)
+                                .lastModifiedAt(productLastMod)
+                                .operationType(SeoOperationType.URL_GENERATION)
+                                .build();
+
+                SeoPatternHandler handler = patternFactory.resolve(productBaseContext);
+
+                // Base product URL
+                UrlMeta baseUrl = handler.generateUrl(productBaseContext);
+
+                // Build location-specific URLs
+                Map<String, UrlMeta> locationUrls = buildProductLocationUrls(
+                                product, productBaseSlug, productLastMod, categoryId, handler);
+
+                UrlGroup productUrls = new UrlGroup(baseUrl, locationUrls);
+
+                // Build variant URLs
+                List<VariantResponse> variants = new ArrayList<>();
+
+                if (product.getProductTypeId() == null || product.getProductTypeId().isBlank()) {
+                        log.error("Skipping variant URL generation for product {} - missing product type ID",
+                                        product.getId());
+                } else if (product.getVariants() != null && !product.getVariants().isEmpty()) {
+                        ProductTypeData productTypeData = productTypeMap.get(product.getProductTypeId());
+
+                        if (productTypeData == null) {
+                                log.warn("Product type data not found for typeId: {} (product: {})",
+                                                product.getProductTypeId(), product.getId());
+                        }
+
+                        List<String> productLocations = extractProductLocations(product);
+                        variants = buildVariantUrls(product, productLocations, productLastMod, productTypeData,
+                                        handler);
+                }
+
+                return new ProductResponse(
+                                product.getId(),
+                                productBaseSlug,
+                                productUrls,
+                                variants);
+        }
+
+
+        private Map<String, ProductTypeData> fetchProductTypes(Set<String> productTypeIds) {
+                if (productTypeIds == null || productTypeIds.isEmpty()) {
+                        return new HashMap<>();
+                }
+
+                // Uses ProductTypeService which handles caching internally
+                return productTypeService.getProductTypes(productTypeIds, SeoConstants.STOREFRONT_MSME);
+        }
+
+
+        private String buildVariantAttributeSlug(Product product, Variant variant, ProductTypeData productTypeData) {
+
+                String baseSlug = CatalogueUtil.str(product.getAttributes().get(SeoConstants.ATTR_SLUG));
+
+                // If no variant attributes, return base slug
+                if (variant.getAttributes() == null || variant.getAttributes().isEmpty()) {
+                        return baseSlug;
+                }
+
+                // If no product type data or variant selectors, fall back to all attributes
+                if (productTypeData == null || productTypeData.getVariantSelectors() == null
+                                || productTypeData.getVariantSelectors().isEmpty()) {
+                        log.warn("No variant selectors found for product {}, using all variant attributes for slug",
+                                        product.getId());
+                        return buildSlugWithAllAttributes(baseSlug, variant);
+                }
+
+                // Use only attributes specified in variant selectors
+                Set<String> selectorKeys = productTypeData.getVariantSelectors().keySet();
+                String attributePart = variant.getAttributes().entrySet()
+                                .stream()
+                                .filter(e -> selectorKeys.contains(e.getKey())) // Only include attributes in selectors
+                                .sorted(Map.Entry.comparingByKey()) // stable URLs
+                                .map(e -> e.getKey().toLowerCase() + "-"
+                                                + e.getValue().toLowerCase().replaceAll("\\s+", "-"))
+                                .collect(Collectors.joining("-"));
+
+                return attributePart.isEmpty() ? baseSlug : baseSlug + "-" + attributePart;
+        }
+
+        /**
+         * Fallback method to build slug with all variant attributes
+         */
+        private String buildSlugWithAllAttributes(String baseSlug, Variant variant) {
+                String attributePart = variant.getAttributes().entrySet()
+                                .stream()
+                                .sorted(Map.Entry.comparingByKey()) // stable URLs
+                                .map(e -> e.getKey().toLowerCase() + "-"
+                                                + e.getValue().toLowerCase().replaceAll("\\s+", "-"))
+                                .collect(Collectors.joining("-"));
+
+                return attributePart.isEmpty() ? baseSlug : baseSlug + "-" + attributePart;
+        }
+
+        private UrlGroup buildCategoryUrls(
+                        SeoContext context,
+                        SeoPatternHandler handler,
+                        Set<String> locations) {
+                UrlMeta base = handler.generateUrl(context);
+
+                Map<String, UrlMeta> locationUrls = new HashMap<>();
+
+                // Generate location-based category URLs from cached locations
+                for (String location : locations) {
+                        // Skip 'all' location
+                        if (SeoConstants.LOCATION_ALL.equalsIgnoreCase(location)) {
+                                continue;
+                        }
+                        SeoContext locationContext = SeoContext.builder()
+                                        .entityType(context.getEntityType())
+                                        .pageType(context.getPageType())
+                                        .categoryType(context.getCategoryType())
+                                        .categoryId(context.getCategoryId())
+                                        .slug(context.getSlug())
+                                        .location(location)
+                                        .operationType(SeoOperationType.URL_GENERATION)
+                                        .build();
+
+                        UrlMeta locationUrl = handler.generateUrl(locationContext);
+                        locationUrls.put(location, locationUrl);
+                }
+
+                return new UrlGroup(base, locationUrls);
+        }
+
+        /*
+         * CAFFEINE CACHE HELPERS
+         */
+
+        /**
+         * Initialize an empty location set for a category in cache
+         */
+        private void initializeCategoryLocationCache(String categoryId) {
+                Cache cache = cacheManager.getCache(CacheNames.SEO_CATEGORY_LOCATIONS);
+                if (cache != null) {
+                        cache.put(categoryId, new HashSet<String>());
+                        log.debug("Initialized location cache for category: {}", categoryId);
+                } else {
+                        log.warn("SEO_CATEGORY_LOCATIONS cache not found");
+                }
+        }
+
+        /**
+         * Add a location to the category's cached location set
+         */
+        private void addLocationToCache(String categoryId, String location) {
+                Cache cache = cacheManager.getCache(CacheNames.SEO_CATEGORY_LOCATIONS);
+                if (cache != null) {
+                        @SuppressWarnings("unchecked")
+                        Set<String> locations = cache.get(categoryId, HashSet.class);
+                        if (locations != null) {
+                                locations.add(location);
+                                cache.put(categoryId, locations);
+                        }
+                }
+        }
+
+        /**
+         * Parse last modified timestamp from product (ISO 8601 format)
+         */
+        private Instant parseLastModified(String lastModifiedAt) {
+                if (lastModifiedAt == null || lastModifiedAt.isEmpty()) {
+                        return null;
+                }
+                try {
+                        return Instant.parse(lastModifiedAt);
+                } catch (Exception e) {
+                        log.warn("Failed to parse lastModifiedAt: {}", lastModifiedAt);
+                        return null;
+                }
+        }
+
+        /**
+         * Retrieve all cached locations for a category
+         */
+        private Set<String> getLocationsFromCache(String categoryId) {
+                Cache cache = cacheManager.getCache(CacheNames.SEO_CATEGORY_LOCATIONS);
+                if (cache != null) {
+                        @SuppressWarnings("unchecked")
+                        Set<String> locations = cache.get(categoryId, HashSet.class);
+                        return locations != null ? locations : Set.of();
+                }
+                return Set.of();
+        }
+
+        /**
+         * Clear cached locations for a category after processing is complete
+         */
+        private void clearCategoryLocationCache(String categoryId) {
+                Cache cache = cacheManager.getCache(CacheNames.SEO_CATEGORY_LOCATIONS);
+                if (cache != null) {
+                        cache.evict(categoryId);
+                        log.debug("Cleared location cache for category: {}", categoryId);
+                }
+        }
+
+        /*
+         * RUNTIME — SEO METADATA RESOLUTION
+         */
+        @Override
+        public SeoMeta resolveSeoMeta(
+                        String path,
+                        Map<String, String> pathVariables) {
+
+                SeoContext context = contextResolver.resolve(path, pathVariables);
+
+                SeoPatternHandler handler = patternFactory.resolve(context);
+
+                SeoData seoData = handler.fetchData(context);
+
+                return handler.generateMeta(context, seoData);
+        }
+
+        private List<CategoryIdentifier> fetchAllCategoryIdsFromCC() {
+
+                List<CatalogueCategoryTree> categoryTree = centralCatalogueClient.getCategoryTree();
+
+                if (categoryTree == null || categoryTree.isEmpty()) {
+                        return List.of();
+                }
+
+                List<CategoryIdentifier> result = new ArrayList<>();
+
+                for (CatalogueCategoryTree root : categoryTree) {
+
+                        CategoryType categoryType = SeoConstants.CATEGORY_TYPE_BRANDS.equalsIgnoreCase(root.getKey())
+                                        ? CategoryType.BRAND
+                                        : CategoryType.STANDARD;
+
+                        if (root.getSub_menu() != null) {
+                                for (CatalogueCategoryTree child : root.getSub_menu()) {
+                                        collectSubCategories(child, categoryType, result);
+                                }
+                        }
+                }
+
+                return result;
+        }
+
+        private void collectSubCategories(
+                        CatalogueCategoryTree node,
+                        CategoryType categoryType,
+                        List<CategoryIdentifier> result) {
+
+                if (node.getId() != null
+                                && node.getAttributes() != null
+                                && node.getAttributes().getSlug() != null) {
+
+                        result.add(
+                                        CategoryIdentifier.builder()
+                                                        .categoryId(node.getId())
+                                                        .categorySlug(node.getAttributes().getSlug())
+                                                        .categoryType(categoryType)
+                                                        .build());
+                }
+
+                if (node.getSub_menu() == null || node.getSub_menu().isEmpty()) {
+                        return;
+                }
+
+                for (CatalogueCategoryTree child : node.getSub_menu()) {
+                        collectSubCategories(child, categoryType, result);
+                }
+        }
+
+        /**
+         * Extract unique location list from product's location data
+         */
+        private List<String> extractProductLocations(Product product) {
+                if (product.getProductLocation() == null) {
+                        return List.of();
+                }
+
+                return product.getProductLocation()
+                                .stream()
+                                .flatMap(location -> Stream.of(
+                                                location.getState(),
+                                                location.getDistrict()))
+                                .filter(loc -> loc != null && !loc.isBlank())
+                                .filter(loc -> !SeoConstants.LOCATION_ALL.equalsIgnoreCase(loc)) // Skip 'all' location
+                                .distinct()
+                                .toList();
+        }
+
+        /**
+         * Build location-specific URLs for a product and cache locations
+         */
+        private Map<String, UrlMeta> buildProductLocationUrls(
+                        Product product,
+                        String productBaseSlug,
+                        Instant productLastMod,
+                        String categoryId,
+                        SeoPatternHandler handler) {
+
+                Map<String, UrlMeta> locationUrls = new ConcurrentHashMap<>();
+                List<String> locations = extractProductLocations(product);
+
+                for (String location : locations) {
+                        // Add to cache for category URL generation
+                        addLocationToCache(categoryId, location);
+
+                        SeoContext locationContext = SeoContext.builder()
+                                        .entityType(SeoEntityType.PRODUCT)
+                                        .pageType(SeoPageType.PDP)
+                                        .categoryType(CategoryType.STANDARD)
+                                        .productId(product.getId())
+                                        .slug(productBaseSlug)
+                                        .location(location)
+                                        .lastModifiedAt(productLastMod)
+                                        .operationType(SeoOperationType.URL_GENERATION)
+                                        .build();
+
+                        UrlMeta locationUrl = handler.generateUrl(locationContext);
+                        locationUrls.put(location, locationUrl);
+                }
+
+                return locationUrls;
+        }
+
+        /**
+         * Build variant URLs for all variants of a product
+         */
+        private List<VariantResponse> buildVariantUrls(
+                        Product product,
+                        List<String> productLocations,
+                        Instant productLastMod,
+                        ProductTypeData productTypeData,
+                        SeoPatternHandler handler) {
+
+                List<VariantResponse> variants = new ArrayList<>();
+
+                if (product.getVariants() == null || product.getVariants().isEmpty()) {
+                        return variants;
+                }
+
+                for (Variant variant : product.getVariants()) {
+                        Map<String, UrlMeta> variantLocationUrls = new ConcurrentHashMap<>();
+
+                        for (String location : productLocations) {
+                                String variantBaseSlug = buildVariantAttributeSlug(product, variant, productTypeData);
+
+                                SeoContext variantContext = SeoContext.builder()
+                                                .entityType(SeoEntityType.VARIANT)
+                                                .pageType(SeoPageType.PDP)
+                                                .categoryType(CategoryType.STANDARD)
+                                                .productId(product.getId())
+                                                .slug(variantBaseSlug)
+                                                .variantMmid(variant.getVariantMmid())
+                                                .location(location)
+                                                .lastModifiedAt(productLastMod)
+                                                .operationType(SeoOperationType.URL_GENERATION)
+                                                .build();
+
+                                UrlMeta variantUrl = handler.generateUrl(variantContext);
+                                variantLocationUrls.put(location, variantUrl);
+                        }
+
+                        if (!variantLocationUrls.isEmpty()) {
+                                variants.add(new VariantResponse(
+                                                variant.getVariantMmid(),
+                                                new UrlGroup(null, variantLocationUrls)));
+                        }
+                }
+
+                return variants;
+        }
+}
