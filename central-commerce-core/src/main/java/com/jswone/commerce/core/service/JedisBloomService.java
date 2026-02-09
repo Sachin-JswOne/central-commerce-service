@@ -44,7 +44,13 @@ public class JedisBloomService {
     }
 
     public boolean isBarred(String normalizedQuery) {
-        return jedisPooled.sismember(BARRED_SET, normalizedQuery);
+        Cache cache = getBarredTrendingSearchesCache();
+        Cache.ValueWrapper wrapper = cache.get("terms");
+        if (wrapper != null) {
+            Set<String> barredTerms = (HashSet<String>) wrapper.get();
+            return barredTerms.contains(normalizedQuery);
+        }
+        return false;
     }
 
     public void barTerm(Set<String> normalizedQuery) {

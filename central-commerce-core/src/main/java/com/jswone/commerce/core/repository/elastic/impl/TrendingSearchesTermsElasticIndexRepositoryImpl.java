@@ -2,17 +2,22 @@ package com.jswone.commerce.core.repository.elastic.impl;
 
 import co.elastic.clients.elasticsearch.ElasticsearchClient;
 import co.elastic.clients.elasticsearch._types.Script;
+import co.elastic.clients.elasticsearch._types.SortOrder;
+import co.elastic.clients.elasticsearch._types.mapping.FieldType;
 import co.elastic.clients.elasticsearch.core.*;
 import co.elastic.clients.json.JsonData;
 import com.jswone.commerce.core.constants.ElasticConstants;
+import com.jswone.commerce.core.model.elastic.index.RecentSearchIndex;
 import com.jswone.commerce.core.model.elastic.index.TrendingSearchTermIndex;
 import com.jswone.commerce.core.repository.elastic.TrendingSearchTermElasticIndexRepository;
+import com.jswone.commerce.core.util.elastic.queryBuilder.TrendingSearchQueryBuilder;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.io.IOException;
 import java.util.Date;
+import java.util.List;
 import java.util.Map;
 
 
@@ -22,6 +27,7 @@ import java.util.Map;
 public class TrendingSearchesTermsElasticIndexRepositoryImpl implements TrendingSearchTermElasticIndexRepository {
 
     private final ElasticsearchClient elasticsearchClient;
+    private final TrendingSearchQueryBuilder queryBuilder;
 
 
     @Override
@@ -64,10 +70,44 @@ public class TrendingSearchesTermsElasticIndexRepositoryImpl implements Trending
                 log.error("Failed to index data : {}", userSearchLogs.getId());
             }
             assert response != null;
-            log.info("Indexed User Search logs ID: {}", response.id());
+            log.info("Indexed Trending Search Term ID: {}", response.id());
 
         } catch (Exception e) {
-            throw new RuntimeException(e);
+            log.error("Error while indexing Trending Search Term : {} ", userSearchLogs.getQuery());
+        }
+    }
+
+    @Override
+    public SearchResponse<TrendingSearchTermIndex> getTrendingSearchTerms(int limit, String offset) throws IOException {
+        SearchRequest request = SearchRequest.of(s -> s
+                .index(List.of(ElasticConstants.TRENDING_SEARCHES_TERMS))
+                .sort(so -> so
+                        .field(f -> f
+                                .field("unique_count")
+                                .order(SortOrder.Desc)
+                                .unmappedType(FieldType.Float)
+                        )
+                )
+                .query(queryBuilder.getTrendingSearchTermQuery(offset))
+                .size(limit)
+        );
+
+        log.info("Executing search with request: {}", request);
+        return elasticsearchClient.search(
+                request,
+                TrendingSearchTermIndex.class
+        );
+    }
+
+    @Override
+    public void deleteData(String normalizedQuery) {
+        try {
+            elasticsearchClient.delete(DeleteRequest.of(d -> d
+                    .index(ElasticConstants.TRENDING_SEARCHES_TERMS)
+                    .id(normalizedQuery)
+            ));
+        } catch (IOException e) {
+            log.error("Error while barring Trending Search Term : {}", normalizedQuery);
         }
     }
 }
