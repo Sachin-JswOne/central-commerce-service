@@ -258,6 +258,7 @@ public class ProductServiceImpl implements ProductService {
                                 .variantMMID(variantMasterId)
                                 .productTypeKey(productCatalogueStore.getProductTypeKey())
                                 .sku(masterVariant.getSku())
+                                .productKey(productCatalogueStore.getProductKey())
                                 .build());
             }
         }
@@ -279,6 +280,7 @@ public class ProductServiceImpl implements ProductService {
                             .variantMMID(variantMasterId)
                             .productTypeKey(productCatalogueStore.getProductTypeKey())
                             .sku(masterVariant.getSku())
+                            .productKey(productCatalogueStore.getProductKey())
                             .build());
         }
 
