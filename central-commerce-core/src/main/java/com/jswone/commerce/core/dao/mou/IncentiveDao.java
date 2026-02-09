@@ -13,6 +13,7 @@ import org.springframework.stereotype.Repository;
 @Repository
 public class IncentiveDao {
 
+    private static final String INCENTIVE_DETAILS = "incentiveDetails";
     private final JdbcTemplate jdbcTemplate;
     private final ObjectMapper objectMapper;
 
@@ -36,15 +37,21 @@ public class IncentiveDao {
                     mouId, financialYear, productCategory, mouType);
 
             if (json == null || json.isBlank()) {
-                return objectMapper.createObjectNode();
+                return objectMapper.createArrayNode();
             }
 
-            return objectMapper.readTree(json);
+            JsonNode root = objectMapper.readTree(json);
 
+            if (root.has(INCENTIVE_DETAILS)) {
+                return root.get(INCENTIVE_DETAILS);
+            }
+            return root;
         } catch (Exception ex) {
-            log.error("Failed to fetch incentive JSON for mouId={}, category={}", mouId, productCategory, ex);
+            log.error("Failed to fetch incentive JSON for mouId={}, financialYear={}," +
+                    "productCategory={} and mouType={}", mouId, productCategory, financialYear, mouType, ex);
 
-            throw new CentralCommerceServiceException("Failed to fetch Mou incentive details",
+            throw new CentralCommerceServiceException(
+                    "Failed to fetch Mou incentive details",
                     HttpStatus.INTERNAL_SERVER_ERROR
             );
         }
