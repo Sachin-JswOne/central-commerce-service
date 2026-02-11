@@ -1,6 +1,8 @@
 package com.jswone.commerce.core.publisher.recentSearch;
 
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.api.core.ApiFuture;
 import com.google.api.core.ApiFutureCallback;
@@ -17,6 +19,7 @@ import com.jswone.commerce.core.model.elastic.dto.ProductResult;
 import com.jswone.commerce.core.model.elastic.dto.ResultContext;
 import com.jswone.commerce.core.model.elastic.dto.SearchQuery;
 import com.jswone.commerce.core.model.elastic.index.RecentSearchIndex;
+import com.jswone.commerce.core.model.elastic.index.UserSearchLogsIndex;
 import com.jswone.commerce.core.model.request.Search.SearchRequest;
 import com.jswone.commerce.core.model.response.centralCatalogue.ProductSearchResponse;
 import jakarta.annotation.PreDestroy;
@@ -28,7 +31,6 @@ import org.springframework.stereotype.Component;
 
 import java.io.IOException;
 import java.util.Map;
-import java.util.Objects;
 import java.util.UUID;
 
 import static com.jswone.commerce.core.constants.JWTConstants.*;
@@ -37,7 +39,7 @@ import static com.jswone.commerce.core.enums.ErrorType.INCORRECT_INPUT;
 @Component
 @RequiredArgsConstructor
 @Slf4j
-public class RecentSearchItemPublisher {
+public class UserSearchLogsItemPublisher {
 
     private final ObjectMapper objectMapper;
     private final Publisher publisher;
@@ -48,20 +50,32 @@ public class RecentSearchItemPublisher {
 
     public void publish(ProductSearchResponse productSearchResponse, SearchRequest searchRequest) {
         try {
-            Event event = buildConsumerEvent(productSearchResponse, searchRequest);
-            publishRecentSearch(event);
+            UserSearchLogsIndex userSearchLogs = buildUserSearchLogs(productSearchResponse, searchRequest);
+            Event event = buildConsumerEvent(userSearchLogs);
+            publishUserSearchLogs(event);
+
+            if (userSearchLogs.isToBeShownInRecent()) {
+                event = event.toBuilder().eventType(ElasticPublisherEventTypes.PUBLISH_RECENT_SEARCH.getValue()).build();
+                publishRecentSearch(event);
+            }
+
+            if (userSearchLogs.getQuery().isValidQueryForTrendingSearch()) {
+                event = event.toBuilder().eventType(ElasticPublisherEventTypes.PUBLISH_TRENDING_SEARCH_TERM.getValue()).build();
+                publishTrendingSearchTerm(event);
+            }
+
+
         } catch (Exception e) {
             log.error(e.getMessage());
             throw new ParsingException("Error serializing ", INCORRECT_INPUT);
         }
     }
 
-    private Event buildConsumerEvent(ProductSearchResponse productSearchResponse, SearchRequest searchRequest) {
-
-        RecentSearchIndex recentSearchIndex = RecentSearchIndex.builder()
+    private UserSearchLogsIndex buildUserSearchLogs(ProductSearchResponse productSearchResponse, SearchRequest searchRequest) {
+        return UserSearchLogsIndex.builder()
                 .searchId(searchRequest.getSearchId())
                 .searchType(searchRequest.getSearchType().equalsIgnoreCase("Full Search") ? "FULL" : "PARTIAL")
-                .eventType(UserSearchTrackingEventTypes.RECENT_SEARCH.getValue())
+                .eventType(UserSearchTrackingEventTypes.USER_SEARCH_LOGS.getValue())
                 .toBeShownInRecent(searchRequest.getSearchType().equalsIgnoreCase("Full Search"))
                 .id(UUID.randomUUID().toString())
                 .userId(MDC.get(USER_ID_CLAIM))
@@ -86,40 +100,23 @@ public class RecentSearchItemPublisher {
                                 .toList())
                         .build())
                 .build();
+    }
 
-        Map<String, Object> requestMap = objectMapper.convertValue(recentSearchIndex, Map.class);
+    private Event buildConsumerEvent(UserSearchLogsIndex userSearchLogs) {
+
+        Map<String, Object> requestMap = objectMapper.convertValue(userSearchLogs, new TypeReference<Map<String, Object>>() {
+        });
 
         return Event.builder()
                 .eventId(UUID.randomUUID().toString())
-                .eventType(ElasticPublisherEventTypes.PUBLISH_RECENT_SEARCH.getValue())
+                .eventType(ElasticPublisherEventTypes.PUBLISH_USER_SEARCH_LOGS.getValue())
                 .payload(requestMap)
                 .build();
     }
 
-    public void publishClearRecentSearch(RecentSearchIndex recentSearchIndex) {
-
-        try {
-            Map<String, Object> requestMap =
-                    objectMapper.convertValue(recentSearchIndex, Map.class);
-
-            Event event = Event.builder()
-                    .eventId(UUID.randomUUID().toString())
-                    .eventType(
-                            ElasticPublisherEventTypes.CLEAR_RECENT_SEARCH.getValue()
-                    )
-                    .payload(requestMap)
-                    .build();
-
-            publishRecentSearch(event);
-        } catch (Exception e) {
-            log.error(e.getMessage());
-            throw new ParsingException("Error serializing ", INCORRECT_INPUT);
-        }
-    }
-
     private void publishRecentSearch(Event event) throws IOException {
         String messageString = objectMapper.writeValueAsString(event);
-        log.info("Elastic TRACKER_PUBLISHER_TOPIC: {}", TRACKER_PUBLISHER_TOPIC);
+        log.info("Elastic TRACKER_PUBLISHER_TOPIC: {} , Event type : {}", TRACKER_PUBLISHER_TOPIC, event.getEventType());
         ByteString data = ByteString.copyFromUtf8(messageString);
         // Create PubsubMessage with the serialized data
         PubsubMessage pubsubMessage = PubsubMessage.newBuilder().setData(data).build();
@@ -140,8 +137,64 @@ public class RecentSearchItemPublisher {
                 },
                 MoreExecutors.directExecutor()
         );
-        log.info("Published Recent Search message: {}", messageString);
+        log.debug("Published Recent Search message: {}", messageString);
         MDC.clear();
+    }
+
+    private void publishUserSearchLogs(Event event) throws IOException {
+        String messageString = objectMapper.writeValueAsString(event);
+        log.info("Elastic TRACKER_PUBLISHER_TOPIC: {} , Event type : {}", TRACKER_PUBLISHER_TOPIC, event.getEventType());
+        ByteString data = ByteString.copyFromUtf8(messageString);
+        // Create PubsubMessage with the serialized data
+        PubsubMessage pubsubMessage = PubsubMessage.newBuilder().setData(data).build();
+        ApiFuture<String> messageId = publisher.publish(pubsubMessage);
+        ApiFutures.addCallback(
+                messageId,
+                new ApiFutureCallback<>() {
+                    @Override
+                    public void onSuccess(String messageId) {
+                        log.info("Published Data to Topic: {}, messageId: {}", publisher.getTopicName(), messageId);
+                    }
+
+                    @Override
+                    public void onFailure(Throwable t) {
+                        log.error("Failed to publish Data to Topic: {}, message: {}", publisher.getTopicName(), t.getMessage());
+                    }
+
+                },
+                MoreExecutors.directExecutor()
+        );
+        log.debug("Published User Search message: {}", messageString);
+        MDC.clear();
+    }
+
+    private void publishTrendingSearchTerm(Event event) throws JsonProcessingException {
+
+        String messageString = objectMapper.writeValueAsString(event);
+        log.info("Elastic TRACKER_PUBLISHER_TOPIC: {} , Event type : {}", TRACKER_PUBLISHER_TOPIC, event.getEventType());
+        ByteString data = ByteString.copyFromUtf8(messageString);
+        // Create PubsubMessage with the serialized data
+        PubsubMessage pubsubMessage = PubsubMessage.newBuilder().setData(data).build();
+        ApiFuture<String> messageId = publisher.publish(pubsubMessage);
+        ApiFutures.addCallback(
+                messageId,
+                new ApiFutureCallback<>() {
+                    @Override
+                    public void onSuccess(String messageId) {
+                        log.info("Published Data to Topic: {} for eventType {} , messageId: {}", publisher.getTopicName(), event.getEventType(), messageId);
+                    }
+
+                    @Override
+                    public void onFailure(Throwable t) {
+                        log.error("Failed to publish Data to Topic: {} for eventType {}, message: {}", publisher.getTopicName(), event.getEventType(), t.getMessage());
+                    }
+
+                },
+                MoreExecutors.directExecutor()
+        );
+        log.debug("Published Trending Search Term message: {}", messageString);
+        MDC.clear();
+
     }
 
     @PreDestroy

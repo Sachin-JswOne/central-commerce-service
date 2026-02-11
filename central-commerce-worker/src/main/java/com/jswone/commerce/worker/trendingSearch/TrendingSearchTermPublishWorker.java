@@ -1,4 +1,4 @@
-package com.jswone.commerce.worker.recentSearch;
+package com.jswone.commerce.worker.trendingSearch;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.cloud.spring.pubsub.support.BasicAcknowledgeablePubsubMessage;
@@ -6,7 +6,6 @@ import com.google.cloud.spring.pubsub.support.GcpPubSubHeaders;
 import com.jswone.commerce.core.enums.ElasticPublisherEventTypes;
 import com.jswone.commerce.core.model.elastic.Event;
 import com.jswone.commerce.worker.processor.EventProcessor;
-import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.integration.annotation.ServiceActivator;
@@ -17,17 +16,17 @@ import java.util.List;
 
 @Service
 @Slf4j
-public class RecentSearchTrackerWorker {
+public class TrendingSearchTermPublishWorker {
 
     private final ObjectMapper objectMapper;
     private final EventProcessor eventProcessor;
     private final List<String> allowedEvents;
 
-    public RecentSearchTrackerWorker(ObjectMapper objectMapper, EventProcessor eventProcessor, List<String> allowedEvents) {
+    public TrendingSearchTermPublishWorker(ObjectMapper objectMapper, EventProcessor eventProcessor, List<String> allowedEvents) {
         this.objectMapper = objectMapper;
         this.eventProcessor = eventProcessor;
         this.allowedEvents = List.of(
-                ElasticPublisherEventTypes.PUBLISH_RECENT_SEARCH.getValue()
+                ElasticPublisherEventTypes.PUBLISH_TRENDING_SEARCH_TERM.getValue()
         );
     }
 
@@ -49,4 +48,5 @@ public class RecentSearchTrackerWorker {
         }
 
     }
+
 }
