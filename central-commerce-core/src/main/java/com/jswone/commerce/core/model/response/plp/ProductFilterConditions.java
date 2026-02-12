@@ -13,6 +13,6 @@ public class ProductFilterConditions {
     private String id;
     private String displayText;
     private String type;
-    private List<String> values;
+    private Object values;
     private List<String> selectedValues;
 }

@@ -52,98 +52,31 @@ public class CatalogueCategoryServiceImpl implements CatalogueCategoryService {
 
   @Override
   public BreadcrumbData getBreadcrumbData(String categoryId, String slug) {
-    try {
-      if(Objects.nonNull(categoryId) && Objects.nonNull(slug)){
-        throw new CentralCommerceServiceException("Both category and slug cannot be called together", HttpStatus.BAD_REQUEST);
-      }
+      try {
+          if (Objects.nonNull(categoryId) && Objects.nonNull(slug)) {
+              throw new CentralCommerceServiceException("Both category and slug cannot be called together", HttpStatus.BAD_REQUEST);
+          }
 
-      if(Objects.isNull(categoryId) && Objects.isNull(slug)){
-        throw new CentralCommerceServiceException("Please provide either category or slug", HttpStatus.BAD_REQUEST);
-      }
-      CatalogueBreadCrumbData catalogueBreadcrumbResponse =
-              centralCatalogueClient.getBreadcrumb(categoryId, slug);
+          if (Objects.isNull(categoryId) && Objects.isNull(slug)) {
+              throw new CentralCommerceServiceException("Please provide either category or slug", HttpStatus.BAD_REQUEST);
+          }
+          CatalogueBreadCrumbData catalogueBreadcrumbResponse =
+                  centralCatalogueClient.getBreadcrumb(categoryId, slug);
 
-      if (catalogueBreadcrumbResponse == null
-              || catalogueBreadcrumbResponse.getBread_crumb_details() == null) {
-        log.error(
-                "Category breadcrumb API returned invalid or empty data for categoryId: {}", categoryId);
-        throw new CentralCommerceServiceException(
-                "Category breadcrumb API returned invalid or empty data for categoryId");
-      }
+          if (catalogueBreadcrumbResponse == null
+                  || catalogueBreadcrumbResponse.getBread_crumb_details() == null) {
+              log.error(
+                      "Category breadcrumb API returned invalid or empty data for categoryId: {}", categoryId);
+              throw new CentralCommerceServiceException(
+                      "Category breadcrumb API returned invalid or empty data for categoryId");
+          }
 
-      log.info("Mapping Catalogue breadcrumb data to central commerce format");
-      return breadcrumbMapper.toBreadcrumbResponse(catalogueBreadcrumbResponse);
-    }catch (Exception ex){
-      throw new CentralCommerceServiceException(ex.getMessage(),HttpStatus.BAD_REQUEST);
-    }
+          log.info("Mapping Catalogue breadcrumb data to central commerce format");
+          return breadcrumbMapper.toBreadcrumbResponse(catalogueBreadcrumbResponse);
+      } catch (Exception ex) {
+          throw new CentralCommerceServiceException(ex.getMessage(), HttpStatus.BAD_REQUEST);
+      }
   }
-
-//  @Override
-//  public CategoryTreeResponse getBulkCatalogueCategoryTree(BulkCategoryRequestDTO categoryRequestDTO) {
-//    try {
-//      if(Objects.nonNull(categoryRequestDTO.getCategoryIds()) && Objects.nonNull(categoryRequestDTO.getBrandCategoryIds())){
-//        throw new CentralCommerceServiceException("Both category and brand cannot be called together", HttpStatus.BAD_REQUEST);
-//      }
-//
-//      if(Objects.isNull(categoryRequestDTO.getBrandCategoryIds()) && Objects.isNull(categoryRequestDTO.getCategoryIds())){
-//        throw new CentralCommerceServiceException("Please provide either category or brand", HttpStatus.BAD_REQUEST);
-//      }
-//
-//        if((Objects.nonNull(categoryRequestDTO.getBrandCategoryIds()) &&
-//           categoryRequestDTO.getBrandCategoryIds().isEmpty()) ||
-//           (Objects.nonNull(categoryRequestDTO.getCategoryIds()) &&
-//           categoryRequestDTO.getCategoryIds().isEmpty())){
-//        throw new CentralCommerceServiceException("Please provide either category or brand", HttpStatus.BAD_REQUEST);
-//      }
-//
-//      CategoryTreeResponse categoryTreeResponse = this.getCatalogueCategoryTree();
-//
-//      if(Objects.nonNull(categoryRequestDTO.getCategoryIds()) &&
-//              !categoryRequestDTO.getCategoryIds().isEmpty()){
-//
-//        List<String> categoryIds = categoryRequestDTO.getCategoryIds()
-//                                   .stream()
-//                                   .distinct()
-//                                   .toList();
-//
-//        categoryTreeResponse.getNavigation().removeIf(navigationItem ->
-//                !navigationItem.getName().equalsIgnoreCase("All products"));
-//
-//        categoryTreeResponse.getNavigation().forEach(navigationItem -> {
-//          navigationItem.getSubMenu().removeIf(
-//                  subMenu -> !categoryIds.contains(subMenu.getId())
-//          );
-//
-//          navigationItem.getSubMenu().sort(
-//                  Comparator.comparingInt(subMenu -> categoryIds.indexOf(subMenu.getId()))
-//          );
-//        });
-//
-//      } else if(Objects.nonNull(categoryRequestDTO.getBrandCategoryIds()) &&
-//              !categoryRequestDTO.getBrandCategoryIds().isEmpty()){
-//        List<String> brandCategoryIds = categoryRequestDTO.getBrandCategoryIds()
-//                                        .stream()
-//                                        .distinct()
-//                                        .toList();
-//
-//        categoryTreeResponse.getNavigation().removeIf(navigationItem ->
-//                !navigationItem.getName().equalsIgnoreCase("Brands"));
-//
-//        categoryTreeResponse.getNavigation().forEach(navigationItem -> {
-//          navigationItem.getSubMenu().removeIf(
-//                  subMenu -> !brandCategoryIds.contains(subMenu.getId())
-//          );
-//
-//          navigationItem.getSubMenu().sort(
-//                  Comparator.comparingInt(subMenu -> brandCategoryIds.indexOf(subMenu.getId()))
-//          );
-//        });
-//      }
-//      return categoryTreeResponse;
-//    }catch (Exception ex){
-//      throw new CentralCommerceServiceException(ex.getMessage(),HttpStatus.BAD_REQUEST);
-//    }
-//  }
 
     @Override
     public CategoryTreeResponse getBulkCatalogueCategoryTree(BulkCategoryRequestDTO categoryRequestDTO) {
@@ -157,7 +90,8 @@ public class CatalogueCategoryServiceImpl implements CatalogueCategoryService {
             }
 
             if (Objects.isNull(categoryRequestDTO.getBrandCategoryIds())
-                    && Objects.isNull(categoryRequestDTO.getCategoryIds())) {
+                    && Objects.isNull(categoryRequestDTO.getCategoryIds())
+                    && Objects.isNull(categoryRequestDTO.getCategorySlugs())) {
                 throw new CentralCommerceServiceException(
                         "Please provide either category or brand",
                         HttpStatus.BAD_REQUEST);
@@ -179,57 +113,21 @@ public class CatalogueCategoryServiceImpl implements CatalogueCategoryService {
             if (Objects.nonNull(categoryRequestDTO.getCategoryIds()) &&
                     !categoryRequestDTO.getCategoryIds().isEmpty()) {
 
-                List<String> categoryIds = categoryRequestDTO.getCategoryIds()
-                        .stream()
-                        .filter(Objects::nonNull)
-                        .distinct()
-                        .toList();
-
-                categoryTreeResponse.getNavigation().removeIf(
-                        nav -> !"All products".equalsIgnoreCase(nav.getName()));
-
-                categoryTreeResponse.getNavigation().forEach(nav -> {
-
-                    List<NavigationItem> matchedSubMenus = new ArrayList<>();
-
-                    for (String categoryId : categoryIds) {
-                        NavigationItem matched =
-                                findNodeRecursively(nav.getSubMenu(), categoryId);
-                        if (matched != null) {
-                            matchedSubMenus.add(matched);
-                        }
-                    }
-                    nav.setSubMenu(matchedSubMenus);
-                });
+                getCategoryTreeResponse(categoryTreeResponse, categoryRequestDTO);
             }
 
             // Brand filtering logic
             else if (Objects.nonNull(categoryRequestDTO.getBrandCategoryIds()) &&
                     !categoryRequestDTO.getBrandCategoryIds().isEmpty()) {
 
-                List<String> brandCategoryIds =
-                        categoryRequestDTO.getBrandCategoryIds()
-                                .stream()
-                                .filter(Objects::nonNull)
-                                .distinct()
-                                .toList();
+                getBrandCategoryTreeResponse(categoryTreeResponse,categoryRequestDTO);
+            }
 
-                categoryTreeResponse.getNavigation().removeIf(
-                        nav -> !"Brands".equalsIgnoreCase(nav.getName()));
-
-                categoryTreeResponse.getNavigation().forEach(nav -> {
-
-                    List<NavigationItem> matchedSubMenus = new ArrayList<>();
-
-                    for (String brandId : brandCategoryIds) {
-                        NavigationItem matched =
-                                findNodeRecursively(nav.getSubMenu(), brandId);
-                        if (matched != null) {
-                            matchedSubMenus.add(matched);
-                        }
-                    }
-                    nav.setSubMenu(matchedSubMenus);
-                });
+            //Slug Category filtering logic
+            else if (Objects.nonNull(categoryRequestDTO.getCategorySlugs()) &&
+                    !categoryRequestDTO.getCategorySlugs().isEmpty())
+            {
+                getSlugCategoryTreeResponse(categoryTreeResponse,categoryRequestDTO);
             }
             return categoryTreeResponse;
 
@@ -237,6 +135,82 @@ public class CatalogueCategoryServiceImpl implements CatalogueCategoryService {
             throw new CentralCommerceServiceException(
                     ex.getMessage(), HttpStatus.BAD_REQUEST);
         }
+    }
+
+    private void getCategoryTreeResponse(CategoryTreeResponse categoryTreeResponse, BulkCategoryRequestDTO categoryRequestDTO){
+        List<String> categoryIds = categoryRequestDTO.getCategoryIds()
+                .stream()
+                .filter(Objects::nonNull)
+                .distinct()
+                .toList();
+
+        categoryTreeResponse.getNavigation().removeIf(
+                nav -> !"All products".equalsIgnoreCase(nav.getName()));
+
+        categoryTreeResponse.getNavigation().forEach(nav -> {
+
+            List<NavigationItem> matchedSubMenus = new ArrayList<>();
+
+            for (String categoryId : categoryIds) {
+                NavigationItem matched =
+                        findNodeRecursively(nav.getSubMenu(), categoryId);
+                if (matched != null) {
+                    matchedSubMenus.add(matched);
+                }
+            }
+            nav.setSubMenu(matchedSubMenus);
+        });
+    }
+
+    private void getBrandCategoryTreeResponse(CategoryTreeResponse categoryTreeResponse, BulkCategoryRequestDTO categoryRequestDTO){
+        List<String> brandCategoryIds =
+                categoryRequestDTO.getBrandCategoryIds()
+                        .stream()
+                        .filter(Objects::nonNull)
+                        .distinct()
+                        .toList();
+
+        categoryTreeResponse.getNavigation().removeIf(
+                nav -> !"Brands".equalsIgnoreCase(nav.getName()));
+
+        categoryTreeResponse.getNavigation().forEach(nav -> {
+
+            List<NavigationItem> matchedSubMenus = new ArrayList<>();
+
+            for (String brandId : brandCategoryIds) {
+                NavigationItem matched =
+                        findNodeRecursively(nav.getSubMenu(), brandId);
+                if (matched != null) {
+                    matchedSubMenus.add(matched);
+                }
+            }
+            nav.setSubMenu(matchedSubMenus);
+        });
+    }
+
+    private void getSlugCategoryTreeResponse(CategoryTreeResponse categoryTreeResponse, BulkCategoryRequestDTO categoryRequestDTO){
+        List<String> slugs = categoryRequestDTO.getCategorySlugs()
+                .stream()
+                .filter(Objects::nonNull)
+                .distinct()
+                .toList();
+
+        categoryTreeResponse.getNavigation().removeIf(
+                nav -> !"All products".equalsIgnoreCase(nav.getName()));
+
+        categoryTreeResponse.getNavigation().forEach(nav -> {
+
+            List<NavigationItem> matchedSubMenus = new ArrayList<>();
+
+            for (String slug : slugs) {
+                NavigationItem matched =
+                        findNodeRecursivelySlug(nav.getSubMenu(), slug);
+                if (matched != null) {
+                    matchedSubMenus.add(matched);
+                }
+            }
+            nav.setSubMenu(matchedSubMenus);
+        });
     }
 
     private NavigationItem findNodeRecursively(
@@ -252,6 +226,26 @@ public class CatalogueCategoryServiceImpl implements CatalogueCategoryService {
             }
             NavigationItem found =
                     findNodeRecursively(item.getSubMenu(), targetId);
+            if (found != null) {
+                return found;
+            }
+        }
+        return null;
+    }
+
+    private NavigationItem findNodeRecursivelySlug(
+            List<NavigationItem> subMenus, String targetId) {
+
+        if (subMenus == null || targetId == null) {
+            return null;
+        }
+
+        for (NavigationItem item : subMenus) {
+            if (targetId.equals(item.getSlug())) {
+                return item;
+            }
+            NavigationItem found =
+                    findNodeRecursivelySlug(item.getSubMenu(), targetId);
             if (found != null) {
                 return found;
             }

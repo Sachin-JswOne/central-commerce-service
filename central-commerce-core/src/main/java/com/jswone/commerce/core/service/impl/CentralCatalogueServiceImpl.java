@@ -2,7 +2,9 @@ package com.jswone.commerce.core.service.impl;
 
 import com.jswone.commerce.core.converters.CatalogueConverter;
 import com.jswone.commerce.core.exceptions.CentralCommerceServiceException;
+import com.jswone.commerce.core.model.CategoryTreeResponse;
 import com.jswone.commerce.core.model.ImageMetadata;
+import com.jswone.commerce.core.model.request.BulkCategoryRequestDTO;
 import com.jswone.commerce.core.model.request.ProductBulkRequest;
 import com.jswone.commerce.core.model.request.ProductListingRequest;
 import com.jswone.commerce.core.model.request.Search.SearchRequest;
@@ -10,9 +12,11 @@ import com.jswone.commerce.core.model.response.ProductListingResponse;
 import com.jswone.commerce.core.model.response.centralCatalogue.ProductBulkResponse;
 import com.jswone.commerce.core.model.response.centralCatalogue.ProductListingCatalogueResponse;
 import com.jswone.commerce.core.model.response.centralCatalogue.ProductSearchResponse;
+import com.jswone.commerce.core.model.response.plp.ProductFilterConditions;
 import com.jswone.commerce.core.model.response.search.SearchResponse;
 import com.jswone.commerce.core.publisher.recentSearch.UserSearchLogsItemPublisher;
 import com.jswone.commerce.core.rest.CentralCatalogueClient;
+import com.jswone.commerce.core.service.CatalogueCategoryService;
 import com.jswone.commerce.core.service.CentralCatalogueService;
 import com.jswone.commerce.core.util.CatalogueUtil;
 import com.jswone.commerce.core.validators.CatalogueValidator;
@@ -41,12 +45,14 @@ public class CentralCatalogueServiceImpl implements CentralCatalogueService {
     private final CatalogueValidator catalogueValidator;
     private final UserSearchLogsItemPublisher userSearchLogsItemPublisher;
     private final ExecutorService executorService = Executors.newFixedThreadPool(10);
+    private final CatalogueCategoryService categoryService;
 
-    public CentralCatalogueServiceImpl(CentralCatalogueClient centralCatalogueClient, CatalogueConverter catalogueConverter, CatalogueValidator catalogueValidator, UserSearchLogsItemPublisher userSearchLogsItemPublisher) {
+    public CentralCatalogueServiceImpl(CentralCatalogueClient centralCatalogueClient, CatalogueConverter catalogueConverter, CatalogueValidator catalogueValidator, UserSearchLogsItemPublisher userSearchLogsItemPublisher, CatalogueCategoryService categoryService) {
         this.centralCatalogueClient = centralCatalogueClient;
         this.catalogueConverter = catalogueConverter;
         this.catalogueValidator = catalogueValidator;
         this.userSearchLogsItemPublisher = userSearchLogsItemPublisher;
+        this.categoryService = categoryService;
     }
 
     @Override
@@ -92,8 +98,33 @@ public class CentralCatalogueServiceImpl implements CentralCatalogueService {
                 StringUtils.isNotBlank(productListingRequest.getCategoryId()) ? productListingRequest.getCategoryId() : productListingRequest.getSlug());
 
         ProductListingCatalogueResponse catalogueResponse = centralCatalogueClient.productListing(productListingRequest);
-        ProductListingCatalogueResponse facetsResponse = centralCatalogueClient.productListingFacetsOnly(productListingRequest);
-        return catalogueConverter.convertCataloguePLPResponseToPLPResponse(catalogueResponse, facetsResponse, productListingRequest);
+//        CategoryTreeResponse categoryTreeResponse = null;
+//        ProductFilterConditions categoryFilterConditions =
+//                Optional.ofNullable(productListingRequest.getFilterConditions())
+//                        .orElse(Collections.emptyList())
+//                        .stream()
+//                        .filter(fc -> fc.getId().equalsIgnoreCase("CATEGORY"))
+//                        .filter(fc -> fc.getSelectedValues() != null && !fc.getSelectedValues().isEmpty())
+//                        .findAny()
+//                        .orElse(null);
+//
+//        if(Objects.isNull(categoryFilterConditions) || Objects.isNull(categoryFilterConditions.getId())){
+//            if (Objects.nonNull(productListingRequest.getSlug())) {
+//                categoryTreeResponse = categoryService.getBulkCatalogueCategoryTree(
+//                        BulkCategoryRequestDTO
+//                                .builder()
+//                                .categorySlugs(List.of(productListingRequest.getSlug()))
+//                                .build());
+//            } else {
+//                categoryTreeResponse = categoryService.getBulkCatalogueCategoryTree(
+//                        BulkCategoryRequestDTO
+//                                .builder()
+//                                .categoryIds(List.of(productListingRequest.getCategoryId()))
+//                                .build());
+//            }
+//        }
+//        return catalogueConverter.convertCataloguePLPResponseToPLPResponse(catalogueResponse, productListingRequest, categoryTreeResponse, categoryFilterConditions);
+        return catalogueConverter.convertCataloguePLPResponseToPLPResponse(catalogueResponse,productListingRequest);
     }
 
     @Override

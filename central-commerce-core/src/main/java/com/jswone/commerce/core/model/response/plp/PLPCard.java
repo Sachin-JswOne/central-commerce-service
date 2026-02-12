@@ -18,4 +18,5 @@ public class PLPCard {
     private JSWPriceRange priceRange;
     private List<PLPAttribute> productAttributes;
     private String productMaterialMasterId;
+    private List<String> categorySlugs;
 }
