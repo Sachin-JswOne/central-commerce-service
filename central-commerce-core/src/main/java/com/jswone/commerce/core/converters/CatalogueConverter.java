@@ -2,6 +2,8 @@ package com.jswone.commerce.core.converters;
 
 import com.jswone.commerce.core.config.CatalogueDynamicConfig;
 import com.jswone.commerce.core.exceptions.CentralCommerceServiceException;
+import com.jswone.commerce.core.model.CategoryTreeResponse;
+import com.jswone.commerce.core.model.NavigationItem;
 import com.jswone.commerce.core.model.centralCatalogue.Product;
 import com.jswone.commerce.core.model.request.FilterRequestProvider;
 import com.jswone.commerce.core.model.request.ProductListingRequest;
@@ -21,6 +23,7 @@ import org.springframework.stereotype.Component;
 
 import java.util.*;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 @Component
 @Slf4j
@@ -108,6 +111,7 @@ public class CatalogueConverter {
                 .productAttributes(buildDynamicPLPAttributes(attrs))
                 .productMaterialMasterId(product.getProductMmid())
                 .priceRange(null)
+                .categorySlugs(getCategorySlugs(product))
                 .build();
     }
 
@@ -188,20 +192,20 @@ public class CatalogueConverter {
 
         // Build the response list by facets only
         facetValues.forEach((key, values) -> {
-            out.add(
-                    ProductFilterConditions.builder()
-                            .id(key.toUpperCase())
-                            .displayText(CatalogueUtil.formatName(key))
-                            .type("selection")
-                            .values(new ArrayList<>(values)) // Available values from facets
-                            .selectedValues(new ArrayList<>()) // No selected values
-                            .build()
-            );
+                out.add(
+                        ProductFilterConditions.builder()
+                                .id(key.toUpperCase())
+                                .displayText(CatalogueUtil.formatName(key))
+                                .type("selection")
+                                .values(new ArrayList<>(values)) // Available values from facets
+                                .selectedValues(new ArrayList<>()) // No selected values
+                                .build()
+                );
         });
 
 
         // Construct the output list only from the filters passed in the request.
-        if (filterRequest.getFilterConditions() != null && !filterRequest.getFilterConditions().isEmpty()) {
+            if (filterRequest.getFilterConditions() != null && !filterRequest.getFilterConditions().isEmpty()) {
             // READ SELECTED VALUES FROM FE
             Map<String, List<String>> selectedFromRequestMap = getSelectedFromRequestMap(filterRequest);
 
@@ -241,7 +245,8 @@ public class CatalogueConverter {
 
     // PRODUCT LISTING CONVERTER ======================================================================================
     public ProductListingResponse convertCataloguePLPResponseToPLPResponse(
-            ProductListingCatalogueResponse listingCatalogueResponse, ProductListingCatalogueResponse facetsResponse, ProductListingRequest listingRequest) {
+            ProductListingCatalogueResponse listingCatalogueResponse,
+            ProductListingRequest listingRequest) {
 
         try {
             List<Product> products = Optional.ofNullable(listingCatalogueResponse.getProducts())
@@ -250,10 +255,21 @@ public class CatalogueConverter {
             ProductListingResponse response = new ProductListingResponse();
 
             // Dynamic Filters
-            response.setFilterConditions(buildDynamicFilters(facetsResponse, listingRequest));
+            response.setFilterConditions(buildDynamicFiltersProductListing(listingCatalogueResponse, listingRequest));
+//            if(Objects.nonNull(categoryTreeResponse)) {
+//                response.getFilterConditions().add(ProductFilterConditions.builder()
+//                        .displayText("Category")
+//                        .id("CATEGORY")
+//                        .selectedValues(new ArrayList<>())
+//                        .type("selection")
+//                        .values(categoryTreeResponse.getNavigation().getFirst().getSubMenu())
+//                        .build());
+//            }else {
+//                response.getFilterConditions().add(categoryFilterConditions);
+//            }
             List<PLPCard> plpCards = products.stream()
                     .map(this::convertToPLPCard)
-                    .collect(Collectors.toList());
+                    .toList();
 
             response.setProducts(plpCards);
             response.setCount((long) plpCards.size());
@@ -268,5 +284,121 @@ public class CatalogueConverter {
                     "Exception occurred while mapping central catalogue product listing response: " + e.getMessage()
             );
         }
+    }
+
+    public static Map<String, List<String>> buildNameToSubMenuMap(List<NavigationItem> menuItems) {
+        Map<String, List<String>> result = new LinkedHashMap<>();
+        traverse(menuItems, result);
+        return result;
+    }
+
+    private static void traverse(List<NavigationItem> items, Map<String, List<String>> map) {
+        if (items == null) return;
+
+        for (NavigationItem item : items) {
+            List<NavigationItem> navItem = item.getSubMenu();
+
+            if (navItem != null && !navItem.isEmpty()) {
+                List<String> navNames = new ArrayList<>();
+                for (NavigationItem nav : navItem) {
+                    if (nav.getName() != null) {
+                        navNames.add(nav.getName());
+                    }
+                }
+                map.put(item.getName(), navNames);
+            }
+
+            // recurse deeper
+            traverse(navItem, map);
+        }
+    }
+
+    private List<String> getCategorySlugs(Product product){
+        return product.getAssociatedCategories()
+                .stream()
+                .flatMap(category -> {
+
+                    Stream<String> categorySlug = Stream.ofNullable(
+                            (String) category.getAttributes().get("slug")
+                    );
+
+                    Stream<String> traversalSlugs = category.getTraversal() == null
+                            ? Stream.empty()
+                            : category.getTraversal().stream()
+                            .map(traversal ->
+                                    (String) traversal.getAttributes().get("slug")
+                            );
+
+                    return Stream.concat(categorySlug, traversalSlugs);
+                })
+                .filter(Objects::nonNull)
+                .distinct()
+                .toList();
+    }
+
+    // FILTER BUILDER PRODUCT LISTING======================================================================================
+    private List<ProductFilterConditions> buildDynamicFiltersProductListing(FacetsProvider facetResponse, FilterRequestProvider filterRequest) {
+
+        List<ProductFilterConditions> out = new ArrayList<>();
+
+        // Build and return full facets
+        Map<String, Set<String>> facetValues = new HashMap<>();
+
+        //  Extract facet data from the response
+        for (Map.Entry<String, Set<String>> facet : facetResponse.getFacets().entrySet()) {
+            String key = facet.getKey();
+            Set<String> val = facet.getValue();
+
+            if (!ATTRIBUTE_KEYS.contains(key)) continue;
+            if (val == null || val.isEmpty()) continue;
+
+            facetValues.put(key, val);
+        }
+
+        // Build the response list by facets only
+        facetValues.forEach((key, values) -> {
+            ProductFilterConditions filterConditions =
+                    Optional.ofNullable(filterRequest.getFilterConditions())
+                            .orElse(Collections.emptyList())
+                            .stream()
+                            .filter(fc -> fc.getId().equalsIgnoreCase(key.toUpperCase()))
+                            .filter(fc -> fc.getSelectedValues() != null && !fc.getSelectedValues().isEmpty())
+                            .findAny()
+                            .orElse(null);
+            if(Objects.nonNull(filterConditions) && Objects.nonNull(filterConditions.getId())){
+                out.add(filterConditions);
+            }else {
+                out.add(
+                        ProductFilterConditions.builder()
+                                .id(key.toUpperCase())
+                                .displayText(CatalogueUtil.formatName(key))
+                                .type("selection")
+                                .values(new ArrayList<>(values)) // Available values from facets
+                                .selectedValues(new ArrayList<>()) // No selected values
+                                .build()
+                );
+            }
+        });
+
+
+        // Construct the output list only from the filters passed in the request.
+        if (filterRequest.getFilterConditions() != null && !filterRequest.getFilterConditions().isEmpty()) {
+            // READ SELECTED VALUES FROM FE
+            Map<String, List<String>> selectedFromRequestMap = getSelectedFromRequestMap(filterRequest);
+
+            // BUILD FINAL FILTERS
+            facetValues.forEach((key, values) -> {
+                List<String> selected = selectedFromRequestMap.getOrDefault(
+                        key.toLowerCase(),
+                        Collections.emptyList()
+                );
+                out.forEach(productFilterConditions -> {
+                    if (productFilterConditions.getId().equalsIgnoreCase(key)) {
+                        productFilterConditions.setSelectedValues(selected);
+                    }
+                });
+            });
+        }
+        return out;
     }
 }
