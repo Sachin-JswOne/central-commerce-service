@@ -2,6 +2,7 @@ package com.jswone.commerce.core.service.impl;
 
 import com.jswone.commerce.core.config.CommerceValueConfig;
 import com.jswone.commerce.core.constants.CacheNames;
+import com.jswone.commerce.core.exceptions.CentralCommerceServiceException;
 import com.jswone.commerce.core.rest.CentralCatalogueClient;
 import com.jswone.commerce.core.service.LocationMasterService;
 import lombok.RequiredArgsConstructor;
@@ -134,7 +135,7 @@ public class LocationMasterServiceImpl implements LocationMasterService {
         Cache cache = cacheManager.getCache(cacheName);
         if (cache == null) {
             log.error("Location cache '{}' not found in CacheManager", cacheName);
-            throw new IllegalStateException("Cache not configured: " + cacheName);
+            throw new CentralCommerceServiceException("Cache not configured: " + cacheName);
         }
         return cache;
     }
