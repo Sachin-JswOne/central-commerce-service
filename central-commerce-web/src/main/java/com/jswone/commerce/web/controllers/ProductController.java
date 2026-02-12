@@ -4,6 +4,10 @@ import com.jswone.commerce.core.model.ApiResponse;
 import com.jswone.commerce.core.model.centralCatalogue.ProductSlug;
 import com.jswone.commerce.core.model.request.ProductSkuRequest;
 import com.jswone.commerce.core.model.response.SkuInfo;
+import com.jswone.commerce.core.model.seo.SeoContext;
+import com.jswone.commerce.core.enums.seo.SeoEntityType;
+import com.jswone.commerce.core.exceptions.CentralCommerceServiceException;
+import com.jswone.commerce.core.resolver.SeoContextResolver;
 import com.jswone.commerce.core.service.ProductService;
 import com.jswone.commerce.core.util.ApiResponseUtil;
 import jakarta.validation.Valid;
@@ -15,7 +19,7 @@ import org.springframework.web.bind.annotation.*;
 
 @RestController
 @Slf4j
-public class ProductController implements CentralBaseController{
+public class ProductController implements CentralBaseController {
     private final ProductService productService;
 
     public ProductController(ProductService productService) {
@@ -30,12 +34,16 @@ public class ProductController implements CentralBaseController{
         return ApiResponseUtil.createSuccessResponse(skuInfo, HttpStatus.OK);
     }
 
-    @GetMapping(value = "/product/slug/{slugId}", produces = MediaType.APPLICATION_JSON_VALUE)
-    public ApiResponse<ProductSlug> getProductFromSlug(@PathVariable String slugId,
-                                                       @RequestParam(defaultValue = "msme") String storeFront) {
-        log.debug("Received request to find product slug :{} ", slugId);
-        ProductSlug productSlug = productService.getProductFromSlug(slugId, storeFront);
 
-        return ApiResponseUtil.createSuccessResponse(productSlug, HttpStatus.OK);
+    @GetMapping(value = "/product/slug/{*slugPath}", produces = MediaType.APPLICATION_JSON_VALUE)
+    public ApiResponse<ProductSlug> getProductFromSlug(
+            @PathVariable String slugPath,
+            @RequestParam(defaultValue = "msme") String storeFront) {
+
+        log.debug("Received request to find product slug: {}", slugPath);
+
+        return ApiResponseUtil.createSuccessResponse(
+                productService.getProductFromSlug(slugPath, storeFront),
+                HttpStatus.OK);
     }
 }

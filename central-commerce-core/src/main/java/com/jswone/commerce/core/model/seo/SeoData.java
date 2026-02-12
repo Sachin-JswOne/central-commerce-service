@@ -15,5 +15,5 @@ import java.util.Map;
 public class SeoData {
     private final String title; // Product title or Category title
     private final String image; // Product/Category/Brand image for og:image
-    private final Map<String, String> defaultSelectedAttributes; // Default variant attributes
+    private final Map<String, Object> variantSpec; // Variant specifications (length, width, thickness, etc.)
 }

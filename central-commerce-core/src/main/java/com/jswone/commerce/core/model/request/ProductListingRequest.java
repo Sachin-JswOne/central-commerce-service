@@ -25,6 +25,8 @@ public class ProductListingRequest implements FilterRequestProvider {
 
     private String categoryId;
 
+    private String location;
+
     private String slug;
 
     /** Current applied or available filters from the FE */

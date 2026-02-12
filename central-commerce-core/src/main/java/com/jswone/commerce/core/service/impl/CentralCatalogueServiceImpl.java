@@ -11,7 +11,9 @@ import com.jswone.commerce.core.model.response.centralCatalogue.ProductBulkRespo
 import com.jswone.commerce.core.model.response.centralCatalogue.ProductListingCatalogueResponse;
 import com.jswone.commerce.core.model.response.centralCatalogue.ProductSearchResponse;
 import com.jswone.commerce.core.model.response.search.SearchResponse;
+import com.jswone.commerce.core.model.seo.SeoContext;
 import com.jswone.commerce.core.publisher.recentSearch.UserSearchLogsItemPublisher;
+import com.jswone.commerce.core.resolver.SeoContextResolver;
 import com.jswone.commerce.core.rest.CentralCatalogueClient;
 import com.jswone.commerce.core.service.CentralCatalogueService;
 import com.jswone.commerce.core.util.CatalogueUtil;
@@ -40,13 +42,20 @@ public class CentralCatalogueServiceImpl implements CentralCatalogueService {
     private final CatalogueConverter catalogueConverter;
     private final CatalogueValidator catalogueValidator;
     private final UserSearchLogsItemPublisher userSearchLogsItemPublisher;
+    private final SeoContextResolver seoContextResolver;
     private final ExecutorService executorService = Executors.newFixedThreadPool(10);
 
-    public CentralCatalogueServiceImpl(CentralCatalogueClient centralCatalogueClient, CatalogueConverter catalogueConverter, CatalogueValidator catalogueValidator, UserSearchLogsItemPublisher userSearchLogsItemPublisher) {
+    public CentralCatalogueServiceImpl(
+            CentralCatalogueClient centralCatalogueClient,
+            CatalogueConverter catalogueConverter,
+            CatalogueValidator catalogueValidator,
+            UserSearchLogsItemPublisher userSearchLogsItemPublisher,
+            SeoContextResolver seoContextResolver) {
         this.centralCatalogueClient = centralCatalogueClient;
         this.catalogueConverter = catalogueConverter;
         this.catalogueValidator = catalogueValidator;
         this.userSearchLogsItemPublisher = userSearchLogsItemPublisher;
+        this.seoContextResolver = seoContextResolver;
     }
 
     @Override
@@ -55,7 +64,8 @@ public class CentralCatalogueServiceImpl implements CentralCatalogueService {
         ProductSearchResponse productSearchResponse = centralCatalogueClient.genericSearch(searchRequest);
         userSearchLogsItemPublisher.publish(productSearchResponse, searchRequest);
         ProductSearchResponse facetsResponse = centralCatalogueClient.genericSearchFacetsOnly(searchRequest);
-        return catalogueConverter.convertGenericSearchToSearchResponse(productSearchResponse, facetsResponse, searchRequest);
+        return catalogueConverter.convertGenericSearchToSearchResponse(productSearchResponse, facetsResponse,
+                searchRequest);
     }
 
     @Override
@@ -82,49 +92,83 @@ public class CentralCatalogueServiceImpl implements CentralCatalogueService {
     public ProductListingResponse productListing(ProductListingRequest productListingRequest) {
         catalogueValidator.validateProductListingRequest(productListingRequest);
 
-        if (StringUtils.isBlank(productListingRequest.getCategoryId()) && StringUtils.isBlank(productListingRequest.getSlug())) {
-            throw new CentralCommerceServiceException("Either categoryId or slug must be provided", HttpStatus.BAD_REQUEST);
+        if (StringUtils.isBlank(productListingRequest.getCategoryId())
+                && StringUtils.isBlank(productListingRequest.getSlug())) {
+            throw new CentralCommerceServiceException("Either categoryId or slug must be provided",
+                    HttpStatus.BAD_REQUEST);
         }
-        if (StringUtils.isNotBlank(productListingRequest.getCategoryId()) && StringUtils.isNotBlank(productListingRequest.getSlug())) {
-            throw new CentralCommerceServiceException("Both categoryId and slug can not be provided together", HttpStatus.BAD_REQUEST);
+        if (StringUtils.isNotBlank(productListingRequest.getCategoryId())
+                && StringUtils.isNotBlank(productListingRequest.getSlug())) {
+            throw new CentralCommerceServiceException("Both categoryId and slug can not be provided together",
+                    HttpStatus.BAD_REQUEST);
         }
-        log.info("Processing product listing for identifier: {}",
-                StringUtils.isNotBlank(productListingRequest.getCategoryId()) ? productListingRequest.getCategoryId() : productListingRequest.getSlug());
 
-        ProductListingCatalogueResponse catalogueResponse = centralCatalogueClient.productListing(productListingRequest);
-        ProductListingCatalogueResponse facetsResponse = centralCatalogueClient.productListingFacetsOnly(productListingRequest);
-        return catalogueConverter.convertCataloguePLPResponseToPLPResponse(catalogueResponse, facetsResponse, productListingRequest);
+        // Build SeoContext from slug and location in request body
+        if (StringUtils.isNotBlank(productListingRequest.getSlug())) {
+            // Build URL path from slug and location to resolve SeoContext
+            String urlPath = buildUrlPath(productListingRequest.getSlug(), productListingRequest.getLocation());
+            SeoContext seoContext = seoContextResolver.resolve(urlPath);
+
+            log.info("Resolved SeoContext for product listing: entityType={}, pageType={}, slug={}, location={}",
+                    seoContext.getEntityType(), seoContext.getPageType(), seoContext.getSlug(),
+                    seoContext.getLocation());
+
+            // You can now use seoContext for additional metadata or validation
+            // For example, you might want to enrich the request or log additional context
+        }
+
+        log.info("Processing product listing for identifier: {}",
+                StringUtils.isNotBlank(productListingRequest.getCategoryId()) ? productListingRequest.getCategoryId()
+                        : productListingRequest.getSlug());
+
+        ProductListingCatalogueResponse catalogueResponse = centralCatalogueClient
+                .productListing(productListingRequest);
+        ProductListingCatalogueResponse facetsResponse = centralCatalogueClient
+                .productListingFacetsOnly(productListingRequest);
+        return catalogueConverter.convertCataloguePLPResponseToPLPResponse(catalogueResponse, facetsResponse,
+                productListingRequest);
+    }
+
+    /**
+     * Build URL path from slug and location for SeoContext resolution
+     * Uses /category/ pattern for product listing pages
+     */
+    private String buildUrlPath(String slug, String location) {
+        if (StringUtils.isNotBlank(location)) {
+            // If location is provided, build full URL: /category/{location}/{slug}
+            return String.format("/category/%s/%s", location, slug);
+        } else {
+            // If no location, just use slug: /category/{slug}
+            return String.format("/category/%s", slug);
+        }
     }
 
     @Override
     public Map<String, ProductListingResponse> productListingBulk(
             List<String> slugs) {
 
-        List<CompletableFuture<ProductListingResponse>> futures =
-                slugs.stream()
-                        .map(
-                                slug ->
-                                        CompletableFuture.supplyAsync(
-                                                        () -> {
-                                                            ProductListingRequest request =
-                                                                    new ProductListingRequest();
-                                                            request.setSlug(slug);
-                                                            return productListing(request);
-                                                        },
-                                                        executorService)
-                                                .handle(
-                                                        (result, ex) -> {
-                                                            if (ex != null) {
-                                                                log.error(
-                                                                        "Error occurred while fetching products for slug: {}",
-                                                                        slug,
-                                                                        ex);
-                                                                result = new ProductListingResponse();
-                                                            }
-                                                            result.setCategoryId(slug);
-                                                            return result; // recover and continue
-                                                        }))
-                        .toList();
+        List<CompletableFuture<ProductListingResponse>> futures = slugs.stream()
+                .map(
+                        slug -> CompletableFuture.supplyAsync(
+                                () -> {
+                                    ProductListingRequest request = new ProductListingRequest();
+                                    request.setSlug(slug);
+                                    return productListing(request);
+                                },
+                                executorService)
+                                .handle(
+                                        (result, ex) -> {
+                                            if (ex != null) {
+                                                log.error(
+                                                        "Error occurred while fetching products for slug: {}",
+                                                        slug,
+                                                        ex);
+                                                result = new ProductListingResponse();
+                                            }
+                                            result.setCategoryId(slug);
+                                            return result; // recover and continue
+                                        }))
+                .toList();
         // Wait for all tasks to complete (same as reference)
         return futures.stream()
                 .map(CompletableFuture::join)
@@ -133,7 +177,6 @@ public class CentralCatalogueServiceImpl implements CentralCatalogueService {
                                 ProductListingResponse::getCategoryId,
                                 Function.identity()));
     }
-
 
     @Override
     public ProductBulkResponse fetchProductsByProductMMIDs(Set<String> productMMIDList) {
@@ -146,8 +189,7 @@ public class CentralCatalogueServiceImpl implements CentralCatalogueService {
                 productMMIDList.size());
 
         try {
-            ProductBulkRequest request =
-                    new ProductBulkRequest(productMMIDList, STOREFRONT_MSME, LOCALE_EN_US);
+            ProductBulkRequest request = new ProductBulkRequest(productMMIDList, STOREFRONT_MSME, LOCALE_EN_US);
             return centralCatalogueClient.bulkMMIDResponse(request);
         } catch (Exception e) {
             log.error("Central catalogue call failed (client retries already attempted): {}",

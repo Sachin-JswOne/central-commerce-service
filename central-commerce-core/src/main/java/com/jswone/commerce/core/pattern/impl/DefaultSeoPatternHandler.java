@@ -37,142 +37,6 @@ public class DefaultSeoPatternHandler implements SeoPatternHandler {
     private final CentralCatalogueClient catalogueClient;
     private final SeoUrlProperties seoUrlProperties;
 
-    @Override
-    public SeoData fetchData(SeoContext context) {
-
-        if (context.getOperationType() == SeoOperationType.URL_GENERATION) {
-            return null;
-        }
-
-        try {
-            String title = null;
-            String image = null;
-            Map<String, String> defaultSelectedAttributes = null;
-
-            if (context.getEntityType() == SeoEntityType.CATEGORY
-                    && context.getCategoryId() != null
-                    && context.getSlug() != null) {
-
-                CatalogueBreadCrumbData breadcrumb = catalogueClient.getBreadcrumb(
-                        context.getCategoryId(),
-                        context.getSlug());
-
-                if (breadcrumb != null) {
-
-                    var matchedBread = breadcrumb.getBread_crumb_details()
-                            .stream()
-                            .filter(bread -> bread.getAttributes() != null
-                                    && bread.getAttributes().getSlug() != null
-                                    && bread.getAttributes().getSlug()
-                                            .equalsIgnoreCase(context.getSlug()))
-                            .findFirst()
-                            .orElse(null);
-
-                    if (matchedBread != null) {
-                        title = matchedBread.getAttributes().getCategory_title();
-
-                        if (matchedBread.getAttributes().getMeta_image() != null) {
-                            image = matchedBread.getAttributes()
-                                    .getMeta_image()
-                                    .getPublic_url();
-                        }
-                    }
-                }
-            }
-
-            else if (context.getEntityType() == SeoEntityType.PRODUCT
-                    && context.getSlug() != null) {
-
-                Product product = fetchProductBySlug(context.getSlug());
-
-                if (product != null && product.getAttributes() != null) {
-                    title = CatalogueUtil.str(
-                            product.getAttributes().get(SeoConstants.ATTR_PRODUCT_TITLE));
-                    image = CatalogueUtil.extractImage(product);
-                }
-            }
-
-            else if (context.getEntityType() == SeoEntityType.VARIANT
-                    && context.getVariantMmid() != null) {
-
-                Product product = fetchProductByVariantMmid(
-                        context.getVariantMmid());
-
-                if (product != null && product.getAttributes() != null) {
-                    title = CatalogueUtil.str(
-                            product.getAttributes().get(SeoConstants.ATTR_PRODUCT_TITLE));
-
-                    // Find the matched variant
-                    if (product.getVariants() != null) {
-                        var matchedVariant = product.getVariants().stream()
-                                .filter(v -> context.getVariantMmid().equals(v.getVariantMmid()))
-                                .findFirst()
-                                .orElse(null);
-
-                        if (matchedVariant != null) {
-                            image = CatalogueUtil.extractImage(product);
-                            // TODO: Extract defaultSelectedAttributes from matchedVariant
-                        }
-                    }
-                }
-            }
-
-            return SeoData.builder()
-                    .title(title)
-                    .image(image)
-                    .defaultSelectedAttributes(defaultSelectedAttributes)
-                    .build();
-
-        } catch (Exception e) {
-            log.error(
-                    "SEO data fetch failed | entityType={} | slug={} | categoryId={} | variantMmid={}",
-                    context.getEntityType(),
-                    context.getSlug(),
-                    context.getCategoryId(),
-                    context.getVariantMmid(),
-                    e);
-            return null;
-        }
-    }
-
-    private Product fetchProductBySlug(String slug) {
-
-        ProductBulkResponse response = catalogueClient.getProductFromSlug(slug, STOREFRONT_MSME);
-
-        if (response == null || response.getProducts().isEmpty()) {
-            return null;
-        }
-
-        return response.getProducts().getFirst();
-    }
-
-    private Product fetchProductByVariantMmid(String variantMmid) {
-
-        String productMmid = extractProductMmid(variantMmid);
-
-        ProductBulkResponse response = catalogueClient.bulkMMIDResponse(
-                new ProductBulkRequest(Set.of(productMmid),
-                        STOREFRONT_MSME,
-                        LOCALE_EN_US));
-
-        if (response == null || response.getProducts().isEmpty()) {
-            return null;
-        }
-
-        return response.getProducts().getFirst();
-    }
-
-    private String extractProductMmid(String variantMmid) {
-
-        String[] parts = variantMmid.split("-");
-
-        if (parts.length < 2) {
-            throw new CentralCommerceServiceException("Invalid variant MMID: " + variantMmid);
-        }
-
-        return parts[0] + "-" + parts[1];
-    }
-
     /**
      * Get title from fetched SeoData
      */
@@ -241,53 +105,71 @@ public class DefaultSeoPatternHandler implements SeoPatternHandler {
             case CATEGORY:
                 title = buildFromTemplate(
                         seoUrlProperties.getMetadata().getCategory().getTitle(),
-                        entityTitle, location, data, ctx);
+                        entityTitle, location, ctx);
                 description = buildFromTemplate(
                         seoUrlProperties.getMetadata().getCategory().getDescription(),
-                        entityTitle, location, data, ctx);
+                        entityTitle, location, ctx);
                 break;
 
             case VARIANT:
                 String variantAttrs = extractVariantAttributes(data);
                 title = buildFromTemplate(
                         seoUrlProperties.getMetadata().getVariant().getTitle(),
-                        entityTitle, location, data, ctx)
-                        .replace(SeoConstants.PLACEHOLDER_VARIANT_ATTRIBUTES, variantAttrs);
+                        entityTitle, location, ctx);
+
+                // Only add variant attributes to description if they exist
                 description = buildFromTemplate(
                         seoUrlProperties.getMetadata().getVariant().getDescription(),
-                        entityTitle, location, data, ctx)
-                        .replace(SeoConstants.PLACEHOLDER_VARIANT_ATTRIBUTES, variantAttrs);
+                        entityTitle, location, ctx);
+
+                // Replace placeholder - template already has parentheses if needed
+                if (variantAttrs != null && !variantAttrs.isEmpty()) {
+                    title = title.replace(SeoConstants.PLACEHOLDER_VARIANT_ATTRIBUTES, variantAttrs);
+                    description = description.replace(SeoConstants.PLACEHOLDER_VARIANT_ATTRIBUTES, variantAttrs);
+                } else {
+                    // Remove placeholder completely if no attributes (including any surrounding
+                    // parentheses)
+                    title = title.replace(SeoConstants.PLACEHOLDER_VARIANT_ATTRIBUTES, "");
+                    description = description
+                            .replaceAll("\\(\\s*" + SeoConstants.PLACEHOLDER_VARIANT_ATTRIBUTES + "\\s*\\)", "")
+                            .replace(SeoConstants.PLACEHOLDER_VARIANT_ATTRIBUTES, "")
+                            .replaceAll("\\s+", " ")
+                            .trim();
+                }
                 break;
 
             case PRODUCT:
             default:
                 title = buildFromTemplate(
                         seoUrlProperties.getMetadata().getProduct().getTitle(),
-                        entityTitle, location, data, ctx);
+                        entityTitle, location, ctx);
                 description = buildFromTemplate(
                         seoUrlProperties.getMetadata().getProduct().getDescription(),
-                        entityTitle, location, data, ctx);
+                        entityTitle, location, ctx);
                 break;
         }
 
-        String canonical = templateResolver.productBase();
+        String canonical = generateUrl(ctx).getUrl();
         String ogImage = getImage(data);
 
-        return new SeoMeta(
-                title,
-                description,
-                canonical,
-                title,
-                ogType(ctx),
-                canonical,
-                ogImage,
-                description);
+        return SeoMeta.builder()
+                .canonical(canonical)
+                .title(title)
+                .description(description)
+                .ogImage(ogImage)
+                .ogUrl(canonical)
+                .description(description)
+                .ogImage(ogImage)
+                .ogDescription(description)
+                .ogTitle(title)
+                .ogType(ctx.getEntityType().name())
+                .build();
     }
 
     /**
      * Build metadata string from template by replacing placeholders
      */
-    private String buildFromTemplate(String template, String entityTitle, String location, SeoData data,
+    private String buildFromTemplate(String template, String entityTitle, String location,
             SeoContext ctx) {
         if (template == null || template.isEmpty()) {
             return entityTitle;
@@ -303,11 +185,65 @@ public class DefaultSeoPatternHandler implements SeoPatternHandler {
 
     /**
      * Extract variant attributes as a formatted string for metadata
-     * TODO: Enhance with actual variant attribute extraction when available
+     * Formats attributes like: "Length 3000mm, Thickness 16mm, Width 1500mm"
      */
     private String extractVariantAttributes(SeoData data) {
+        if (data == null || data.getVariantSpec() == null || data.getVariantSpec().isEmpty()) {
+            return "";
+        }
 
-        return "";
+        Map<String, Object> variantSpec = data.getVariantSpec();
+        List<String> parts = new ArrayList<>();
+
+        // Common order for variant attributes
+        String[] preferredOrder = { "length", "thickness", "width", "diameter", "grade", "finish" };
+
+        for (String key : preferredOrder) {
+            if (variantSpec.containsKey(key)) {
+                Object value = variantSpec.get(key);
+                if (value != null) {
+                    String displayName = capitalize(key);
+                    String displayValue = formatValue(value);
+                    parts.add(displayName + " " + displayValue);
+                }
+            }
+        }
+
+        // Add any remaining attributes not in the preferred order
+        for (Map.Entry<String, Object> entry : variantSpec.entrySet()) {
+            String key = entry.getKey();
+            if (!Arrays.asList(preferredOrder).contains(key.toLowerCase()) && entry.getValue() != null) {
+                String displayName = capitalize(key);
+                String displayValue = formatValue(entry.getValue());
+                parts.add(displayName + " " + displayValue);
+            }
+        }
+
+        return String.join(", ", parts);
+    }
+
+    /**
+     * Format value - remove trailing .0 for whole numbers
+     */
+    private String formatValue(Object value) {
+        if (value instanceof Double) {
+            Double d = (Double) value;
+            if (d == d.intValue()) {
+                return String.valueOf(d.intValue());
+            }
+            return String.valueOf(d);
+        }
+        return String.valueOf(value);
+    }
+
+    /**
+     * Capitalize first letter of string
+     */
+    private String capitalize(String str) {
+        if (str == null || str.isEmpty()) {
+            return str;
+        }
+        return str.substring(0, 1).toUpperCase() + str.substring(1).toLowerCase();
     }
 
     /**

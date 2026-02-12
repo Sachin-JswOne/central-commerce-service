@@ -1,7 +1,9 @@
 package com.jswone.commerce.core.util;
 
+import com.jswone.commerce.core.exceptions.CentralCommerceServiceException;
 import com.jswone.commerce.core.model.centralCatalogue.Product;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Component;
 
 import java.util.Map;
@@ -111,5 +113,58 @@ public class CatalogueUtil {
             chunks.add(chunk);
         }
         return chunks;
+    }
+
+    /**
+     * Extracts product MMID from variant MMID.
+     * Variant MMID format: {part1}-{part2}-{variantId}
+     * Product MMID format: {part1}-{part2}
+     *
+     * Example: "1000-10000-10000079" -> "1000-10000"
+     */
+    public static String extractProductMmid(String variantMmid) {
+        if (variantMmid == null || variantMmid.trim().isEmpty()) {
+            throw new CentralCommerceServiceException("Variant MMID cannot be null or empty", HttpStatus.BAD_REQUEST);
+        }
+
+        String[] parts = variantMmid.split("-");
+        if (parts.length < 2) {
+            throw new CentralCommerceServiceException(
+                    "Invalid variant MMID format: " + variantMmid + ". Expected format: {categoryId}-{ProductId}-{variantId}",
+                    HttpStatus.BAD_REQUEST);
+        }
+
+        return parts[0] + "-" + parts[1];
+    }
+
+    public static String formatSeoLocationNameToUpperCase(String input) {
+        if (input == null || input.trim().isEmpty()) {
+            return input;
+        }
+
+        return input
+                .trim()
+                .replace("-", " ")
+                .toUpperCase();
+    }
+
+    public static String formatSeoLocationToTitleCase(String input) {
+        if (input == null || input.trim().isEmpty()) {
+            return input;
+        }
+
+        String[] words = input.trim().toLowerCase().split("-");
+
+        StringBuilder result = new StringBuilder();
+
+        for (String word : words) {
+            if (!word.isEmpty()) {
+                result.append(Character.toUpperCase(word.charAt(0)))
+                        .append(word.substring(1))
+                        .append(" ");
+            }
+        }
+
+        return result.toString().trim();
     }
 }

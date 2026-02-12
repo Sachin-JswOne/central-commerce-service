@@ -7,13 +7,12 @@ import com.jswone.commerce.core.model.request.BulkCategoryRequestDTO;
 import com.jswone.commerce.core.service.CatalogueCategoryService;
 import com.jswone.commerce.core.util.ApiResponseUtil;
 import jakarta.validation.Valid;
-import jakarta.validation.constraints.NotNull;
-import lombok.extern.log4j.Log4j2;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
-@Log4j2
+@Slf4j
 public class CatalogueCategoryController implements CentralBaseController {
 
   private final CatalogueCategoryService categoryService;

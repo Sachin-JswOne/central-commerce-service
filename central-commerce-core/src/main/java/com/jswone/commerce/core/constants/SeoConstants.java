@@ -59,4 +59,6 @@ public final class SeoConstants {
     public static final String SITEMAP_PRIORITY_HIGH = "1.0";
     public static final String SITEMAP_PRIORITY_MEDIUM = "0.8";
     public static final String SITEMAP_PRIORITY_LOW = "0.5";
+
+    public static final String PRODUCT_DETAIL = "product-detail/";
 }

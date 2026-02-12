@@ -2,6 +2,8 @@ package com.jswone.commerce.core.service;
 
 
 import com.jswone.commerce.core.model.seo.CategoryResponse;
+import com.jswone.commerce.core.model.seo.SeoContext;
+import com.jswone.commerce.core.model.seo.SeoData;
 import com.jswone.commerce.core.model.seo.SeoMeta;
 
 import java.util.List;
@@ -23,8 +25,6 @@ public interface SeoService {
      */
     List<CategoryResponse> generateSitemap();
 
-    /**
-     * Runtime SEO metadata resolution for SEO-friendly URLs.
-     */
-    SeoMeta resolveSeoMeta(String path, Map<String, String> pathVariables);
+
+    SeoMeta resolveSeoMeta(SeoContext seoContext, SeoData seoData);
 }
