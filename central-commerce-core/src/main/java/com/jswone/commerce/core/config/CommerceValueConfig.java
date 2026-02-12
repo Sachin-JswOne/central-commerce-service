@@ -204,4 +204,7 @@ public class CommerceValueConfig {
 
     @Value("${central.catalogue.admin.get.state.endpoint}")
     private String centralCatalogueAdminGetStateEndpoint;
+
+    @Value("${central.catalogue.admin.get.district.endpoint}")
+    private String centralCatalogueAdminGetDistrictEndpoint;
 }

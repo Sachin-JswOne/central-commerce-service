@@ -130,12 +130,7 @@ public class CatalogueCategoryServiceImpl implements CatalogueCategoryService {
         }
     }
 
-          log.info("Mapping Catalogue breadcrumb data to central commerce format");
-          return breadcrumbMapper.toBreadcrumbResponse(catalogueBreadcrumbResponse);
-      } catch (Exception ex) {
-          throw new CentralCommerceServiceException(ex.getMessage(), HttpStatus.BAD_REQUEST);
-      }
-  }
+
     private void enrichSeo(
             CatalogueBreadCrumbData response,
             SeoContext seoContext) {

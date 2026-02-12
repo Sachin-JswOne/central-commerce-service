@@ -74,7 +74,7 @@ class ProductServiceImplTest {
 
                 // Mock both resolve signatures - old (backward compatible) and new (with entity
                 // type)
-                lenient().when(seoContextResolver.resolve(any(String.class)))
+                lenient().when(seoContextResolver.resolve(any(String.class),any()))
                                 .thenReturn(SeoContext.builder().build());
                 lenient().when(seoContextResolver.resolve(any(String.class), any()))
                                 .thenReturn(SeoContext.builder().build());

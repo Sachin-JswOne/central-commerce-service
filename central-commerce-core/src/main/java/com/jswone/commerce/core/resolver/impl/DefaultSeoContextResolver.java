@@ -7,7 +7,9 @@ import com.jswone.commerce.core.enums.seo.SeoPageType;
 import com.jswone.commerce.core.exceptions.CentralCommerceServiceException;
 import com.jswone.commerce.core.model.seo.SeoContext;
 import com.jswone.commerce.core.resolver.SeoContextResolver;
+import com.jswone.commerce.core.service.LocationMasterService;
 import com.jswone.commerce.core.constants.SeoConstants;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
@@ -20,7 +22,10 @@ import java.util.Map;
  */
 @Slf4j
 @Component
+@RequiredArgsConstructor
 public class DefaultSeoContextResolver implements SeoContextResolver {
+
+    private final LocationMasterService locationMasterService;
 
     /**
      * Resolves with entity type hint - cleaner approach without prefix
@@ -43,29 +48,7 @@ public class DefaultSeoContextResolver implements SeoContextResolver {
         }
     }
 
-    /**
-     * Backward compatible resolve - uses prefix detection.
-     */
-    @Override
-    public SeoContext resolve(String slugOrUrl) {
 
-        String normalized = normalize(slugOrUrl);
-
-        if (normalized.startsWith("brand/")) {
-            return resolveBrandUrl(normalized, false);
-        }
-
-        if (normalized.startsWith("category/")) {
-            return resolveCategoryUrl(normalized, false);
-        }
-
-        if (normalized.startsWith("product-detail/")) {
-            return resolveProductUrl(normalized, false);
-        }
-
-        // If no prefix → treat as simple product slug
-        return resolveSimpleSlug(normalized);
-    }
 
     private String normalize(String input) {
         if (input == null || input.trim().isEmpty()) {
@@ -87,37 +70,55 @@ public class DefaultSeoContextResolver implements SeoContextResolver {
         return normalized;
     }
 
-    /*
-     * BRAND URL
-     * brand/{slug}
-     * brand/{location}/{slug}
-     * OR (prefixless): {slug} or {location}/{slug}
+    /**
+     * Validate location format and existence: must be lowercase letters with
+     * hyphens only,
+     * and must exist in the location master data.
+     * Valid examples: "mumbai", "new-delhi", "andhra-pradesh"
+     * Invalid examples: "Mumbai", "new_delhi", "123delhi", "new delhi"
+     * 
+     * @param location The location string to validate
+     * @throws CentralCommerceServiceException if location format is invalid or
+     *                                         doesn't exist
      */
-    private SeoContext resolveBrandUrl(String normalized, boolean prefixless) {
-        String[] parts = normalized.split("/");
-        int startIndex = prefixless ? 0 : 1; // Skip "brand/" if present
-
-        String slug = null;
-        String location = null;
-
-        if (parts.length == startIndex + 1) {
-            // {slug}
-            slug = parts[startIndex];
-        } else if (parts.length >= startIndex + 2) {
-            // {location}/{slug}
-            location = parts[startIndex];
-            slug = parts[startIndex + 1];
+    private void validateLocationFormat(String location) {
+        if (location == null || location.isEmpty()) {
+            return; // null/empty is valid (no location specified)
         }
 
-        return SeoContext.builder()
-                .entityType(SeoEntityType.CATEGORY)
-                .pageType(SeoPageType.PLP)
-                .categoryType(CategoryType.BRAND)
-                .slug(slug)
-                .location(location)
-                .operationType(SeoOperationType.METADATA_RESOLUTION)
-                .build();
+        // Pattern: lowercase letters and hyphens only, must start and end with letter
+        if (!location.matches("^[a-z]+(-[a-z]+)*$")) {
+            log.error("Malformed location in URL: {}", location);
+            throw new CentralCommerceServiceException(
+                    "The requested location in URL is malformed",
+                    org.springframework.http.HttpStatus.NOT_FOUND);
+        }
+
+        // Format normalized location for validation (hyphen to space, capitalize each
+        // word)
+        String normalizedLocation = formatSeoLocationNameToUpperCase(location);
+
+//         Validate against location master data
+        if (!locationMasterService.isValidSeoLocation(normalizedLocation)) {
+            log.warn("Location '{}' (normalized: '{}') not found in serviceable locations",
+                    location, normalizedLocation);
+            throw new CentralCommerceServiceException(
+                    "The requested location is not serviceable",
+                    org.springframework.http.HttpStatus.NOT_FOUND);
+        }
+
+        log.debug("Location '{}' validated successfully", location);
     }
+
+    /**
+     * Convert SEO URL location format (lowercase-with-hyphens) to uppercase format.
+     * Example: "new-delhi" -> "NEW DELHI"
+     */
+    private String formatSeoLocationNameToUpperCase(String seoLocation) {
+        return seoLocation.replace("-", " ").toUpperCase();
+    }
+
+
 
     /*
      * CATEGORY URL
@@ -140,6 +141,9 @@ public class DefaultSeoContextResolver implements SeoContextResolver {
             location = parts[startIndex];
             slug = parts[startIndex + 1];
         }
+
+        // Validate location format if present
+        validateLocationFormat(location);
 
         return SeoContext.builder()
                 .entityType(SeoEntityType.CATEGORY)
@@ -181,6 +185,9 @@ public class DefaultSeoContextResolver implements SeoContextResolver {
             slug = parts[startIndex + 1];
             mmid = parts[startIndex + 2];
         }
+
+        // Validate location format if present
+        validateLocationFormat(location);
 
         SeoEntityType entityType = mmid != null ? SeoEntityType.VARIANT : SeoEntityType.PRODUCT;
 

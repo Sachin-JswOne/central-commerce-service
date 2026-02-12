@@ -1,6 +1,7 @@
 package com.jswone.commerce.core.service.impl;
 
 import com.jswone.commerce.core.converters.CatalogueConverter;
+import com.jswone.commerce.core.enums.seo.SeoEntityType;
 import com.jswone.commerce.core.exceptions.CentralCommerceServiceException;
 import com.jswone.commerce.core.model.CategoryTreeResponse;
 import com.jswone.commerce.core.model.ImageMetadata;
@@ -55,8 +56,9 @@ public class CentralCatalogueServiceImpl implements CentralCatalogueService {
             CatalogueConverter catalogueConverter,
             CatalogueValidator catalogueValidator,
             UserSearchLogsItemPublisher userSearchLogsItemPublisher,
-            SeoContextResolver seoContextResolver) {
-    public CentralCatalogueServiceImpl(CentralCatalogueClient centralCatalogueClient, CatalogueConverter catalogueConverter, CatalogueValidator catalogueValidator, UserSearchLogsItemPublisher userSearchLogsItemPublisher, CatalogueCategoryService categoryService) {
+            SeoContextResolver seoContextResolver,
+            CatalogueCategoryService categoryService
+    ) {
         this.centralCatalogueClient = centralCatalogueClient;
         this.catalogueConverter = catalogueConverter;
         this.catalogueValidator = catalogueValidator;
@@ -114,7 +116,7 @@ public class CentralCatalogueServiceImpl implements CentralCatalogueService {
         if (StringUtils.isNotBlank(productListingRequest.getSlug())) {
             // Build URL path from slug and location to resolve SeoContext
             String urlPath = buildUrlPath(productListingRequest.getSlug(), productListingRequest.getLocation());
-            SeoContext seoContext = seoContextResolver.resolve(urlPath);
+            SeoContext seoContext = seoContextResolver.resolve(urlPath, SeoEntityType.CATEGORY);
 
             log.info("Resolved SeoContext for product listing: entityType={}, pageType={}, slug={}, location={}",
                     seoContext.getEntityType(), seoContext.getPageType(), seoContext.getSlug(),
@@ -156,12 +158,6 @@ public class CentralCatalogueServiceImpl implements CentralCatalogueService {
 //        }
 //        return catalogueConverter.convertCataloguePLPResponseToPLPResponse(catalogueResponse, productListingRequest, categoryTreeResponse, categoryFilterConditions);
         return catalogueConverter.convertCataloguePLPResponseToPLPResponse(catalogueResponse,productListingRequest);
-        ProductListingCatalogueResponse catalogueResponse = centralCatalogueClient
-                .productListing(productListingRequest);
-        ProductListingCatalogueResponse facetsResponse = centralCatalogueClient
-                .productListingFacetsOnly(productListingRequest);
-        return catalogueConverter.convertCataloguePLPResponseToPLPResponse(catalogueResponse, facetsResponse,
-                productListingRequest);
     }
 
     /**

@@ -41,5 +41,5 @@ public interface CentralCatalogueClient {
 
     List<Product> getAllProductsForCategoryId(String categoryId, String storefront);
 
-    Map<String,String> getStates();
+    Map<String, Set<String>> getAllServiceableLocations();
 }

@@ -41,13 +41,14 @@ import java.util.Set;
 @Configuration
 @RequiredArgsConstructor
 public class CacheConfig {
-    private static final Set<Pair<String, Duration>> cache =
-            Set.of(Pair.of(CacheNames.BUY_AGAIN_PRODUCTS_CACHE_PREFIX_V2, duration(1440L)),
-                    Pair.of(CacheNames.BUY_AGAIN_PRODUCTS_CACHE_PREFIX, duration(1440L)),
-                    Pair.of(CacheNames.CLEAR_RECENT_SEARCHES_CACHE_PREFIX, null),
-                    Pair.of(CacheNames.BARRED_TRENDING_SEARCHES_CACHE_PREFIX, null),
-                    Pair.of(CacheNames.DEDUPE_TRENDING_SEARCHES_CACHE_PREFIX, duration(43200L)),
-                    Pair.of(CacheNames.SEO_PRODUCT_TYPES, duration(1440L)));
+    private static final Set<Pair<String, Duration>> cache = Set.of(
+            Pair.of(CacheNames.BUY_AGAIN_PRODUCTS_CACHE_PREFIX_V2, duration(1440L)),
+            Pair.of(CacheNames.BUY_AGAIN_PRODUCTS_CACHE_PREFIX, duration(1440L)),
+            Pair.of(CacheNames.CLEAR_RECENT_SEARCHES_CACHE_PREFIX, null),
+            Pair.of(CacheNames.BARRED_TRENDING_SEARCHES_CACHE_PREFIX, null),
+            Pair.of(CacheNames.DEDUPE_TRENDING_SEARCHES_CACHE_PREFIX, duration(43200L)),
+            Pair.of(CacheNames.LOCATION_MASTER_ALL, Duration.ZERO),
+            Pair.of(CacheNames.SEO_PRODUCT_TYPES, duration(1440L)));
 
     private final CommerceValueConfig commerceValueConfig;
 
@@ -107,7 +108,8 @@ public class CacheConfig {
     }
 
     private RedisCacheConfiguration getConfig(Duration duration) {
-        if (Objects.isNull(duration)) return getDefaultCacheConfig();
+        if (Objects.isNull(duration))
+            return getDefaultCacheConfig();
 
         return getDefaultCacheConfig().entryTtl(duration);
     }
@@ -117,11 +119,9 @@ public class CacheConfig {
         return RedisCacheConfiguration.defaultCacheConfig()
                 .disableCachingNullValues() // Don't cache null values
                 .serializeValuesWith(
-                        RedisSerializationContext.SerializationPair.fromSerializer(jsonSerializer)
-                )
+                        RedisSerializationContext.SerializationPair.fromSerializer(jsonSerializer))
                 .serializeKeysWith(
-                        RedisSerializationContext.SerializationPair.fromSerializer(new StringRedisSerializer())
-                )
+                        RedisSerializationContext.SerializationPair.fromSerializer(new StringRedisSerializer()))
                 .computePrefixWith(cacheName -> cacheName.concat(":"));
     }
 
@@ -133,8 +133,8 @@ public class CacheConfig {
         redisConfig.setUsername(redisProperties.getUsername());
         redisConfig.setPassword(redisProperties.getPassword());
 
-        LettuceClientConfiguration.LettuceClientConfigurationBuilder lettuceClientConfigurationBuilder =
-                LettuceClientConfiguration.builder();
+        LettuceClientConfiguration.LettuceClientConfigurationBuilder lettuceClientConfigurationBuilder = LettuceClientConfiguration
+                .builder();
 
         SslOptions sslOptions = null;
         try {
@@ -147,8 +147,11 @@ public class CacheConfig {
                 log.info("Fetched PEM certificate from secret manager for Redis connection.");
             }
             sslOptions = SslOptions.builder().sslContext(CacheClientConfig.createTrustStoreSSLContext(pem)).build();
-//            sslOptions = SslOptions.builder().sslContext(CacheClientConfig.createTrustStoreSSLContext(commerceValueConfig.getRedisCacheProfile().equals("qa") ?
-//                    redisConfiguration.getPemContentFromClassPath() : redisConfiguration.getPemContent())).build();
+            // sslOptions =
+            // SslOptions.builder().sslContext(CacheClientConfig.createTrustStoreSSLContext(commerceValueConfig.getRedisCacheProfile().equals("qa")
+            // ?
+            // redisConfiguration.getPemContentFromClassPath() :
+            // redisConfiguration.getPemContent())).build();
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
