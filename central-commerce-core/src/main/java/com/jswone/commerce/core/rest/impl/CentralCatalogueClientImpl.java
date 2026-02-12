@@ -27,6 +27,7 @@ import com.jswone.commerce.core.rest.CentralCatalogueClient;
 import com.jswone.commerce.core.util.RestUtil;
 import com.jswone.commerce.core.util.RetryUtil;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -48,6 +49,8 @@ import static com.jswone.commerce.core.constants.GenericConstants.*;
 import static com.jswone.commerce.core.constants.RestConstants.CLIENT_ID;
 import static com.jswone.commerce.core.constants.RestConstants.X_API_KEY;
 import static com.jswone.commerce.core.util.CatalogueUtil.extractErrorMessage;
+import static com.jswone.commerce.core.util.CatalogueUtil.formatSeoLocationNameToUpperCase;
+import static org.apache.commons.lang3.StringUtils.EMPTY;
 import static org.apache.http.HttpHeaders.CONTENT_TYPE;
 
 @Service
@@ -86,7 +89,7 @@ public class CentralCatalogueClientImpl implements CentralCatalogueClient {
                     .storefront(searchRequest.getStorefront())
                     .locale("en-US")
                     .facets_only(false)
-                    .filters(extractFilters(searchRequest))  // method below
+                    .filters(extractFilters(searchRequest,EMPTY))  // method below
                     .build();
 
             String url = commerceValueConfig.getCentralCatalogueBaseUrl()
@@ -176,7 +179,7 @@ public class CentralCatalogueClientImpl implements CentralCatalogueClient {
         }
     }
 
-    private Map<String, List<String>> extractFilters(FilterRequestProvider filterRequestProvider) {
+    private Map<String, List<String>> extractFilters(FilterRequestProvider filterRequestProvider, String location) {
 
         if (filterRequestProvider.getFilterConditions() == null) {
             return Collections.emptyMap();
@@ -196,6 +199,17 @@ public class CentralCatalogueClientImpl implements CentralCatalogueClient {
                     values
             );
         });
+
+        //Adding location filter to filter products based on location
+        if(StringUtils.isNotEmpty(location)) {
+                Map<String,String> states = getStates();
+                String formattedName = formatSeoLocationNameToUpperCase(location);
+                if(states.containsKey(formattedName)) {
+                        filters.put("state",List.of(formattedName));
+                }else{
+                        filters.put("district",List.of(formattedName));
+                }
+        }
 
         return filters;
     }
@@ -442,16 +456,18 @@ public class CentralCatalogueClientImpl implements CentralCatalogueClient {
     public ProductListingCatalogueResponse productListing(ProductListingRequest productListingRequest) {
         try {
 
-            CentralCatalogueProductListingRequest ccplRequest = CentralCatalogueProductListingRequest.builder()
-                    .page(productListingRequest.getOffSet())
-                    .size(productListingRequest.getLimit())
-                    .category_id(productListingRequest.getCategoryId())
-                    .slug(productListingRequest.getSlug())
-                    .storefront(productListingRequest.getStorefront())
-                    .facets_only(false)
-                    .locale("en-US")
-                    .filters(extractFilters(productListingRequest))
-                    .build();
+                        CentralCatalogueProductListingRequest ccplRequest = CentralCatalogueProductListingRequest
+                                        .builder()
+                                        .page(productListingRequest.getOffSet())
+                                        .size(productListingRequest.getLimit())
+                                        .category_id(productListingRequest.getCategoryId())
+                                        .slug(productListingRequest.getSlug())
+                                        .storefront(productListingRequest.getStorefront())
+                                        .facets_only(false)
+                                        .locale("en-US")
+                                        .filters(extractFilters(productListingRequest,
+                                                        productListingRequest.getLocation()))
+                                        .build();
 
             String url = commerceValueConfig.getCentralCatalogueBaseUrl()
                     + commerceValueConfig.getCentralCatalogueProductListingEndpoint();
@@ -646,11 +662,11 @@ public class CentralCatalogueClientImpl implements CentralCatalogueClient {
                                 CompletableFuture<List<Product>> pageFuture = CompletableFuture.supplyAsync(() -> {
                                         try {
                                                 return fetchProductPage(categoryId, storefront, currentPage, pageSize,
-                                                        url,
-                                                        headers);
+                                                                url,
+                                                                headers);
                                         } catch (Exception e) {
                                                 log.error("Error fetching page {} for category {}: {}",
-                                                        currentPage, categoryId, e.getMessage(), e);
+                                                                currentPage, categoryId, e.getMessage(), e);
                                                 return List.of();
                                         }
                                 }, paginationExecutor);
@@ -728,5 +744,68 @@ public class CentralCatalogueClientImpl implements CentralCatalogueClient {
                         body.getProducts().size(), page, categoryId);
 
                 return body.getProducts();
+        }
+
+        @Override
+        public Map<String, String> getStates() {
+                try {
+                        log.info("Fetching available states from material master service");
+
+                        String url = commerceValueConfig.getCentralCatalogueBaseUrl()
+                                + commerceValueConfig.getCentralCatalogueAdminGetStateEndpoint();
+
+                        Map<String, String> headers = Map.of(
+                                X_API_KEY, commerceValueConfig.getCentralCatalogueAdminApiKey(),
+                                CLIENT_ID, commerceValueConfig.getCentralCatalogueAdminClientId());
+
+                        log.info("Calling Material Master Get State API: {}", url);
+
+                        ResponseEntity<com.jswone.commerce.core.model.response.centralCatalogue.StateListResponse> response =
+                                RetryUtil.retryHttpCalls(
+                                        () -> restUtil.makeRestCall(
+                                                url,
+                                                null,
+                                                HttpMethod.GET,
+                                                com.jswone.commerce.core.model.response.centralCatalogue.StateListResponse.class,
+                                                headers),
+                                        0,
+                                        3,
+                                        100,
+                                        "MATERIAL_MASTER_GET_STATE");
+
+                        if (response.getBody() == null || response.getBody().getData() == null) {
+                                log.warn("Empty response from get-state API");
+                                return Collections.emptyMap();
+                        }
+
+                        List<String> states = response.getBody().getData();
+
+                        Map<String, String> stateMap = states.stream()
+                                .filter(Objects::nonNull)
+                                .collect(Collectors.toMap(
+                                        state -> state,
+                                        state -> state
+                                ));
+
+                        log.info("Successfully fetched {} states", stateMap.size());
+
+                        return stateMap;
+
+                } catch (HttpClientErrorException | HttpServerErrorException ex) {
+                        log.error("Http error while calling Material Master get-state API: {}",
+                                ex.getMessage(), ex);
+
+                        throw new CentralCatalogueServiceException(
+                                "Error calling Material Master get-state API: " + ex.getMessage(),
+                                HttpStatus.valueOf(ex.getStatusCode().value()));
+
+                } catch (Exception ex) {
+                        log.error("Exception occurred while calling Material Master get-state API: {}",
+                                ex.getMessage(), ex);
+
+                        throw new CentralCatalogueServiceException(
+                                "Exception occurred while calling Material Master get-state API",
+                                HttpStatus.INTERNAL_SERVER_ERROR);
+                }
         }
 }

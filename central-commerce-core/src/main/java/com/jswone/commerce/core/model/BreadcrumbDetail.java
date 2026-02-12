@@ -1,5 +1,6 @@
 package com.jswone.commerce.core.model;
 
+import com.jswone.commerce.core.model.seo.SeoMeta;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -21,4 +22,5 @@ public class BreadcrumbDetail {
   private String faqsHeading;
   private String faqsDescription;
   private MetaImage metaImage;
+  private SeoMeta seoMeta;
 }

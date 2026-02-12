@@ -1,5 +1,6 @@
 package com.jswone.commerce.core.model.centralCatalogue;
 
+import com.jswone.commerce.core.model.seo.SeoMeta;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -50,4 +51,8 @@ public class ProductSlug {
     private List<Map<String,Object>> productOverview;
 
     private boolean pdpIdentifier;
+
+    private SeoMeta seoMeta;
+
+    private  Map<String, Object> defaultSelectedAttributes;
 }

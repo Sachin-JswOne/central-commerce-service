@@ -30,7 +30,6 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.cache.Cache;
 import org.springframework.cache.CacheManager;
-import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 
 import java.time.Instant;
@@ -420,17 +419,11 @@ public class DefaultSeoService implements SeoService {
          * RUNTIME — SEO METADATA RESOLUTION
          */
         @Override
-        public SeoMeta resolveSeoMeta(
-                        String path,
-                        Map<String, String> pathVariables) {
+        public SeoMeta resolveSeoMeta(SeoContext seoContext, SeoData seoData) {
 
-                SeoContext context = contextResolver.resolve(path, pathVariables);
+                SeoPatternHandler handler = patternFactory.resolve(seoContext);
 
-                SeoPatternHandler handler = patternFactory.resolve(context);
-
-                SeoData seoData = handler.fetchData(context);
-
-                return handler.generateMeta(context, seoData);
+                return handler.generateMeta(seoContext, seoData);
         }
 
         private List<CategoryIdentifier> fetchAllCategoryIdsFromCC() {

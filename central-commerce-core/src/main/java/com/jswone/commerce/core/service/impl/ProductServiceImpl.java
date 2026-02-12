@@ -3,12 +3,11 @@ package com.jswone.commerce.core.service.impl;
 import com.jswone.commerce.core.entity.catalogue.Attribute;
 import com.jswone.commerce.core.entity.catalogue.ProductCatalogueStore;
 import com.jswone.commerce.core.entity.catalogue.Variant;
+import com.jswone.commerce.core.enums.seo.SeoEntityType;
 import com.jswone.commerce.core.exceptions.CentralCommerceServiceException;
 import com.jswone.commerce.core.exceptions.ProductSelectorException;
-import com.jswone.commerce.core.mapper.BreadcrumbMapper;
 import com.jswone.commerce.core.mapper.ProductSlugMapper;
 import com.jswone.commerce.core.model.centralCatalogue.ProductSlug;
-import com.jswone.commerce.core.model.centralCatalogue.ProductTypeData;
 import com.jswone.commerce.core.model.centralCatalogue.QuantityCard;
 import com.jswone.commerce.core.model.centralCatalogue.VariantSelector;
 import com.jswone.commerce.core.model.request.ProductAttributeDTO;
@@ -18,16 +17,19 @@ import com.jswone.commerce.core.model.response.ProductSelectorSkuResponse;
 import com.jswone.commerce.core.model.response.SkuInfo;
 import com.jswone.commerce.core.model.response.centralCatalogue.ProductBulkResponse;
 import com.jswone.commerce.core.model.response.centralCatalogue.ProductTypeBulkResponse;
+import com.jswone.commerce.core.model.seo.SeoContext;
+import com.jswone.commerce.core.model.seo.SeoData;
 import com.jswone.commerce.core.repository.ProductCatalogueStoreRepository;
+import com.jswone.commerce.core.resolver.SeoContextResolver;
 import com.jswone.commerce.core.rest.CentralCatalogueClient;
 import com.jswone.commerce.core.service.ProductService;
 import com.jswone.commerce.core.util.ProductAttributeUtil;
 import com.jswone.commons.constants.JSWGenericConstants;
 import lombok.RequiredArgsConstructor;
-import lombok.extern.log4j.Log4j2;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.tuple.Pair;
+import org.jetbrains.annotations.NotNull;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 
@@ -35,6 +37,10 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 import static com.jswone.commerce.core.constants.GenericConstants.*;
+import static com.jswone.commerce.core.constants.SeoConstants.ATTR_PRODUCT_TITLE;
+import static com.jswone.commerce.core.util.CatalogueUtil.extractProductMmid;
+
+import com.jswone.commerce.core.util.CatalogueUtil;
 
 @Service
 @Slf4j
@@ -44,7 +50,8 @@ public class ProductServiceImpl implements ProductService {
     private final ProductAttributeUtil productAttributeUtil;
     private final CentralCatalogueClient centralCatalogueClient;
     private final ProductSlugMapper productSlugMapper;
-
+    private final SeoContextResolver seoContextResolver;
+    private final com.jswone.commerce.core.service.SeoService seoService;
 
     @Override
     public SkuInfo getMatchedVariantResponse(ProductSkuRequest productSkuRequest) {
@@ -56,16 +63,35 @@ public class ProductServiceImpl implements ProductService {
 
     @Override
     public ProductSlug getProductFromSlug(String slug, String storeFront) {
-        try{
+        try {
 
-            ProductBulkResponse productBulkResponse = centralCatalogueClient.getProductFromSlug(slug,"msme");
+            // Resolve using entity type hint - no need for manual prefixing
+            SeoContext seoContext = seoContextResolver.resolve(slug, SeoEntityType.PRODUCT);
+            log.debug("Resolved SeoContext: {} from input: {}", seoContext, slug);
 
-            if(Objects.isNull(productBulkResponse) || productBulkResponse.getProducts().isEmpty()){
-                throw new CentralCommerceServiceException("Product is not available for slug : "+slug, HttpStatus.BAD_GATEWAY);
+            // Check if this is a variant URL (has variant MMID)
+            if (seoContext.getVariantMmid() != null && seoContext.getEntityType() == SeoEntityType.VARIANT) {
+                String productMmid = extractProductMmid(seoContext.getVariantMmid());
+                log.info("Variant URL detected. Extracted product MMID: {} from variant MMID: {}",
+                        productMmid, seoContext.getVariantMmid());
+                return getProductFromMmid(productMmid, storeFront, seoContext);
             }
 
-            if(Objects.isNull(productBulkResponse.getProducts().getFirst().getProductTypeId())){
-                throw new CentralCommerceServiceException("Product type Id is not available for slug : "+slug, HttpStatus.BAD_GATEWAY);
+            // Use the extracted slug from SeoContext, not the full path
+            String extractedSlug = seoContext.getSlug();
+            log.debug("Calling catalogue client with extracted slug: {}", extractedSlug);
+
+            ProductBulkResponse productBulkResponse = centralCatalogueClient.getProductFromSlug(extractedSlug, "msme");
+
+            if (Objects.isNull(productBulkResponse) || productBulkResponse.getProducts().isEmpty()) {
+                throw new CentralCommerceServiceException("Product is not available for slug : " + extractedSlug,
+                        HttpStatus.BAD_GATEWAY);
+            }
+
+            if (Objects.isNull(productBulkResponse.getProducts().getFirst().getProductTypeId())) {
+                throw new CentralCommerceServiceException(
+                        "Product type Id is not available for slug : " + extractedSlug,
+                        HttpStatus.BAD_GATEWAY);
             }
             String productTypeId = productBulkResponse.getProducts().getFirst().getProductTypeId();
 
@@ -73,21 +99,42 @@ public class ProductServiceImpl implements ProductService {
 
             ProductTypeBulkResponse productTypeBulkResponse = centralCatalogueClient.bulkTypeIdResponse(request);
 
-            if(Objects.isNull(productTypeBulkResponse) || productTypeBulkResponse.getData().getProductTypeDetail().isEmpty()){
-                throw new CentralCommerceServiceException("Product type is not available for slug : "+slug, HttpStatus.BAD_GATEWAY);
+            if (Objects.isNull(productTypeBulkResponse)
+                    || productTypeBulkResponse.getData().getProductTypeDetail().isEmpty()) {
+                throw new CentralCommerceServiceException("Product type is not available for slug : " + slug,
+                        HttpStatus.BAD_GATEWAY);
             }
 
-            if(Objects.isNull(productTypeBulkResponse.getData().getProductTypeDetail().get(productTypeId).getQuantityCards())){
-                throw new CentralCommerceServiceException("Quantity cards are not available for slug : "+slug, HttpStatus.BAD_GATEWAY);
+            if (Objects.isNull(
+                    productTypeBulkResponse.getData().getProductTypeDetail().get(productTypeId).getQuantityCards())) {
+                throw new CentralCommerceServiceException("Quantity cards are not available for slug : " + slug,
+                        HttpStatus.BAD_GATEWAY);
             }
 
-            List<QuantityCard> quantityCards = productTypeBulkResponse.getData().getProductTypeDetail().get(productTypeId).getQuantityCards();
+            List<QuantityCard> quantityCards = productTypeBulkResponse.getData().getProductTypeDetail()
+                    .get(productTypeId).getQuantityCards();
 
-            ProductSlug productSlug = productSlugMapper.toProductSlug(productBulkResponse.getProducts().getFirst(),quantityCards);
+            ProductSlug productSlug = productSlugMapper.toProductSlug(productBulkResponse.getProducts().getFirst(),
+                    quantityCards);
 
             handleAttributeMappingsAndUpdateProductSlug(productTypeBulkResponse, productTypeId, productSlug);
             productSlug.setProductOverview(productTypeBulkResponse.getData().getProductOverview());
             productSlug.setPdpIdentifier(pdpIdentifier(productSlug.getVariantSelectors()));
+
+            // Build default selected attributes for variants
+            Map<String, Object> defaultSelectedAttributes = StringUtils.isNotEmpty(seoContext.getVariantMmid())
+                    ? buildDefaultSelectedAttributes(productSlug, seoContext.getVariantMmid())
+                    : Collections.emptyMap();
+
+            // Generate and set SEO metadata with variant specifications
+            productSlug.setSeoMeta(seoService.resolveSeoMeta(seoContext, SeoData.builder()
+                    .title(CatalogueUtil
+                            .str(productBulkResponse.getProducts().getFirst().getAttributes().get("product_title")))
+                    .image(CatalogueUtil.extractImage(productBulkResponse.getProducts().getFirst()))
+                    .variantSpec(defaultSelectedAttributes)
+                    .build()));
+
+            productSlug.setDefaultSelectedAttributes(defaultSelectedAttributes);
 
             return productSlug;
 
@@ -96,42 +143,178 @@ public class ProductServiceImpl implements ProductService {
         }
     }
 
-    private boolean pdpIdentifier(Map<String, VariantSelector> variantSelectors){
-        List<String> uniqueInputTypes =
-                Optional.ofNullable(variantSelectors)
-                        .map(Map::values)
-                        .orElse(Collections.emptyList())
-                        .stream()
-                        .map(VariantSelector::getInputType)
-                        .filter(Objects::nonNull)
-                        .distinct()
-                        .toList();
+    private ProductSlug getProductFromMmid(String productMmid, String storeFront, SeoContext seoContext) {
+        try {
+            log.info("Fetching product by MMID: {} for storefront: {}", productMmid, storeFront);
+
+            // Create bulk request with product MMID
+            com.jswone.commerce.core.model.request.ProductBulkRequest request = new com.jswone.commerce.core.model.request.ProductBulkRequest(
+                    Set.of(productMmid),
+                    storeFront,
+                    "en_US");
+
+            ProductBulkResponse productBulkResponse = centralCatalogueClient.bulkMMIDResponse(request);
+
+            if (Objects.isNull(productBulkResponse) || productBulkResponse.getProducts().isEmpty()) {
+                throw new CentralCommerceServiceException(
+                        "Product is not available for MMID: " + productMmid,
+                        HttpStatus.BAD_GATEWAY);
+            }
+
+            if (Objects.isNull(productBulkResponse.getProducts().getFirst().getProductTypeId())) {
+                throw new CentralCommerceServiceException(
+                        "Product type ID is not available for MMID: " + productMmid,
+                        HttpStatus.BAD_GATEWAY);
+            }
+
+            String productTypeId = productBulkResponse.getProducts().getFirst().getProductTypeId();
+
+            ProductTypeBulkRequest typeRequest = new ProductTypeBulkRequest(Set.of(productTypeId), storeFront);
+            ProductTypeBulkResponse productTypeBulkResponse = centralCatalogueClient.bulkTypeIdResponse(typeRequest);
+
+            if (Objects.isNull(productTypeBulkResponse) ||
+                    productTypeBulkResponse.getData().getProductTypeDetail().isEmpty()) {
+                throw new CentralCommerceServiceException(
+                        "Product type is not available for MMID: " + productMmid,
+                        HttpStatus.BAD_GATEWAY);
+            }
+
+            if (Objects.isNull(productTypeBulkResponse.getData().getProductTypeDetail()
+                    .get(productTypeId).getQuantityCards())) {
+                throw new CentralCommerceServiceException(
+                        "Quantity cards are not available for MMID: " + productMmid,
+                        HttpStatus.BAD_GATEWAY);
+            }
+
+            List<QuantityCard> quantityCards = productTypeBulkResponse.getData()
+                    .getProductTypeDetail().get(productTypeId).getQuantityCards();
+
+            ProductSlug productSlug = productSlugMapper.toProductSlug(
+                    productBulkResponse.getProducts().getFirst(), quantityCards);
+
+            handleAttributeMappingsAndUpdateProductSlug(productTypeBulkResponse, productTypeId, productSlug);
+            productSlug.setProductOverview(productTypeBulkResponse.getData().getProductOverview());
+            productSlug.setPdpIdentifier(pdpIdentifier(productSlug.getVariantSelectors()));
+
+            // Build default selected attributes for variants
+            Map<String, Object> defaultSelectedAttributes = StringUtils.isNotEmpty(seoContext.getVariantMmid())
+                    ? buildDefaultSelectedAttributes(productSlug, seoContext.getVariantMmid())
+                    : Collections.emptyMap();
+
+            // Generate and set SEO metadata with variant specifications
+            productSlug.setSeoMeta(seoService.resolveSeoMeta(seoContext, SeoData.builder()
+                    .title(CatalogueUtil
+                            .str(productBulkResponse.getProducts().getFirst().getAttributes().get(ATTR_PRODUCT_TITLE)))
+                    .image(CatalogueUtil.extractImage(productBulkResponse.getProducts().getFirst()))
+                    .variantSpec(defaultSelectedAttributes)
+                    .build()));
+
+            productSlug.setDefaultSelectedAttributes(defaultSelectedAttributes);
+
+            return productSlug;
+
+        } catch (Exception e) {
+            throw new CentralCommerceServiceException(e.getLocalizedMessage(), HttpStatus.BAD_GATEWAY);
+        }
+    }
+
+    public Map<String, Object> buildDefaultSelectedAttributes(
+            ProductSlug productSlug,
+            String variantMMId) {
+
+        if (productSlug == null || variantMMId == null) {
+            return Collections.emptyMap();
+        }
+
+        com.jswone.commerce.core.model.centralCatalogue.Variant selectedVariant = productSlug.getVariants()
+                .stream()
+                .filter(variant -> variantMMId.equals(variant.getVariantMmid()))
+                .findFirst()
+                .orElse(null);
+
+        if (selectedVariant == null || selectedVariant.getAttributes() == null) {
+            return Collections.emptyMap();
+        }
+
+        Map<String, VariantSelector> variantSelectors = productSlug.getVariantSelectors();
+
+        if (variantSelectors == null || variantSelectors.isEmpty()) {
+            return Collections.emptyMap();
+        }
+
+        return getdefaultSelectedAttributeMap(selectedVariant, variantSelectors);
+    }
+
+    private static @NotNull Map<String, Object> getdefaultSelectedAttributeMap(
+            com.jswone.commerce.core.model.centralCatalogue.Variant selectedVariant,
+            Map<String, VariantSelector> variantSelectors) {
+        Map<String, String> variantAttributes = selectedVariant.getAttributes();
+
+        Map<String, Object> defaultSelectedAttributes = new HashMap<>();
+
+        for (Map.Entry<String, VariantSelector> entry : variantSelectors.entrySet()) {
+            String selectorKey = entry.getKey();
+            VariantSelector selector = entry.getValue();
+
+            if (variantAttributes.containsKey(selectorKey)) {
+                String attributeValue = variantAttributes.get(selectorKey);
+
+                // Convert to proper type based on selector configuration
+                // If selector has min/max, it's numeric and should be Double
+                if (selector.getMin() != null || selector.getMax() != null) {
+                    try {
+                        defaultSelectedAttributes.put(selectorKey, Double.parseDouble(attributeValue));
+                    } catch (NumberFormatException e) {
+                        // If parsing fails, keep as string
+                        defaultSelectedAttributes.put(selectorKey, attributeValue);
+                    }
+                } else {
+                    // Non-numeric selector, keep as string
+                    defaultSelectedAttributes.put(selectorKey, attributeValue);
+                }
+            }
+        }
+        return defaultSelectedAttributes;
+    }
+
+    private boolean pdpIdentifier(Map<String, VariantSelector> variantSelectors) {
+        List<String> uniqueInputTypes = Optional.ofNullable(variantSelectors)
+                .map(Map::values)
+                .orElse(Collections.emptyList())
+                .stream()
+                .map(VariantSelector::getInputType)
+                .filter(Objects::nonNull)
+                .distinct()
+                .toList();
         return uniqueInputTypes.stream()
                 .anyMatch(s -> s.equalsIgnoreCase(CENTRAL_CATALOGUE_PDP_IDENTIFIER));
     }
 
-    private void handleAttributeMappingsAndUpdateProductSlug(ProductTypeBulkResponse productTypeBulkResponse, String productTypeId, ProductSlug productSlug) {
-        var variantSelectors = productTypeBulkResponse.getData().getProductTypeDetail().get(productTypeId).getVariantSelectors();
+    private void handleAttributeMappingsAndUpdateProductSlug(ProductTypeBulkResponse productTypeBulkResponse,
+            String productTypeId, ProductSlug productSlug) {
+        var variantSelectors = productTypeBulkResponse.getData().getProductTypeDetail().get(productTypeId)
+                .getVariantSelectors();
 
-        var standardAttributes = productTypeBulkResponse.getData().getProductTypeDetail().get(productTypeId).getStandardAttributes();
+        var standardAttributes = productTypeBulkResponse.getData().getProductTypeDetail().get(productTypeId)
+                .getStandardAttributes();
 
-        var customAttributes = productTypeBulkResponse.getData().getProductTypeDetail().get(productTypeId).getAttributes();
+        var customAttributes = productTypeBulkResponse.getData().getProductTypeDetail().get(productTypeId)
+                .getAttributes();
 
-        Map<String,String> standardAttributeNames = standardAttributes.stream().filter(Objects::nonNull)
+        Map<String, String> standardAttributeNames = standardAttributes.stream().filter(Objects::nonNull)
                 .filter(sa -> sa.get(CENTRAL_CATALOGUE_STANDARD_ATTRIBUTE_NAME_KEY) != null)
                 .collect(Collectors.toMap(
                         sa -> String.valueOf(sa.get(CENTRAL_CATALOGUE_STANDARD_ATTRIBUTE_NAME_KEY)),
-                        sa -> String.valueOf(sa.get(CENTRAL_CATALOGUE_STANDARD_ATTRIBUTE_LABEL_KEY))
-                ));
+                        sa -> String.valueOf(sa.get(CENTRAL_CATALOGUE_STANDARD_ATTRIBUTE_LABEL_KEY))));
 
-        Map<String,String> standardAttributeUnit = standardAttributes.stream().filter(Objects::nonNull)
+        Map<String, String> standardAttributeUnit = standardAttributes.stream().filter(Objects::nonNull)
                 .filter(sa -> sa.get(CENTRAL_CATALOGUE_STANDARD_ATTRIBUTE_NAME_KEY) != null)
                 .collect(Collectors.toMap(
                         sa -> String.valueOf(sa.get(CENTRAL_CATALOGUE_STANDARD_ATTRIBUTE_NAME_KEY)),
-                        sa -> String.valueOf(sa.get(CENTRAL_CATALOGUE_STANDARD_ATTRIBUTE_UNIT_KEY))
-                ));
+                        sa -> String.valueOf(sa.get(CENTRAL_CATALOGUE_STANDARD_ATTRIBUTE_UNIT_KEY))));
 
-        productSlugMapper.updateVariantSelectors(variantSelectors, productSlug.getAttributes(), standardAttributeNames, standardAttributeUnit);
+        productSlugMapper.updateVariantSelectors(variantSelectors, productSlug.getAttributes(), standardAttributeNames,
+                standardAttributeUnit);
         productSlugMapper.updateCustomAttributes(customAttributes, productSlug.getAttributes());
 
         productSlug.setVariantSelectors(variantSelectors);
@@ -147,15 +330,14 @@ public class ProductServiceImpl implements ProductService {
             ProductCatalogueStore productCatalogueStore = null;
             productCatalogueStore = productCatalogueStoreRepository.findProductCatalogueStoresByProductMaterialMasterId(
                     productSkuRequest.getProductMaterialMasterId());
-            if(Objects.isNull(productCatalogueStore)){
+            if (Objects.isNull(productCatalogueStore)) {
                 throw new CentralCommerceServiceException("Product not available in catalogue store : "
-                        .concat(productSkuRequest.getProductMaterialMasterId()),HttpStatus.BAD_REQUEST);
+                        .concat(productSkuRequest.getProductMaterialMasterId()), HttpStatus.BAD_REQUEST);
             }
-            ProductSelectorSkuResponse productSkuRes =
-                    Objects.nonNull(productSkuRequest.getProductAttributes())
-                            ? getVariant(
+            ProductSelectorSkuResponse productSkuRes = Objects.nonNull(productSkuRequest.getProductAttributes())
+                    ? getVariant(
                             productCatalogueStore, productSkuRequest.getProductAttributes())
-                            : null;
+                    : null;
             return Optional.ofNullable(productSkuRes)
                     .map(
                             productSkuResponse -> {
@@ -170,13 +352,12 @@ public class ProductServiceImpl implements ProductService {
                                             HttpStatus.BAD_REQUEST);
                             })
                     .orElseThrow(
-                            () ->
-                                    new ProductSelectorException(
-                                            productSkuRequest,
-                                            "Error while fetching variant using product-selector",
-                                            HttpStatus.SERVICE_UNAVAILABLE));
+                            () -> new ProductSelectorException(
+                                    productSkuRequest,
+                                    "Error while fetching variant using product-selector",
+                                    HttpStatus.SERVICE_UNAVAILABLE));
         } catch (CentralCommerceServiceException e) {
-            throw new CentralCommerceServiceException(e.getLocalizedMessage(),HttpStatus.BAD_REQUEST);
+            throw new CentralCommerceServiceException(e.getLocalizedMessage(), HttpStatus.BAD_REQUEST);
         } catch (Exception e) {
             throw new ProductSelectorException(productSkuRequest, e.getLocalizedMessage(), HttpStatus.BAD_GATEWAY);
         }
@@ -187,46 +368,40 @@ public class ProductServiceImpl implements ProductService {
 
         ProductSelectorSkuResponse productSkuResponse = new ProductSelectorSkuResponse();
 
-        List<Attribute> attributes =
-                variantAttributes.stream()
-                        .map(productAttributeUtil::transformToAttribute)
-                        .collect(Collectors.toList());
+        List<Attribute> attributes = variantAttributes.stream()
+                .map(productAttributeUtil::transformToAttribute)
+                .collect(Collectors.toList());
 
         List<String> availableSkus = new ArrayList<>();
         List<SkuInfo> matchedSkus = new ArrayList<>();
 
-        String variantMasterId =
-                Optional.ofNullable(productCatalogueStore.getMasterVariant())
-                        .map(Variant::getMmId)
-                        .orElse(null);
+        String variantMasterId = Optional.ofNullable(productCatalogueStore.getMasterVariant())
+                .map(Variant::getMmId)
+                .orElse(null);
 
         if (StringUtils.isEmpty(variantMasterId)) {
             String productMmId = productCatalogueStore.getProductMaterialMasterId();
-            variantMasterId =
-                    productMmId != null
-                            ? productMmId.concat("-").concat("10000000")
-                            : JSWGenericConstants.EMPTY_STRING;
+            variantMasterId = productMmId != null
+                    ? productMmId.concat("-").concat("10000000")
+                    : JSWGenericConstants.EMPTY_STRING;
         }
 
         if (productCatalogueStore.getVariants() != null
                 && !productCatalogueStore.getVariants().isEmpty()) {
             for (Variant variant : productCatalogueStore.getVariants()) {
-                String variantMMId =
-                        StringUtils.defaultIfEmpty(
-                                variant.getMmId(), JSWGenericConstants.EMPTY_STRING);
+                String variantMMId = StringUtils.defaultIfEmpty(
+                        variant.getMmId(), JSWGenericConstants.EMPTY_STRING);
 
                 if (variantMMId.equals(JSWGenericConstants.EMPTY_STRING)) {
-                    variantMMId =
-                            productCatalogueStore
-                                    .getProductMaterialMasterId()
-                                    .concat("-")
-                                    .concat("10000000");
+                    variantMMId = productCatalogueStore
+                            .getProductMaterialMasterId()
+                            .concat("-")
+                            .concat("10000000");
                 }
 
                 availableSkus.add(variant.getVariantKey());
 
-                Pair<Boolean, List<Attribute>> variantCustomAttributePair =
-                        isMatchProductVariant(variant, attributes);
+                Pair<Boolean, List<Attribute>> variantCustomAttributePair = isMatchProductVariant(variant, attributes);
 
                 if (variantCustomAttributePair.getLeft()) {
                     matchedSkus.add(
@@ -247,8 +422,8 @@ public class ProductServiceImpl implements ProductService {
 
         Variant masterVariant = productCatalogueStore.getMasterVariant();
         if (masterVariant != null) {
-            Pair<Boolean, List<Attribute>> masterVariantAttributePair =
-                    isMatchProductVariant(masterVariant, attributes);
+            Pair<Boolean, List<Attribute>> masterVariantAttributePair = isMatchProductVariant(masterVariant,
+                    attributes);
 
             if (matchedSkus.isEmpty() && masterVariantAttributePair.getLeft()) {
                 matchedSkus.add(
@@ -294,12 +469,10 @@ public class ProductServiceImpl implements ProductService {
             return Pair.of(false, Collections.emptyList());
         }
 
-        boolean productFlag =
-                attributes.stream()
-                        .allMatch(
-                                a ->
-                                        variant.getAttributes().stream()
-                                                .anyMatch(va -> checkEquality(va, a)));
+        boolean productFlag = attributes.stream()
+                .allMatch(
+                        a -> variant.getAttributes().stream()
+                                .anyMatch(va -> checkEquality(va, a)));
 
         return productFlag
                 ? Pair.of(true, Collections.emptyList())
@@ -355,7 +528,7 @@ public class ProductServiceImpl implements ProductService {
                             && Comparable.class.isAssignableFrom(val.getValue().getClass())
                             && Comparable.class.isAssignableFrom(minAttribute.getValue().getClass())
                             && Comparable.class.isAssignableFrom(
-                            maxAttribute.getValue().getClass())) {
+                                    maxAttribute.getValue().getClass())) {
 
                         double value = Double.parseDouble(val.getValue().toString());
                         double minValue = Double.parseDouble(minAttribute.getValue().toString());
@@ -408,8 +581,10 @@ public class ProductServiceImpl implements ProductService {
     }
 
     private static boolean isNumeric(Object value) {
-        if (value == null) return false;
-        if (value instanceof Number) return true;
+        if (value == null)
+            return false;
+        if (value instanceof Number)
+            return true;
 
         try {
             Double.parseDouble(value.toString());

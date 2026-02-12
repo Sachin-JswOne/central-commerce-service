@@ -1,10 +1,12 @@
 package com.jswone.commerce.core.model.seo;
 
 import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Getter;
 
 @Getter
 @AllArgsConstructor
+@Builder
 public class SeoMeta {
 
     /* Standard SEO */

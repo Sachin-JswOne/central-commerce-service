@@ -7,8 +7,6 @@ import com.jswone.commerce.core.model.seo.UrlMeta;
 
 public interface SeoPatternHandler {
 
-    SeoData fetchData(SeoContext context);
-
     UrlMeta generateUrl(SeoContext context);
 
     SeoMeta generateMeta(SeoContext context, SeoData data);

@@ -8,7 +8,7 @@ import org.springframework.context.annotation.Configuration;
 @Configuration
 public class CommerceValueConfig {
     /*
-    Commercetools values.
+     * Commercetools values.
      */
     @Value("${ctp.admin.projectKey}")
     private String projectKey;
@@ -193,12 +193,15 @@ public class CommerceValueConfig {
     @Value("${account.master.service.api.key}")
     private String accountMasterServiceApiKey;
 
-//    @Value("${account.master.service.client.id}")
-//    private String accountMasterServiceClientId;
+    // @Value("${account.master.service.client.id}")
+    // private String accountMasterServiceClientId;
 
     @Value("${account.master.service.base.url}")
     private String accountMasterServiceBaseUrl;
 
     @Value("${account.master.service.mou.endpoint}")
     private String accountMasterServiceMouEndpoint;
+
+    @Value("${central.catalogue.admin.get.state.endpoint}")
+    private String centralCatalogueAdminGetStateEndpoint;
 }

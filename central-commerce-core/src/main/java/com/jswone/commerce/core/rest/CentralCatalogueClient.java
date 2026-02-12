@@ -20,14 +20,26 @@ import java.util.List;
 
 public interface CentralCatalogueClient {
     ProductSearchResponse genericSearch(SearchRequest searchRequest);
+
     ProductSearchResponse genericSearchFacetsOnly(SearchRequest searchRequest);
+
     ProductBulkResponse bulkMMIDResponse(ProductBulkRequest productBulkRequest);
+
     ProductTypeBulkResponse bulkTypeIdResponse(ProductTypeBulkRequest productTypeBulkRequest);
+
     Map<String, ImageMetadata> fetchImagesForMmIds(Set<String> productMmIds);
+
     List<CatalogueCategoryTree> getCategoryTree();
+
     CatalogueBreadCrumbData getBreadcrumb(String categoryId, String slug);
+
     ProductListingCatalogueResponse productListing(ProductListingRequest productListingRequest);
+
     ProductListingCatalogueResponse productListingFacetsOnly(ProductListingRequest productListingRequest);
+
     ProductBulkResponse getProductFromSlug(String slug, String storeFront);
+
     List<Product> getAllProductsForCategoryId(String categoryId, String storefront);
+
+    Map<String,String> getStates();
 }
