@@ -110,19 +110,6 @@ public class CentralCatalogueServiceImpl implements CentralCatalogueService {
                     HttpStatus.BAD_REQUEST);
         }
 
-        // Build SeoContext from slug and location in request body
-        if (StringUtils.isNotBlank(productListingRequest.getSlug())) {
-            // Build URL path from slug and location to resolve SeoContext
-            String urlPath = buildUrlPath(productListingRequest.getSlug(), productListingRequest.getLocation());
-            SeoContext seoContext = seoContextResolver.resolve(urlPath, SeoEntityType.CATEGORY);
-
-            log.info("Resolved SeoContext for product listing: entityType={}, pageType={}, slug={}, location={}",
-                    seoContext.getEntityType(), seoContext.getPageType(), seoContext.getSlug(),
-                    seoContext.getLocation());
-
-            // You can now use seoContext for additional metadata or validation
-            // For example, you might want to enrich the request or log additional context
-        }
 
         log.info("Processing product listing for identifier: {}",
                 StringUtils.isNotBlank(productListingRequest.getCategoryId()) ? productListingRequest.getCategoryId()
@@ -158,19 +145,7 @@ public class CentralCatalogueServiceImpl implements CentralCatalogueService {
         return catalogueConverter.convertCataloguePLPResponseToPLPResponse(catalogueResponse,productListingRequest);
     }
 
-    /**
-     * Build URL path from slug and location for SeoContext resolution
-     * Uses /category/ pattern for product listing pages
-     */
-    private String buildUrlPath(String slug, String location) {
-        if (StringUtils.isNotBlank(location)) {
-            // If location is provided, build full URL: /category/{location}/{slug}
-            return String.format("/%s/%s", location, slug);
-        } else {
-            // If no location, just use slug: /category/{slug}
-            return String.format("/%s", slug);
-        }
-    }
+
 
     @Override
     public Map<String, ProductListingResponse> productListingBulk(
