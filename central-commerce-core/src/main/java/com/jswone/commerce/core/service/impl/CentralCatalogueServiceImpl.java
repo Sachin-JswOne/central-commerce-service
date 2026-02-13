@@ -72,9 +72,7 @@ public class CentralCatalogueServiceImpl implements CentralCatalogueService {
         catalogueValidator.validateSearchRequest(searchRequest);
         ProductSearchResponse productSearchResponse = centralCatalogueClient.genericSearch(searchRequest);
         userSearchLogsItemPublisher.publish(productSearchResponse, searchRequest);
-        ProductSearchResponse facetsResponse = centralCatalogueClient.genericSearchFacetsOnly(searchRequest);
-        return catalogueConverter.convertGenericSearchToSearchResponse(productSearchResponse, facetsResponse,
-                searchRequest);
+        return catalogueConverter.convertGenericSearchToSearchResponse(productSearchResponse, searchRequest);
     }
 
     @Override

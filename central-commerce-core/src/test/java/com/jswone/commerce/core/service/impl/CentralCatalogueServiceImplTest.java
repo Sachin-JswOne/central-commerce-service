@@ -55,13 +55,11 @@ class CentralCatalogueServiceImplTest {
     void searchCatalogue_success() {
         SearchRequest request = mock(SearchRequest.class);
         ProductSearchResponse searchResponse = mock(ProductSearchResponse.class);
-        ProductSearchResponse facetsResponse = mock(ProductSearchResponse.class);
         SearchResponse finalResponse = mock(SearchResponse.class);
 
         when(centralCatalogueClient.genericSearch(request)).thenReturn(searchResponse);
-        when(centralCatalogueClient.genericSearchFacetsOnly(request)).thenReturn(facetsResponse);
         when(catalogueConverter.convertGenericSearchToSearchResponse(
-                searchResponse, facetsResponse, request)).thenReturn(finalResponse);
+                searchResponse, request)).thenReturn(finalResponse);
 
         SearchResponse result = service.searchCatalogue(request);
 

@@ -41,7 +41,7 @@ public class CatalogueConverter {
 
     // MAIN CONVERTER ======================================================================================
     public SearchResponse convertGenericSearchToSearchResponse(
-            ProductSearchResponse productSearchResponse, ProductSearchResponse facetsResponse, SearchRequest searchRequest) {
+            ProductSearchResponse productSearchResponse, SearchRequest searchRequest) {
 
         try {
             List<Product> products = Optional.ofNullable(productSearchResponse.getProducts())
@@ -50,7 +50,7 @@ public class CatalogueConverter {
             SearchResponse response = new SearchResponse();
 
             // Dynamic Filters
-            response.setFilterConditions(buildDynamicFilters(facetsResponse, searchRequest));
+            response.setFilterConditions(buildDynamicFiltersProductListing(productSearchResponse, searchRequest));
 
             // searchAction logic
             if (searchRequest.isSearchAction()) {
