@@ -843,14 +843,23 @@ public class CentralCatalogueClientImpl implements CentralCatalogueClient {
                                 return Collections.emptyMap();
                         }
 
-                        // Step 4: Convert to Map<String, Set<String>>
+                        // Step 4: Invert Map<District, List<State>> to Map<State, Set<District>>
                         Map<String, List<String>> districtData = response.getBody().getData();
-                        Map<String, Set<String>> result = districtData.entrySet().stream()
-                                        .collect(Collectors.toMap(
-                                                        Map.Entry::getKey,
-                                                        entry -> new LinkedHashSet<>(entry.getValue())));
+                        Map<String, Set<String>> result = new HashMap<>();
 
-                        log.info("Successfully fetched serviceable locations for {} states", result.size());
+                        // Iterate through each district and its states
+                        for (Map.Entry<String, List<String>> entry : districtData.entrySet()) {
+                                String district = entry.getKey();
+                                List<String> states = entry.getValue();
+
+                                // For each state, add this district to its set
+                                for (String state : states) {
+                                        result.computeIfAbsent(state, k -> new LinkedHashSet<>()).add(district);
+                                }
+                        }
+
+                        log.info("Successfully fetched serviceable locations for {} states with {} total districts",
+                                        result.size(), districtData.size());
 
                         return result;
 
