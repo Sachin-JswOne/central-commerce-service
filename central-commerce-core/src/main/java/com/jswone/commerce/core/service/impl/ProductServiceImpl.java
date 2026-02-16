@@ -100,8 +100,8 @@ public class ProductServiceImpl implements ProductService {
             ProductBulkResponse response =
                     centralCatalogueClient.bulkMMIDResponse(request);
 
-            validateBulkProductServiceablityForRequestedLocation(
-                    response, seoContext.getLocation());
+//            validateBulkProductServiceablityForRequestedLocation(
+//                    response, seoContext.getLocation());
 
             return response;
         }
@@ -113,7 +113,7 @@ public class ProductServiceImpl implements ProductService {
         return centralCatalogueClient.getProductFromSlug(
                 extractedSlug,
                 "msme",
-                seoContext.getLocation());
+                EMPTY_STRING);
     }
 
     private ProductSlug buildProductSlug(
