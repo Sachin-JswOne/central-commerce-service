@@ -11,6 +11,7 @@ import com.jswone.commerce.core.model.centralCatalogue.ProductSlug;
 import com.jswone.commerce.core.model.centralCatalogue.QuantityCard;
 import com.jswone.commerce.core.model.centralCatalogue.VariantSelector;
 import com.jswone.commerce.core.model.request.ProductAttributeDTO;
+import com.jswone.commerce.core.model.request.ProductBulkRequest;
 import com.jswone.commerce.core.model.request.ProductSkuRequest;
 import com.jswone.commerce.core.model.request.ProductTypeBulkRequest;
 import com.jswone.commerce.core.model.response.ProductSelectorSkuResponse;
@@ -66,160 +67,163 @@ public class ProductServiceImpl implements ProductService {
     public ProductSlug getProductFromSlug(String slug, String storeFront) {
         try {
 
-            // Resolve using entity type hint - no need for manual prefixing
             SeoContext seoContext = seoContextResolver.resolve(slug, SeoEntityType.PRODUCT);
             log.debug("Resolved SeoContext: {} from input: {}", seoContext, slug);
 
-            // Check if this is a variant URL (has variant MMID)
-            if (seoContext.getVariantMmid() != null && seoContext.getEntityType() == SeoEntityType.VARIANT) {
-                String productMmid = extractProductMmid(seoContext.getVariantMmid());
-                log.info("Variant URL detected. Extracted product MMID: {} from variant MMID: {}",
-                        productMmid, seoContext.getVariantMmid());
-                return getProductFromMmid(productMmid, storeFront, seoContext);
-            }
+            ProductBulkResponse productBulkResponse =
+                    fetchProductBulkResponse(seoContext, storeFront);
 
-            // Use the extracted slug from SeoContext, not the full path
-            String extractedSlug = seoContext.getSlug();
-            log.debug("Calling catalogue client with extracted slug: {}", extractedSlug);
+            return buildProductSlug(productBulkResponse, storeFront, seoContext);
 
-            ProductBulkResponse productBulkResponse = centralCatalogueClient.getProductFromSlug(extractedSlug, "msme", seoContext.getLocation());
-
-            if (Objects.isNull(productBulkResponse) || productBulkResponse.getProducts().isEmpty()) {
-                throw new CentralCommerceServiceException("Product is not available for slug : " + extractedSlug,
-                        HttpStatus.BAD_GATEWAY);
-            }
-
-            if (Objects.isNull(productBulkResponse.getProducts().getFirst().getProductTypeId())) {
-                throw new CentralCommerceServiceException(
-                        "Product type Id is not available for slug : " + extractedSlug,
-                        HttpStatus.BAD_GATEWAY);
-            }
-            String productTypeId = productBulkResponse.getProducts().getFirst().getProductTypeId();
-
-            ProductTypeBulkRequest request = new ProductTypeBulkRequest(Set.of(productTypeId), storeFront);
-
-            ProductTypeBulkResponse productTypeBulkResponse = centralCatalogueClient.bulkTypeIdResponse(request);
-
-            if (Objects.isNull(productTypeBulkResponse)
-                    || productTypeBulkResponse.getData().getProductTypeDetail().isEmpty()) {
-                throw new CentralCommerceServiceException("Product type is not available for slug : " + slug,
-                        HttpStatus.BAD_GATEWAY);
-            }
-
-            if (Objects.isNull(
-                    productTypeBulkResponse.getData().getProductTypeDetail().get(productTypeId).getQuantityCards())) {
-                throw new CentralCommerceServiceException("Quantity cards are not available for slug : " + slug,
-                        HttpStatus.BAD_GATEWAY);
-            }
-
-            List<QuantityCard> quantityCards = productTypeBulkResponse.getData().getProductTypeDetail()
-                    .get(productTypeId).getQuantityCards();
-
-            ProductSlug productSlug = productSlugMapper.toProductSlug(productBulkResponse.getProducts().getFirst(),
-                    quantityCards);
-
-            handleAttributeMappingsAndUpdateProductSlug(productTypeBulkResponse, productTypeId, productSlug);
-            productSlug.setProductOverview(productTypeBulkResponse.getData().getProductOverview());
-            productSlug.setPdpIdentifier(pdpIdentifier(productSlug.getVariantSelectors()));
-
-            // Build default selected attributes for variants
-            Map<String, Object> defaultSelectedAttributes = StringUtils.isNotEmpty(seoContext.getVariantMmid())
-                    ? buildDefaultSelectedAttributes(productSlug, seoContext.getVariantMmid())
-                    : Collections.emptyMap();
-
-            // Generate and set SEO metadata with variant specifications
-            productSlug.setSeoMeta(seoService.resolveSeoMeta(seoContext, SeoData.builder()
-                    .title(CatalogueUtil
-                            .str(productBulkResponse.getProducts().getFirst().getAttributes().get("product_title")))
-                    .image(CatalogueUtil.extractImage(productBulkResponse.getProducts().getFirst()))
-                    .variantSpec(defaultSelectedAttributes)
-                    .build()));
-
-            productSlug.setDefaultSelectedAttributes(defaultSelectedAttributes);
-
-            return productSlug;
-
+        } catch (CentralCommerceServiceException e) {
+            throw e;
         } catch (Exception e) {
-            throw new CentralCommerceServiceException(e.getLocalizedMessage(), HttpStatus.BAD_GATEWAY);
+            throw new CentralCommerceServiceException(
+                    e.getLocalizedMessage(),
+                    HttpStatus.BAD_GATEWAY);
+        }
+    }
+    private ProductBulkResponse fetchProductBulkResponse(
+            SeoContext seoContext,
+            String storeFront) {
+
+        // Variant URL → fetch via MMID
+        if (seoContext.getVariantMmid() != null
+                && seoContext.getEntityType() == SeoEntityType.VARIANT) {
+
+            String productMmid = extractProductMmid(seoContext.getVariantMmid());
+            log.info("Variant URL detected. Extracted product MMID: {}", productMmid);
+
+            ProductBulkRequest request =
+                    new ProductBulkRequest(Set.of(productMmid), storeFront, "en_US");
+
+            ProductBulkResponse response =
+                    centralCatalogueClient.bulkMMIDResponse(request);
+
+            validateBulkProductServiceablityForRequestedLocation(
+                    response, seoContext.getLocation());
+
+            return response;
+        }
+
+        // Normal slug flow
+        String extractedSlug = seoContext.getSlug();
+        log.debug("Calling catalogue client with extracted slug: {}", extractedSlug);
+
+        return centralCatalogueClient.getProductFromSlug(
+                extractedSlug,
+                "msme",
+                seoContext.getLocation());
+    }
+
+    private ProductSlug buildProductSlug(
+            ProductBulkResponse productBulkResponse,
+            String storeFront,
+            SeoContext seoContext) {
+
+        validateProductResponse(productBulkResponse);
+
+        String productTypeId =
+                productBulkResponse.getProducts().getFirst().getProductTypeId();
+
+        ProductTypeBulkResponse productTypeBulkResponse =
+                fetchProductType(productTypeId, storeFront);
+
+        List<QuantityCard> quantityCards =
+                productTypeBulkResponse.getData()
+                        .getProductTypeDetail()
+                        .get(productTypeId)
+                        .getQuantityCards();
+
+        ProductSlug productSlug =
+                productSlugMapper.toProductSlug(
+                        productBulkResponse.getProducts().getFirst(),
+                        quantityCards);
+
+        enrichProductSlug(
+                productSlug,
+                productTypeBulkResponse,
+                productTypeId,
+                productBulkResponse,
+                seoContext);
+
+        return productSlug;
+    }
+
+    private void validateProductResponse(ProductBulkResponse response) {
+
+        if (Objects.isNull(response) || response.getProducts().isEmpty()) {
+            throw new CentralCommerceServiceException(
+                    "Product is not available",
+                    HttpStatus.BAD_GATEWAY);
+        }
+
+        if (Objects.isNull(response.getProducts().getFirst().getProductTypeId())) {
+            throw new CentralCommerceServiceException(
+                    "Product type ID is missing",
+                    HttpStatus.BAD_GATEWAY);
         }
     }
 
-    private ProductSlug getProductFromMmid(String productMmid, String storeFront, SeoContext seoContext) {
-        try {
-            log.info("Fetching product by MMID: {} for storefront: {}", productMmid, storeFront);
+    private ProductTypeBulkResponse fetchProductType(
+            String productTypeId,
+            String storeFront) {
 
-            // Create bulk request with product MMID
-            com.jswone.commerce.core.model.request.ProductBulkRequest request = new com.jswone.commerce.core.model.request.ProductBulkRequest(
-                    Set.of(productMmid),
-                    storeFront,
-                    "en_US");
-            ProductBulkResponse productBulkResponse = centralCatalogueClient.bulkMMIDResponse(request);
+        ProductTypeBulkRequest request =
+                new ProductTypeBulkRequest(Set.of(productTypeId), storeFront);
 
-            validateBulkProductServiceablityForRequestedLocation(productBulkResponse,seoContext.getLocation());
+        ProductTypeBulkResponse response =
+                centralCatalogueClient.bulkTypeIdResponse(request);
 
-            if (Objects.isNull(productBulkResponse) || productBulkResponse.getProducts().isEmpty()) {
-                throw new CentralCommerceServiceException(
-                        "Product is not available for MMID: " + productMmid,
-                        HttpStatus.BAD_GATEWAY);
-            }
+        if (Objects.isNull(response)
+                || response.getData().getProductTypeDetail().isEmpty()
+                || Objects.isNull(response.getData()
+                .getProductTypeDetail()
+                .get(productTypeId)
+                .getQuantityCards())) {
 
-            if (Objects.isNull(productBulkResponse.getProducts().getFirst().getProductTypeId())) {
-                throw new CentralCommerceServiceException(
-                        "Product type ID is not available for MMID: " + productMmid,
-                        HttpStatus.BAD_GATEWAY);
-            }
-
-            String productTypeId = productBulkResponse.getProducts().getFirst().getProductTypeId();
-
-            ProductTypeBulkRequest typeRequest = new ProductTypeBulkRequest(Set.of(productTypeId), storeFront);
-            ProductTypeBulkResponse productTypeBulkResponse = centralCatalogueClient.bulkTypeIdResponse(typeRequest);
-
-            if (Objects.isNull(productTypeBulkResponse) ||
-                    productTypeBulkResponse.getData().getProductTypeDetail().isEmpty()) {
-                throw new CentralCommerceServiceException(
-                        "Product type is not available for MMID: " + productMmid,
-                        HttpStatus.BAD_GATEWAY);
-            }
-
-            if (Objects.isNull(productTypeBulkResponse.getData().getProductTypeDetail()
-                    .get(productTypeId).getQuantityCards())) {
-                throw new CentralCommerceServiceException(
-                        "Quantity cards are not available for MMID: " + productMmid,
-                        HttpStatus.BAD_GATEWAY);
-            }
-
-            List<QuantityCard> quantityCards = productTypeBulkResponse.getData()
-                    .getProductTypeDetail().get(productTypeId).getQuantityCards();
-
-            ProductSlug productSlug = productSlugMapper.toProductSlug(
-                    productBulkResponse.getProducts().getFirst(), quantityCards);
-
-            handleAttributeMappingsAndUpdateProductSlug(productTypeBulkResponse, productTypeId, productSlug);
-            productSlug.setProductOverview(productTypeBulkResponse.getData().getProductOverview());
-            productSlug.setPdpIdentifier(pdpIdentifier(productSlug.getVariantSelectors()));
-
-            // Build default selected attributes for variants
-            Map<String, Object> defaultSelectedAttributes = StringUtils.isNotEmpty(seoContext.getVariantMmid())
-                    ? buildDefaultSelectedAttributes(productSlug, seoContext.getVariantMmid())
-                    : Collections.emptyMap();
-
-            // Generate and set SEO metadata with variant specifications
-            productSlug.setSeoMeta(seoService.resolveSeoMeta(seoContext, SeoData.builder()
-                    .title(CatalogueUtil
-                            .str(productBulkResponse.getProducts().getFirst().getAttributes().get(ATTR_PRODUCT_TITLE)))
-                    .image(CatalogueUtil.extractImage(productBulkResponse.getProducts().getFirst()))
-                    .variantSpec(defaultSelectedAttributes)
-                    .build()));
-
-            productSlug.setDefaultSelectedAttributes(defaultSelectedAttributes);
-
-            return productSlug;
-
-        } catch (Exception e) {
-            throw new CentralCommerceServiceException(e.getLocalizedMessage(), HttpStatus.BAD_GATEWAY);
+            throw new CentralCommerceServiceException(
+                    "Product type data missing",
+                    HttpStatus.BAD_GATEWAY);
         }
+
+        return response;
     }
 
+    private void enrichProductSlug(
+            ProductSlug productSlug,
+            ProductTypeBulkResponse typeResponse,
+            String productTypeId,
+            ProductBulkResponse productBulkResponse,
+            SeoContext seoContext) {
+
+        handleAttributeMappingsAndUpdateProductSlug(
+                typeResponse, productTypeId, productSlug);
+
+        productSlug.setProductOverview(typeResponse.getData().getProductOverview());
+        productSlug.setPdpIdentifier(pdpIdentifier(productSlug.getVariantSelectors()));
+
+        Map<String, Object> defaultSelectedAttributes =
+                StringUtils.isNotEmpty(seoContext.getVariantMmid())
+                        ? buildDefaultSelectedAttributes(productSlug, seoContext.getVariantMmid())
+                        : Collections.emptyMap();
+
+        productSlug.setSeoMeta(
+                seoService.resolveSeoMeta(
+                        seoContext,
+                        SeoData.builder()
+                                .title(CatalogueUtil.str(
+                                        productBulkResponse.getProducts()
+                                                .getFirst()
+                                                .getAttributes()
+                                                .get(ATTR_PRODUCT_TITLE)))
+                                .image(CatalogueUtil.extractImage(
+                                        productBulkResponse.getProducts().getFirst()))
+                                .variantSpec(defaultSelectedAttributes)
+                                .build()));
+
+        productSlug.setDefaultSelectedAttributes(defaultSelectedAttributes);
+    }
     public Map<String, Object> buildDefaultSelectedAttributes(
             ProductSlug productSlug,
             String variantMMId) {
