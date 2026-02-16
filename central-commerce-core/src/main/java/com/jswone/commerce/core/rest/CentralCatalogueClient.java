@@ -37,7 +37,7 @@ public interface CentralCatalogueClient {
 
     ProductListingCatalogueResponse productListingFacetsOnly(ProductListingRequest productListingRequest);
 
-    ProductBulkResponse getProductFromSlug(String slug, String storeFront);
+    ProductBulkResponse getProductFromSlug(String slug, String storeFront, String location);
 
     List<Product> getAllProductsForCategoryId(String categoryId, String storefront);
 

@@ -2,6 +2,7 @@ package com.jswone.commerce.core.util;
 
 import com.jswone.commerce.core.exceptions.CentralCommerceServiceException;
 import com.jswone.commerce.core.model.centralCatalogue.Product;
+import com.jswone.commerce.core.model.response.centralCatalogue.ProductBulkResponse;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Component;
@@ -166,5 +167,25 @@ public class CatalogueUtil {
         }
 
         return result.toString().trim();
+    }
+
+    public static void validateBulkProductServiceablityForRequestedLocation(
+            ProductBulkResponse productBulkResponse,
+            String location) {
+
+        productBulkResponse.getProducts().forEach(product -> {
+
+            boolean serviceable =
+                    product.getProductLocation() != null
+                            && product.getProductLocation().stream()
+                            .anyMatch(loc ->
+                                    location.equalsIgnoreCase(loc.getState())
+                                            || location.equalsIgnoreCase(loc.getDistrict()));
+
+            if (!serviceable) {
+                throw new CentralCommerceServiceException(
+                        "Product not serviceable for location: " + location, HttpStatus.NOT_FOUND);
+            }
+        });
     }
 }

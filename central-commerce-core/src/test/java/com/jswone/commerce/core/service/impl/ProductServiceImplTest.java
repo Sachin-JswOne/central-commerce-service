@@ -470,7 +470,7 @@ class ProductServiceImplTest {
 
                 ProductSlug mappedSlug = new ProductSlug();
 
-                lenient().when(centralCatalogueClient.getProductFromSlug(any(), any()))
+                lenient().when(centralCatalogueClient.getProductFromSlug(any(), any(), any()))
                                 .thenReturn(bulkResponse);
                 when(centralCatalogueClient.bulkTypeIdResponse(any()))
                                 .thenReturn(typeBulkResponse);
@@ -487,7 +487,7 @@ class ProductServiceImplTest {
 
         @Test
         void getProductFromSlug_shouldThrowException_whenProductBulkResponseIsNull() {
-                lenient().when(centralCatalogueClient.getProductFromSlug(any(), any()))
+                lenient().when(centralCatalogueClient.getProductFromSlug(any(), any(), any() ))
                                 .thenReturn(null);
 
                 assertThrows(
@@ -500,7 +500,7 @@ class ProductServiceImplTest {
                 ProductBulkResponse response = new ProductBulkResponse();
                 response.setProducts(List.of());
 
-                when(centralCatalogueClient.getProductFromSlug(any(), any()))
+                when(centralCatalogueClient.getProductFromSlug(any(), any(),any() ))
                                 .thenReturn(response);
 
                 assertThrows(
@@ -516,7 +516,7 @@ class ProductServiceImplTest {
                 ProductBulkResponse response = new ProductBulkResponse();
                 response.setProducts(List.of(product));
 
-                when(centralCatalogueClient.getProductFromSlug(any(), any()))
+                when(centralCatalogueClient.getProductFromSlug(any(), any(),any() ))
                                 .thenReturn(response);
 
                 assertThrows(
@@ -532,7 +532,7 @@ class ProductServiceImplTest {
                 ProductBulkResponse response = new ProductBulkResponse();
                 response.setProducts(List.of(product));
 
-                when(centralCatalogueClient.getProductFromSlug(any(), any()))
+                when(centralCatalogueClient.getProductFromSlug(any(), any(),any() ))
                                 .thenReturn(response);
                 when(centralCatalogueClient.bulkTypeIdResponse(any()))
                                 .thenReturn(null);
@@ -567,7 +567,7 @@ class ProductServiceImplTest {
                 typeBulkResponse.setData(bulkDTO);
 
                 // -------- Stubbing --------
-                lenient().when(centralCatalogueClient.getProductFromSlug(any(), any()))
+                lenient().when(centralCatalogueClient.getProductFromSlug(any(), any(),any() ))
                                 .thenReturn(bulkResponse);
                 lenient().when(centralCatalogueClient.bulkTypeIdResponse(any()))
                                 .thenReturn(typeBulkResponse);
@@ -580,7 +580,7 @@ class ProductServiceImplTest {
 
         @Test
         void getProductFromSlug_shouldWrapAnyException() {
-                when(centralCatalogueClient.getProductFromSlug(any(), any()))
+                when(centralCatalogueClient.getProductFromSlug(any(), any(),any() ))
                                 .thenThrow(new RuntimeException("Service down"));
 
                 CentralCommerceServiceException ex = assertThrows(

@@ -39,6 +39,7 @@ import java.util.stream.Collectors;
 import static com.jswone.commerce.core.constants.GenericConstants.*;
 import static com.jswone.commerce.core.constants.SeoConstants.ATTR_PRODUCT_TITLE;
 import static com.jswone.commerce.core.util.CatalogueUtil.extractProductMmid;
+import static com.jswone.commerce.core.util.CatalogueUtil.validateBulkProductServiceablityForRequestedLocation;
 
 import com.jswone.commerce.core.util.CatalogueUtil;
 
@@ -81,7 +82,7 @@ public class ProductServiceImpl implements ProductService {
             String extractedSlug = seoContext.getSlug();
             log.debug("Calling catalogue client with extracted slug: {}", extractedSlug);
 
-            ProductBulkResponse productBulkResponse = centralCatalogueClient.getProductFromSlug(extractedSlug, "msme");
+            ProductBulkResponse productBulkResponse = centralCatalogueClient.getProductFromSlug(extractedSlug, "msme", seoContext.getLocation());
 
             if (Objects.isNull(productBulkResponse) || productBulkResponse.getProducts().isEmpty()) {
                 throw new CentralCommerceServiceException("Product is not available for slug : " + extractedSlug,
@@ -152,8 +153,9 @@ public class ProductServiceImpl implements ProductService {
                     Set.of(productMmid),
                     storeFront,
                     "en_US");
-
             ProductBulkResponse productBulkResponse = centralCatalogueClient.bulkMMIDResponse(request);
+
+            validateBulkProductServiceablityForRequestedLocation(productBulkResponse,seoContext.getLocation());
 
             if (Objects.isNull(productBulkResponse) || productBulkResponse.getProducts().isEmpty()) {
                 throw new CentralCommerceServiceException(
@@ -327,7 +329,7 @@ public class ProductServiceImpl implements ProductService {
             log.info(
                     "Making request to get matched variant from product catalogue store for product:{}",
                     productSkuRequest.getProductMaterialMasterId());
-            ProductCatalogueStore productCatalogueStore = null;
+            ProductCatalogueStore productCatalogueStore;
             productCatalogueStore = productCatalogueStoreRepository.findProductCatalogueStoresByProductMaterialMasterId(
                     productSkuRequest.getProductMaterialMasterId());
             if (Objects.isNull(productCatalogueStore)) {

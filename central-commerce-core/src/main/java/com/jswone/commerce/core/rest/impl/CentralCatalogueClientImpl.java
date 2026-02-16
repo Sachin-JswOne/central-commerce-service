@@ -199,15 +199,13 @@ public class CentralCatalogueClientImpl implements CentralCatalogueClient {
                                         values);
                 });
 
-                // Adding location filter to filter products based on location
+                addLocationFiltersToRequestFilters(filters,location);
+                return filters;
+        }
+
+        private void addLocationFiltersToRequestFilters( Map<String, List<String>> filters, String location) {
                 if (StringUtils.isNotEmpty(location)) {
                         String formattedName = formatSeoLocationNameToUpperCase(location);
-
-                        // Use LocationMasterService for validation (uses cache)
-                        if (!locationMasterService.isValidSeoLocation(formattedName)) {
-                                log.warn("Location '{}' not found in serviceable locations", formattedName);
-                                return filters;
-                        }
 
                         // Check if it's a state
                         if (locationMasterService.getAllStates().contains(formattedName)) {
@@ -217,8 +215,6 @@ public class CentralCatalogueClientImpl implements CentralCatalogueClient {
                                 filters.put("district", List.of(formattedName));
                         }
                 }
-
-                return filters;
         }
 
         @Override
@@ -553,12 +549,15 @@ public class CentralCatalogueClientImpl implements CentralCatalogueClient {
         }
 
         @Override
-        public ProductBulkResponse getProductFromSlug(String slug, String storeFront) {
+        public ProductBulkResponse getProductFromSlug(String slug, String storeFront, String location) {
                 try {
+
                         ProductSlugRequestDTO productSlugRequestDTO = ProductSlugRequestDTO.builder()
                                         .slug(slug)
                                         .storefront(storeFront)
                                         .locale("en-US").build();
+                        Map<String, List<String>> filters = new HashMap<>();
+                        addLocationFiltersToRequestFilters(filters,location);
 
                         String url = commerceValueConfig.getCentralCatalogueBaseUrl()
                                         + commerceValueConfig.getCentralCatalogueProductSlugEndpoint();
