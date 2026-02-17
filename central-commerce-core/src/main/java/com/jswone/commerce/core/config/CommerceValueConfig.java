@@ -207,4 +207,13 @@ public class CommerceValueConfig {
 
     @Value("${central.catalogue.admin.get.district.endpoint}")
     private String centralCatalogueAdminGetDistrictEndpoint;
+
+    @Value("${gcp.bucket.seo}")
+    private String seoBucketName;
+
+    @Value("${sitemap.base.url}")
+    private String sitemapBaseUrl;
+
+    @Value("${sitemap.xml.url.prefix}")
+    private String sitemapXmlUrlPrefix;
 }
