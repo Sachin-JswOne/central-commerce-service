@@ -15,11 +15,7 @@ import org.springframework.stereotype.Component;
 
 import java.util.Map;
 
-/**
- * Default implementation of SeoContextResolver.
- *
- * Converts SEO-friendly URLs into SeoContext.
- */
+
 @Slf4j
 @Component
 @RequiredArgsConstructor
@@ -27,10 +23,7 @@ public class DefaultSeoContextResolver implements SeoContextResolver {
 
     private final LocationMasterService locationMasterService;
 
-    /**
-     * Resolves with entity type hint - cleaner approach without prefix
-     * construction.
-     */
+
     @Override
     public SeoContext resolve(String slugOrUrl, SeoEntityType entityType) {
         String normalized = normalize(slugOrUrl);
@@ -76,10 +69,7 @@ public class DefaultSeoContextResolver implements SeoContextResolver {
      * and must exist in the location master data.
      * Valid examples: "mumbai", "new-delhi", "andhra-pradesh"
      * Invalid examples: "Mumbai", "new_delhi", "123delhi", "new delhi"
-     * 
-     * @param location The location string to validate
-     * @throws CentralCommerceServiceException if location format is invalid or
-     *                                         doesn't exist
+     *
      */
     private void validateLocationFormat(String location) {
         if (location == null || location.isEmpty()) {
@@ -94,8 +84,6 @@ public class DefaultSeoContextResolver implements SeoContextResolver {
                     org.springframework.http.HttpStatus.NOT_FOUND);
         }
 
-        // Format normalized location for validation (hyphen to space, capitalize each
-        // word)
         String normalizedLocation = formatSeoLocationNameToUpperCase(location);
 
 //         Validate against location master data
@@ -117,7 +105,6 @@ public class DefaultSeoContextResolver implements SeoContextResolver {
     private String formatSeoLocationNameToUpperCase(String seoLocation) {
         return seoLocation.replace("-", " ").toUpperCase();
     }
-
 
 
     /*

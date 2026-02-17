@@ -242,8 +242,9 @@ public class DefaultSeoService implements SeoService {
                         ProductTypeData productTypeData = productTypeMap.get(product.getProductTypeId());
 
                         if (productTypeData == null) {
-                                log.warn("Product type data not found for typeId: {} (product: {})",
-                                                product.getProductTypeId(), product.getId());
+                            log.error("Product type data not found. typeId: {}, productId: {}",
+                                    product.getProductTypeId(),
+                                    product.getId());
                         }
 
                         List<String> productLocations = extractProductLocations(product);
