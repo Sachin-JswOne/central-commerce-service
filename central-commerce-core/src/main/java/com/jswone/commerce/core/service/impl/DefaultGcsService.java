@@ -3,6 +3,7 @@ package com.jswone.commerce.core.service.impl;
 import com.google.cloud.storage.BlobId;
 import com.google.cloud.storage.BlobInfo;
 import com.google.cloud.storage.Storage;
+import com.jswone.commerce.core.exceptions.GcsServiceException;
 import com.jswone.commerce.core.service.GcsService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -32,7 +33,7 @@ public class DefaultGcsService implements GcsService {
             log.info("File uploaded to bucket {} as {} with encoding {}", bucketName, objectName, contentEncoding);
         } catch (Exception e) {
             log.error("Error uploading file to GCS bucket {}: {}", bucketName, e.getMessage(), e);
-            throw new RuntimeException("Failed to upload file to GCS", e);
+            throw new GcsServiceException("Failed to upload file to GCS", e);
         }
     }
 
@@ -45,7 +46,7 @@ public class DefaultGcsService implements GcsService {
             log.info("File uploaded to bucket {} as {}", bucketName, objectName);
         } catch (Exception e) {
             log.error("Error uploading file to GCS bucket {}: {}", bucketName, e.getMessage(), e);
-            throw new RuntimeException("Failed to upload file to GCS", e);
+            throw new GcsServiceException("Failed to upload file to GCS", e);
         }
     }
 
@@ -61,7 +62,7 @@ public class DefaultGcsService implements GcsService {
             }
         } catch (Exception e) {
             log.error("Error deleting file from GCS bucket {}: {}", bucketName, e.getMessage(), e);
-            throw new RuntimeException("Failed to delete file from GCS", e);
+            throw new GcsServiceException("Failed to delete file from GCS", e);
         }
     }
 }

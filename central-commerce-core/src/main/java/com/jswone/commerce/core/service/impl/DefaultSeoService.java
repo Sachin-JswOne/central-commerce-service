@@ -5,6 +5,8 @@ import com.jswone.commerce.core.enums.seo.CategoryType;
 import com.jswone.commerce.core.enums.seo.SeoEntityType;
 import com.jswone.commerce.core.enums.seo.SeoOperationType;
 import com.jswone.commerce.core.enums.seo.SeoPageType;
+import com.jswone.commerce.core.exceptions.CentralCommerceServiceException;
+import com.jswone.commerce.core.exceptions.GcsServiceException;
 import com.jswone.commerce.core.factory.SeoPatternFactory;
 import com.jswone.commerce.core.model.CatalogueCategoryTree;
 import com.jswone.commerce.core.model.centralCatalogue.Product;
@@ -210,7 +212,7 @@ public class DefaultSeoService implements SeoService {
                         return true;
                 } catch (Exception e) {
                         log.error("Error generating sitemap", e);
-                        throw new RuntimeException("Sitemap generation failed", e);
+                        throw new CentralCommerceServiceException("Sitemap generation failed", e);
                 }
         }
 
@@ -259,7 +261,7 @@ public class DefaultSeoService implements SeoService {
                         gzip.finish();
                         return bos.toByteArray();
                 } catch (Exception e) {
-                        throw new RuntimeException("Compression failed", e);
+                        throw new GcsServiceException("Compression failed", e);
                 }
         }
 
