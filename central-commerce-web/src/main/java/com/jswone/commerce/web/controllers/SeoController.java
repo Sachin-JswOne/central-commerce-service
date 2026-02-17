@@ -18,7 +18,7 @@ public class SeoController implements CentralBaseController {
     /**
      * Triggers sitemap generation.
      */
-    @PostMapping("/external/seo/v1/generate-sitemap")
+    @PostMapping("/internal/seo/v1/generate-sitemap")
     public ApiResponse<String> generateSitemap() {
         boolean success = seoService.generateSitemap();
         return success ? ApiResponseUtil.createSuccessResponse("Sitemap generation successful", HttpStatus.OK) : ApiResponseUtil.createErrorResponse("Sitemap generation failed", HttpStatus.INTERNAL_SERVER_ERROR);
