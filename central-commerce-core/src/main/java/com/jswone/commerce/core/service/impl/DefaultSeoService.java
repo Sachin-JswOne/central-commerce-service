@@ -36,6 +36,7 @@ import org.springframework.cache.Cache;
 import org.springframework.cache.CacheManager;
 import org.springframework.stereotype.Service;
 
+import java.io.ByteArrayInputStream;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -201,7 +202,7 @@ public class DefaultSeoService implements SeoService {
                         // Generate Sitemap Index
                         String sitemapIndexXml = SitemapGenerator.generateSitemapIndexXml(sitemapIndexUrls);
                         gcsService.uploadFile(commerceValueConfig.getSeoBucketName(), "index.xml",
-                                        sitemapIndexXml.getBytes(),
+                                new ByteArrayInputStream(sitemapIndexXml.getBytes()),
                                         "application/xml");
 
                         log.info("Sitemap generation completed successfully.");

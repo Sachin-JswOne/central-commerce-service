@@ -18,10 +18,6 @@ public class DefaultGcsService implements GcsService {
 
     private final Storage storage;
 
-    @Override
-    public void uploadFile(String bucketName, String objectName, byte[] content, String contentType) {
-        uploadFile(bucketName, objectName, new ByteArrayInputStream(content), contentType);
-    }
 
     @Override
     public void uploadFile(String bucketName, String objectName, byte[] content, String contentType,

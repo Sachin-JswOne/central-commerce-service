@@ -21,6 +21,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import com.jswone.commerce.core.config.CommerceValueConfig;
 import org.springframework.cache.CacheManager;
 
+import java.io.ByteArrayInputStream;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -412,14 +413,16 @@ class DefaultSeoServiceTest {
                 // Mock GCS service
                 doNothing().when(gcsService).uploadFile(anyString(), anyString(), any(byte[].class), anyString(),
                                 anyString());
-                doNothing().when(gcsService).uploadFile(anyString(), anyString(), any(byte[].class), anyString());
+                doNothing().when(gcsService).uploadFile(anyString(), anyString(), any(java.io.InputStream.class),
+                                anyString());
 
                 // When
                 seoService.generateSitemap();
 
                 // Then
                 // Verify sitemap index upload
-                verify(gcsService, times(1)).uploadFile(eq(seoBucketName), eq("index.xml"), any(byte[].class),
+                verify(gcsService, times(1)).uploadFile(eq(seoBucketName), eq("index.xml"),
+                                any(java.io.InputStream.class),
                                 eq("application/xml"));
 
                 // Verify category sitemap upload
