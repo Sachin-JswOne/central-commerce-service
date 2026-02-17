@@ -163,6 +163,8 @@ public class DefaultSeoService implements SeoService {
                         }
 
                         List<String> sitemapIndexUrls = new ArrayList<>();
+                        // Add hardcoded sitemap entry
+                        sitemapIndexUrls.add(commerceValueConfig.getSitemapXmlUrlPrefix() + "/sitemap.xml");
 
                         // Upload Categories
                         if (!validCategoryUrls.isEmpty()) {
@@ -204,7 +206,7 @@ public class DefaultSeoService implements SeoService {
                         // Generate Sitemap Index
                         String sitemapIndexXml = SitemapGenerator.generateSitemapIndexXml(sitemapIndexUrls);
                         gcsService.uploadFile(commerceValueConfig.getSeoBucketName(), "index.xml",
-                                new ByteArrayInputStream(sitemapIndexXml.getBytes()),
+                                        new ByteArrayInputStream(sitemapIndexXml.getBytes()),
                                         "application/xml");
 
                         log.info("Sitemap generation completed successfully.");
