@@ -36,7 +36,7 @@ public class TrendingSearchServiceImpl implements TrendingSearchService {
         if (jedisBloomService.addToBloom(redisKey) && !jedisBloomService.isBarred(userSearchLogsIndex.getQuery().getNormalized())) {
             trendingSearchTermElasticIndexRepository.insertData(TrendingSearchTermIndex.builder()
                     .id(getQueryString(userSearchLogsIndex.getQuery().getNormalized()))
-                    .query(userSearchLogsIndex.getQuery().getNormalized())
+                    .query(userSearchLogsIndex.getQuery().getRaw())
                     .build());
         }
 
@@ -51,7 +51,7 @@ public class TrendingSearchServiceImpl implements TrendingSearchService {
                     .stream()
                     .map(Hit::source)
                     .filter(Objects::nonNull)
-                    .map(TrendingSearchTermIndex::getId)
+                    .map(TrendingSearchTermIndex::getQuery)
                     .toList();
         } catch (IOException e) {
             log.error("Could not get Trending search items : {} ", e.getMessage());
