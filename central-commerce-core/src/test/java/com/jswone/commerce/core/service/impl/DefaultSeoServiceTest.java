@@ -132,7 +132,7 @@ class DefaultSeoServiceTest {
                                 "Steel Pipe", "Description", "url", "og", "product", "og-url", "img", "og-desc");
 
                 when(patternFactory.resolve(productContext)).thenReturn(mockHandler);
-                when(mockHandler.generateMeta(any(), any())).thenReturn(mockMeta);
+                when(mockHandler.generateMeta(any(SeoContext.class), any(SeoData.class))).thenReturn(mockMeta);
 
                 // When
                 seoService.resolveSeoMeta(productContext, seoData);

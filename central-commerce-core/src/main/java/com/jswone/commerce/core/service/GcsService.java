@@ -4,7 +4,6 @@ import java.io.InputStream;
 
 public interface GcsService {
 
-    void uploadFile(String bucketName, String objectName, byte[] content, String contentType);
 
     void uploadFile(String bucketName, String objectName, byte[] content, String contentType, String contentEncoding);
 
