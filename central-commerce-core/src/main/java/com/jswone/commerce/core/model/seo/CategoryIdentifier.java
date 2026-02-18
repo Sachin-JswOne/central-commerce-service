@@ -1,6 +1,5 @@
 package com.jswone.commerce.core.model.seo;
 
-import com.jswone.commerce.core.enums.seo.CategoryType;
 import lombok.*;
 
 @Getter
@@ -10,5 +9,5 @@ import lombok.*;
 public class CategoryIdentifier {
     String categoryId;
     String categorySlug;
-    CategoryType categoryType;
+    String categoryType;
 }

@@ -20,6 +20,7 @@ public final class SeoConstants {
 
     // ============ Category Types ============
     public static final String CATEGORY_TYPE_BRANDS = "Brands";
+    public static final String CATEGORY_TYPE_ALL_PRODUCTS = "all_products";
 
     // ============ Locations ============
     public static final String LOCATION_ALL = "all";
@@ -35,6 +36,7 @@ public final class SeoConstants {
     // ============ URL Path Segments ============
     public static final String URL_SEGMENT_CATEGORY = "category";
     public static final String URL_SEGMENT_PRODUCT_DETAIL = "product-detail";
+    public static final String URL_SEGMENT_LOCATION_PREFIX = "location";
 
     // ============ Template Placeholders ============
     public static final String PLACEHOLDER_CATEGORY_NAME = "{categoryName}";

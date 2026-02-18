@@ -1,7 +1,7 @@
 package com.jswone.commerce.core.service.impl;
 
 import com.jswone.commerce.core.config.CommerceValueConfig;
-import com.jswone.commerce.core.enums.seo.CategoryType;
+
 import com.jswone.commerce.core.enums.seo.SeoEntityType;
 import com.jswone.commerce.core.enums.seo.SeoOperationType;
 import com.jswone.commerce.core.enums.seo.SeoPageType;
@@ -96,50 +96,56 @@ public class DefaultSeoService implements SeoService {
                         List<CategoryIdentifier> allCategories = fetchAllCategoryIdsFromCC();
                         log.info("Found {} categories to process", allCategories.size());
 
-                        // Internal lists to accumulate URLs
-                        List<UrlMeta> validCategoryUrls = new ArrayList<>();
-                        List<UrlMeta> validBrandUrls = new ArrayList<>();
-                        List<UrlMeta> validPdpBaseUrls = new ArrayList<>();
-                        List<UrlMeta> validPdpStateUrls = new ArrayList<>();
-                        List<UrlMeta> validPdpCityUrls = new ArrayList<>();
-                        List<UrlMeta> validPdpConfiguredUrls = new ArrayList<>();
+                        // Dynamic map to accumulate URLs by sitemap file name
+                        Map<String, List<UrlMeta>> sitemapUrlMap = new java.util.LinkedHashMap<>();
 
                         for (CategoryIdentifier cat : allCategories) {
                                 try {
                                         CategoryResponse response = processCategory(cat.getCategoryId(),
                                                         cat.getCategorySlug(), cat.getCategoryType());
 
+                                        // Derive sitemap key from category type (e.g., "brands-plp",
+                                        // "industry-segments-plp", "categories-plp")
+                                        String sitemapKey;
+                                        if (SeoConstants.CATEGORY_TYPE_ALL_PRODUCTS
+                                                        .equalsIgnoreCase(cat.getCategoryType())) {
+                                                sitemapKey = "categories-plp";
+                                        } else {
+                                                sitemapKey = CatalogueUtil.getSeoUrlCategoryPrefix(
+                                                                cat.getCategoryType()) + "-plp";
+                                        }
+
                                         // Collect Category URLs
                                         UrlGroup catUrls = response.urls();
                                         if (catUrls != null && catUrls.getBase() != null) {
-                                                if (cat.getCategoryType() == CategoryType.BRAND) {
-                                                        validBrandUrls.add(catUrls.getBase());
-                                                        if (catUrls.getLocations() != null) {
-                                                                validBrandUrls.addAll(catUrls.getLocations().values());
-                                                        }
-                                                } else {
-                                                        validCategoryUrls.add(catUrls.getBase());
-                                                        if (catUrls.getLocations() != null) {
-                                                                validCategoryUrls.addAll(
-                                                                                catUrls.getLocations().values());
-                                                        }
+                                                sitemapUrlMap.computeIfAbsent(sitemapKey, k -> new ArrayList<>())
+                                                                .add(catUrls.getBase());
+                                                if (catUrls.getLocations() != null) {
+                                                        sitemapUrlMap.get(sitemapKey)
+                                                                        .addAll(catUrls.getLocations().values());
                                                 }
                                         }
 
-                                        // Collect Product URLs (only for Standard categories)
+                                        // Collect Product URLs (only for all_products categories)
                                         if (response.products() != null) {
                                                 for (ProductResponse prod : response.products()) {
                                                         UrlGroup prodUrls = prod.getUrls();
                                                         if (prodUrls != null && prodUrls.getBase() != null) {
-                                                                validPdpBaseUrls.add(prodUrls.getBase());
+                                                                sitemapUrlMap.computeIfAbsent("pdp-base",
+                                                                                k -> new ArrayList<>())
+                                                                                .add(prodUrls.getBase());
                                                         }
 
                                                         if (prod.getStateUrls() != null) {
-                                                                validPdpStateUrls.addAll(prod.getStateUrls().values());
+                                                                sitemapUrlMap.computeIfAbsent("pdp-states",
+                                                                                k -> new ArrayList<>())
+                                                                                .addAll(prod.getStateUrls().values());
                                                         }
 
                                                         if (prod.getCityUrls() != null) {
-                                                                validPdpCityUrls.addAll(prod.getCityUrls().values());
+                                                                sitemapUrlMap.computeIfAbsent("pdp-cities",
+                                                                                k -> new ArrayList<>())
+                                                                                .addAll(prod.getCityUrls().values());
                                                         }
 
                                                         // Collect Variant URLs
@@ -148,8 +154,10 @@ public class DefaultSeoService implements SeoService {
                                                                         UrlGroup vUrls = variant.getUrls();
                                                                         if (vUrls != null && vUrls
                                                                                         .getLocations() != null) {
-                                                                                validPdpConfiguredUrls.addAll(
-                                                                                                vUrls.getLocations()
+                                                                                sitemapUrlMap.computeIfAbsent(
+                                                                                                "configured-pdp",
+                                                                                                k -> new ArrayList<>())
+                                                                                                .addAll(vUrls.getLocations()
                                                                                                                 .values());
                                                                         }
                                                                 }
@@ -166,41 +174,14 @@ public class DefaultSeoService implements SeoService {
                         // Add hardcoded sitemap entry
                         sitemapIndexUrls.add(commerceValueConfig.getSitemapXmlUrlPrefix() + "/sitemap.xml");
 
-                        // Upload Categories
-                        if (!validCategoryUrls.isEmpty()) {
-                                List<String> urls = uploadChunkedListsToGcs(validCategoryUrls, "categories-plp", 40000);
-                                sitemapIndexUrls.addAll(urls);
-                        }
-
-                        // Upload Brands
-                        if (!validBrandUrls.isEmpty()) {
-                                List<String> urls = uploadChunkedListsToGcs(validBrandUrls, "brands-plp", 40000);
-                                sitemapIndexUrls.addAll(urls);
-                        }
-
-                        // Upload PDP Base
-                        if (!validPdpBaseUrls.isEmpty()) {
-                                List<String> urls = uploadChunkedListsToGcs(validPdpBaseUrls, "pdp-base", 40000);
-                                sitemapIndexUrls.addAll(urls);
-                        }
-
-                        // Upload PDP States
-                        if (!validPdpStateUrls.isEmpty()) {
-                                List<String> urls = uploadChunkedListsToGcs(validPdpStateUrls, "pdp-states", 40000);
-                                sitemapIndexUrls.addAll(urls);
-                        }
-
-                        // Upload PDP Cities (Chunk size 30k)
-                        if (!validPdpCityUrls.isEmpty()) {
-                                List<String> urls = uploadChunkedListsToGcs(validPdpCityUrls, "pdp-cities", 30000);
-                                sitemapIndexUrls.addAll(urls);
-                        }
-
-                        // Upload Configured PDPs (Variants)
-                        if (!validPdpConfiguredUrls.isEmpty()) {
-                                List<String> urls = uploadChunkedListsToGcs(validPdpConfiguredUrls, "configured-pdp",
-                                                40000);
-                                sitemapIndexUrls.addAll(urls);
+                        // Upload all collected URL groups dynamically
+                        for (Map.Entry<String, List<UrlMeta>> entry : sitemapUrlMap.entrySet()) {
+                                if (!entry.getValue().isEmpty()) {
+                                        int chunkSize = "pdp-cities".equals(entry.getKey()) ? 30000 : 40000;
+                                        List<String> urls = uploadChunkedListsToGcs(entry.getValue(), entry.getKey(),
+                                                        chunkSize);
+                                        sitemapIndexUrls.addAll(urls);
+                                }
                         }
 
                         // Generate Sitemap Index
@@ -267,7 +248,7 @@ public class DefaultSeoService implements SeoService {
                 }
         }
 
-        private CategoryResponse processCategory(String categoryId, String categorySlug, CategoryType categoryType) {
+        private CategoryResponse processCategory(String categoryId, String categorySlug, String categoryType) {
 
                 // Initialize cache for this category
                 initializeCategoryLocationCache(categoryId);
@@ -283,12 +264,12 @@ public class DefaultSeoService implements SeoService {
 
                 SeoPatternHandler handler = patternFactory.resolve(categoryContext);
 
-                // For BRAND categories: track locations but don't return product URLs
-                if (categoryType == CategoryType.BRAND) {
-                        processProducts(categoryId);
+                // For ALL_PRODUCTS: process products and variants (deep traversal)
+                if (SeoConstants.CATEGORY_TYPE_ALL_PRODUCTS.equalsIgnoreCase(categoryType)) {
+                        List<ProductResponse> products = processProducts(categoryId);
 
                         Set<String> cachedLocations = getLocationsFromCache(categoryId);
-                        log.debug("Retrieved {} locations from cache for BRAND category: {}", cachedLocations.size(),
+                        log.debug("Retrieved {} locations from cache for category: {}", cachedLocations.size(),
                                         categoryId);
 
                         UrlGroup categoryUrls = buildCategoryUrls(categoryContext, handler, cachedLocations);
@@ -300,13 +281,17 @@ public class DefaultSeoService implements SeoService {
                                         categoryType,
                                         categorySlug,
                                         categoryUrls,
-                                        List.of()); // Empty product list for BRAND categories
+                                        products);
                 }
 
-                List<ProductResponse> products = processProducts(categoryId);
+                // For all other categories (Brands, Industry Segments, etc.):
+                // We still need to process products to extract locations for the category URLs,
+                // but we DO NOT include the products in the Sitemap response.
+                processProducts(categoryId);
 
                 Set<String> cachedLocations = getLocationsFromCache(categoryId);
-                log.debug("Retrieved {} locations from cache for category: {}", cachedLocations.size(), categoryId);
+                log.debug("Retrieved {} locations from cache for category: {}", cachedLocations.size(),
+                                categoryId);
 
                 UrlGroup categoryUrls = buildCategoryUrls(categoryContext, handler, cachedLocations);
 
@@ -317,7 +302,7 @@ public class DefaultSeoService implements SeoService {
                                 categoryType,
                                 categorySlug,
                                 categoryUrls,
-                                products);
+                                List.of()); // Empty description for non-all_products categories
         }
 
         private List<ProductResponse> processProducts(String categoryId) {
@@ -385,7 +370,7 @@ public class DefaultSeoService implements SeoService {
                 SeoContext productBaseContext = SeoContext.builder()
                                 .entityType(SeoEntityType.PRODUCT)
                                 .pageType(SeoPageType.PDP)
-                                .categoryType(CategoryType.STANDARD)
+                                .categoryType(SeoConstants.CATEGORY_TYPE_ALL_PRODUCTS)
                                 .productId(product.getId())
                                 .slug(productBaseSlug)
                                 .lastModifiedAt(productLastMod)
@@ -619,10 +604,7 @@ public class DefaultSeoService implements SeoService {
                 List<CategoryIdentifier> result = new ArrayList<>();
 
                 for (CatalogueCategoryTree root : categoryTree) {
-
-                        CategoryType categoryType = SeoConstants.CATEGORY_TYPE_BRANDS.equalsIgnoreCase(root.getKey())
-                                        ? CategoryType.BRAND
-                                        : CategoryType.STANDARD;
+                        String categoryType = root.getKey();
 
                         if (root.getSub_menu() != null) {
                                 for (CatalogueCategoryTree child : root.getSub_menu()) {
@@ -636,7 +618,7 @@ public class DefaultSeoService implements SeoService {
 
         private void collectSubCategories(
                         CatalogueCategoryTree node,
-                        CategoryType categoryType,
+                        String categoryType,
                         List<CategoryIdentifier> result) {
 
                 if (node.getId() != null
@@ -724,7 +706,7 @@ public class DefaultSeoService implements SeoService {
                         SeoContext locationContext = SeoContext.builder()
                                         .entityType(SeoEntityType.PRODUCT)
                                         .pageType(SeoPageType.PDP)
-                                        .categoryType(CategoryType.STANDARD)
+                                        .categoryType(SeoConstants.CATEGORY_TYPE_ALL_PRODUCTS)
                                         .productId(product.getId())
                                         .slug(productBaseSlug)
                                         .location(location)
@@ -764,7 +746,7 @@ public class DefaultSeoService implements SeoService {
                                 SeoContext variantContext = SeoContext.builder()
                                                 .entityType(SeoEntityType.VARIANT)
                                                 .pageType(SeoPageType.PDP)
-                                                .categoryType(CategoryType.STANDARD)
+                                                .categoryType(SeoConstants.CATEGORY_TYPE_ALL_PRODUCTS)
                                                 .productId(product.getId())
                                                 .slug(variantBaseSlug)
                                                 .variantMmid(variant.getVariantMmid())

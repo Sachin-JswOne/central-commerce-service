@@ -4,6 +4,8 @@ import lombok.Getter;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Configuration;
 
+import java.util.Set;
+
 @Getter
 @Configuration
 public class CommerceValueConfig {
@@ -216,4 +218,7 @@ public class CommerceValueConfig {
 
     @Value("${sitemap.xml.url.prefix}")
     private String sitemapXmlUrlPrefix;
+
+    @Value("${sitemap.disabled.parent.category}")
+    private Set<String> disabledParentCategorySet;
 }

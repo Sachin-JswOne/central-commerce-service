@@ -394,6 +394,7 @@ class DefaultSeoServiceTest {
                 com.jswone.commerce.core.model.CatalogueCategoryTree tree = com.jswone.commerce.core.model.CatalogueCategoryTree
                                 .builder()
                                 .id("cat1")
+                                .key("all_products")
                                 .attributes(attributes)
                                 .sub_menu(List.of(child))
                                 .build();

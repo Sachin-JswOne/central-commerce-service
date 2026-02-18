@@ -39,7 +39,8 @@ public class CatalogueUtil {
     }
 
     public static Double safeDouble(Object o) {
-        if (o instanceof Number num) return num.doubleValue();
+        if (o instanceof Number num)
+            return num.doubleValue();
         try {
             return Double.parseDouble(o.toString());
         } catch (Exception e) {
@@ -131,7 +132,8 @@ public class CatalogueUtil {
         String[] parts = variantMmid.split("-");
         if (parts.length < 2) {
             throw new CentralCommerceServiceException(
-                    "Invalid variant MMID format: " + variantMmid + ". Expected format: {categoryId}-{ProductId}-{variantId}",
+                    "Invalid variant MMID format: " + variantMmid
+                            + ". Expected format: {categoryId}-{ProductId}-{variantId}",
                     HttpStatus.BAD_REQUEST);
         }
 
@@ -187,5 +189,18 @@ public class CatalogueUtil {
                         "Product not serviceable for location: " + location, HttpStatus.NOT_FOUND);
             }
         });
+    }
+
+    public static String getSeoUrlCategoryPrefix(String categoryKey) {
+        if (categoryKey == null || categoryKey.isEmpty()) {
+            return "category";
+        }
+        String normalized = categoryKey.trim().toLowerCase().replace('_', '-');
+
+        if ("brands".equals(normalized) || "industry-segments".equals(normalized)) {
+            return normalized.substring(0, normalized.length() - 1);
+        }
+
+        return normalized;
     }
 }
