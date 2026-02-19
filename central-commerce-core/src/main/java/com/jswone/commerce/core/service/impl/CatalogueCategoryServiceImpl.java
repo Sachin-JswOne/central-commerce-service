@@ -275,19 +275,21 @@ public class CatalogueCategoryServiceImpl implements CatalogueCategoryService {
         categoryTreeResponse.getNavigation().removeIf(
                 nav -> !"All products".equalsIgnoreCase(nav.getName()));
 
-        categoryTreeResponse.getNavigation().forEach(nav -> {
+        if(!slugs.isEmpty() && !slugs.contains("all-products")){
+            categoryTreeResponse.getNavigation().forEach(nav -> {
 
-            List<NavigationItem> matchedSubMenus = new ArrayList<>();
+                List<NavigationItem> matchedSubMenus = new ArrayList<>();
 
-            for (String slug : slugs) {
-                NavigationItem matched =
-                        findNodeRecursivelySlug(nav.getSubMenu(), slug);
-                if (matched != null) {
-                    matchedSubMenus.add(matched);
+                for (String slug : slugs) {
+                    NavigationItem matched =
+                            findNodeRecursivelySlug(nav.getSubMenu(), slug);
+                    if (matched != null) {
+                        matchedSubMenus.add(matched);
+                    }
                 }
-            }
-            nav.setSubMenu(matchedSubMenus);
-        });
+                nav.setSubMenu(matchedSubMenus);
+            });
+        }
     }
 
     private NavigationItem findNodeRecursively(
