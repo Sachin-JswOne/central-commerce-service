@@ -13,6 +13,6 @@ public class ProductResponse {
     private final String productSlug;
     private final UrlGroup urls;
     private final Map<String, UrlMeta> stateUrls;
-    private final Map<String, UrlMeta> cityUrls;
+    private final Map<String, UrlMeta> districtUrls;
     private final List<VariantResponse> variants;
 }

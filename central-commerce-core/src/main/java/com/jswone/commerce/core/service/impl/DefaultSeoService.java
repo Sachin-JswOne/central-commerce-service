@@ -139,10 +139,11 @@ public class DefaultSeoService implements SeoService {
                                                                                 .addAll(prod.getStateUrls().values());
                                                         }
 
-                                                        if (prod.getCityUrls() != null) {
-                                                                sitemapUrlMap.computeIfAbsent("pdp-cities",
+                                                        if (prod.getDistrictUrls() != null) {
+                                                                sitemapUrlMap.computeIfAbsent("pdp-districts",
                                                                                 k -> new ArrayList<>())
-                                                                                .addAll(prod.getCityUrls().values());
+                                                                                .addAll(prod.getDistrictUrls()
+                                                                                                .values());
                                                         }
 
                                                         // Collect Variant URLs
@@ -175,7 +176,7 @@ public class DefaultSeoService implements SeoService {
                         // Upload all collected URL groups dynamically
                         for (Map.Entry<String, List<UrlMeta>> entry : sitemapUrlMap.entrySet()) {
                                 if (!entry.getValue().isEmpty()) {
-                                        int chunkSize = "pdp-cities".equals(entry.getKey()) ? 30000 : 40000;
+                                        int chunkSize = commerceValueConfig.getSitemapDefaultChunkSize();
                                         List<String> urls = uploadChunkedListsToGcs(entry.getValue(), entry.getKey(),
                                                         chunkSize);
                                         sitemapIndexUrls.addAll(urls);
@@ -184,7 +185,7 @@ public class DefaultSeoService implements SeoService {
 
                         // Generate Sitemap Index
                         String sitemapIndexXml = SitemapGenerator.generateSitemapIndexXml(sitemapIndexUrls);
-                        gcsService.uploadFile(commerceValueConfig.getSeoBucketName(), "index.xml",
+                        gcsService.uploadFile(commerceValueConfig.getSeoBucketName(), "sitemap-index.xml",
                                         new ByteArrayInputStream(sitemapIndexXml.getBytes()),
                                         "application/xml");
 

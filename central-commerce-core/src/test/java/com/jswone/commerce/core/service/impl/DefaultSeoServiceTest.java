@@ -409,6 +409,7 @@ class DefaultSeoServiceTest {
                 when(commerceValueConfig.getSeoBucketName()).thenReturn(seoBucketName);
                 when(commerceValueConfig.getSitemapBaseUrl()).thenReturn(expectedSitemapBaseUrl);
                 when(commerceValueConfig.getJoplMsmeWebUrl()).thenReturn(expectedPrefixUrl);
+                when(commerceValueConfig.getSitemapDefaultChunkSize()).thenReturn(40000);
 
                 // Mock GCS service
                 doNothing().when(gcsService).uploadFile(anyString(), anyString(), any(byte[].class), anyString(),
@@ -421,7 +422,7 @@ class DefaultSeoServiceTest {
 
                 // Then
                 // Verify sitemap index upload
-                verify(gcsService, times(1)).uploadFile(eq(seoBucketName), eq("index.xml"),
+                verify(gcsService, times(1)).uploadFile(eq(seoBucketName), eq("sitemap-index.xml"),
                                 any(java.io.InputStream.class),
                                 eq("application/xml"));
 

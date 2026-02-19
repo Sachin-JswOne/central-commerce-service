@@ -224,4 +224,7 @@ public class CommerceValueConfig {
 
     @Value("${sitemap.configured.pdp.urls.enabled}")
     private boolean configuredPdpUrlsEnabled;
+
+    @Value("${sitemap.chunk.size.default:40000}")
+    private int sitemapDefaultChunkSize;
 }
