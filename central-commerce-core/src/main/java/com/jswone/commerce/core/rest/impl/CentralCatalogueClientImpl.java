@@ -199,11 +199,11 @@ public class CentralCatalogueClientImpl implements CentralCatalogueClient {
                                         values);
                 });
 
-                addLocationFiltersToRequestFilters(filters,location);
+                addLocationFiltersToRequestFilters(filters, location);
                 return filters;
         }
 
-        private void addLocationFiltersToRequestFilters( Map<String, List<String>> filters, String location) {
+        private void addLocationFiltersToRequestFilters(Map<String, List<String>> filters, String location) {
                 if (StringUtils.isNotEmpty(location)) {
                         String formattedName = formatSeoLocationNameToUpperCase(location);
 
@@ -557,7 +557,7 @@ public class CentralCatalogueClientImpl implements CentralCatalogueClient {
                                         .storefront(storeFront)
                                         .locale("en-US").build();
                         Map<String, List<String>> filters = new HashMap<>();
-                        addLocationFiltersToRequestFilters(filters,location);
+                        addLocationFiltersToRequestFilters(filters, location);
 
                         String url = commerceValueConfig.getCentralCatalogueBaseUrl()
                                         + commerceValueConfig.getCentralCatalogueProductSlugEndpoint();
@@ -646,33 +646,47 @@ public class CentralCatalogueClientImpl implements CentralCatalogueClient {
                                         categoryId, totalHits, totalPages);
 
                         // Step 2: Fetch all pages in parallel
-                        List<CompletableFuture<List<Product>>> pageFutures = new ArrayList<>();
+                        Map<Integer, CompletableFuture<List<Product>>> pageFutureMap = new LinkedHashMap<>();
 
                         for (int page = 0; page < totalPages; page++) {
                                 final int currentPage = page;
 
-                                CompletableFuture<List<Product>> pageFuture = CompletableFuture.supplyAsync(() -> {
-                                        try {
-                                                return fetchProductPage(categoryId, storefront, currentPage, pageSize,
-                                                                url,
-                                                                headers);
-                                        } catch (Exception e) {
-                                                log.error("Error fetching page {} for category {}: {}",
-                                                                currentPage, categoryId, e.getMessage(), e);
-                                                return List.of();
-                                        }
-                                }, paginationExecutor);
+                                CompletableFuture<List<Product>> pageFuture = CompletableFuture.supplyAsync(
+                                                () -> fetchProductPage(categoryId, storefront, currentPage, pageSize,
+                                                                url, headers),
+                                                paginationExecutor);
 
-                                pageFutures.add(pageFuture);
+                                pageFutureMap.put(page, pageFuture);
                         }
 
-                        // Step 3: Wait for all pages and merge results
-                        List<Product> allProducts = pageFutures.stream()
-                                        .map(CompletableFuture::join)
-                                        .flatMap(List::stream)
-                                        .collect(Collectors.toList());
+                        // Step 3: Collect results and identify failed pages
+                        List<Product> allProducts = new ArrayList<>();
+                        List<Integer> failedPages = new ArrayList<>();
 
-                        log.info("Successfully fetched {} products for category {} using parallel pagination",
+                        for (Map.Entry<Integer, CompletableFuture<List<Product>>> entry : pageFutureMap
+                                        .entrySet()) {
+                                try {
+                                        allProducts.addAll(entry.getValue().join());
+                                } catch (Exception e) {
+                                        log.warn("Page {} failed for category {}: {}",
+                                                        entry.getKey(), categoryId, e.getMessage());
+                                        failedPages.add(entry.getKey());
+                                }
+                        }
+
+                        // Step 4: Retry failed pages with exponential backoff
+                        if (!failedPages.isEmpty()) {
+                                log.info("Retrying {} failed pages for category {} with exponential backoff",
+                                                failedPages.size(), categoryId);
+
+                                for (int failedPage : failedPages) {
+                                        List<Product> retryResult = retryPageWithBackoff(categoryId, storefront,
+                                                        failedPage, pageSize, url, headers);
+                                        allProducts.addAll(retryResult);
+                                }
+                        }
+
+                        log.info("Successfully fetched {} products for category {} (including retries)",
                                         allProducts.size(), categoryId);
 
                         return allProducts;
@@ -736,6 +750,49 @@ public class CentralCatalogueClientImpl implements CentralCatalogueClient {
                                 body.getProducts().size(), page, categoryId);
 
                 return body.getProducts();
+        }
+
+        /**
+         * Retry a failed page fetch with exponential backoff.
+         * Base delay is 500ms, doubling with each attempt, up to maxRetries.
+         */
+        private List<Product> retryPageWithBackoff(
+                        String categoryId,
+                        String storefront,
+                        int page,
+                        int pageSize,
+                        String url,
+                        Map<String, String> headers) {
+
+                int maxRetries = 3;
+                long baseDelayMs = 500;
+
+                for (int attempt = 1; attempt <= maxRetries; attempt++) {
+                        try {
+                                long delay = baseDelayMs * (1L << (attempt - 1)); // 500, 1000, 2000
+                                log.info("Retry attempt {}/{} for page {} of category {} after {}ms delay",
+                                                attempt, maxRetries, page, categoryId, delay);
+                                Thread.sleep(delay);
+
+                                List<Product> result = fetchProductPage(categoryId, storefront, page, pageSize,
+                                                url, headers);
+                                log.info("Successfully fetched page {} on retry attempt {} for category {}",
+                                                page, attempt, categoryId);
+                                return result;
+
+                        } catch (InterruptedException ie) {
+                                Thread.currentThread().interrupt();
+                                log.error("Retry interrupted for page {} of category {}", page, categoryId);
+                                return List.of();
+                        } catch (Exception e) {
+                                log.warn("Retry attempt {}/{} failed for page {} of category {}: {}",
+                                                attempt, maxRetries, page, categoryId, e.getMessage());
+                        }
+                }
+
+                log.error("All {} retry attempts failed for page {} of category {}. Skipping page.",
+                                maxRetries, page, categoryId);
+                return List.of();
         }
 
         public Map<String, String> getStates() {
