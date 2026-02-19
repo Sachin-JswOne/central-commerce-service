@@ -5,7 +5,6 @@ import org.springframework.http.HttpStatus;
 
 public class ProductSelectorException extends RuntimeException {
 
-    private static final long serialVersionUID = 6405119194042287889L;
     private final ProductSkuRequest productSkuRequest;
 
     private final HttpStatus httpStatus;
