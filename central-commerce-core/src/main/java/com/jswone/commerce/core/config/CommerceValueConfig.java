@@ -217,7 +217,7 @@ public class CommerceValueConfig {
     private String sitemapBaseUrl;
 
     @Value("${sitemap.xml.url.prefix}")
-    private String sitemapXmlUrlPrefix;
+    private String joplMsmeWebUrl;
 
     @Value("${sitemap.disabled.parent.category}")
     private Set<String> disabledParentCategorySet;

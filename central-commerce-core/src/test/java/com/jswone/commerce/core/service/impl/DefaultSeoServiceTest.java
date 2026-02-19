@@ -18,10 +18,9 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import com.jswone.commerce.core.service.LocationMasterService;
 import com.jswone.commerce.core.config.CommerceValueConfig;
-import org.springframework.cache.CacheManager;
 
-import java.io.ByteArrayInputStream;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -48,10 +47,10 @@ class DefaultSeoServiceTest {
         private ProductTypeService productTypeService;
 
         @Mock
-        private CacheManager cacheManager;
+        private GcsService gcsService;
 
         @Mock
-        private GcsService gcsService;
+        private LocationMasterService locationMasterService;
 
         @Mock
         private CommerceValueConfig commerceValueConfig;
@@ -67,8 +66,8 @@ class DefaultSeoServiceTest {
                                 patternFactory,
                                 contextResolver,
                                 centralCatalogueClient,
-                                cacheManager,
                                 productTypeService,
+                                locationMasterService,
                                 commerceValueConfig,
                                 gcsService);
         }
@@ -409,7 +408,7 @@ class DefaultSeoServiceTest {
                 // Fix circular stubbing by returning real values
                 when(commerceValueConfig.getSeoBucketName()).thenReturn(seoBucketName);
                 when(commerceValueConfig.getSitemapBaseUrl()).thenReturn(expectedSitemapBaseUrl);
-                when(commerceValueConfig.getSitemapXmlUrlPrefix()).thenReturn(expectedPrefixUrl);
+                when(commerceValueConfig.getJoplMsmeWebUrl()).thenReturn(expectedPrefixUrl);
 
                 // Mock GCS service
                 doNothing().when(gcsService).uploadFile(anyString(), anyString(), any(byte[].class), anyString(),

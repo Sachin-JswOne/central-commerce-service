@@ -12,13 +12,17 @@ public interface LocationMasterService {
 
     Set<String> getAllDistricts();
 
-    /**
-     * Check if a seo location (state or district) is valid.
-     * 
-     * @param location The location name to validate
-     * @return true if location exists as a state or district, false otherwise
-     */
+    Set<String> getDistrictsForState(String state);
+
     boolean isValidSeoLocation(String location);
 
     void warmCache();
+
+    void initCategoryLocations(String categoryId);
+
+    void addCategoryLocation(String categoryId, String location);
+
+    Set<String> getCategoryLocations(String categoryId);
+
+    void clearCategoryLocations(String categoryId);
 }

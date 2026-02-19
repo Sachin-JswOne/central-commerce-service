@@ -12,6 +12,7 @@ import org.springframework.cache.CacheManager;
 import org.springframework.stereotype.Service;
 
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
 import static com.jswone.commerce.core.config.ProfileAwareCacheConfig.getCacheNameWithProfile;
@@ -37,6 +38,17 @@ public class LocationMasterServiceImpl implements LocationMasterService {
         return locations.values().stream()
                 .flatMap(Set::stream)
                 .collect(Collectors.toSet());
+    }
+
+    @Override
+    public Set<String> getDistrictsForState(String state) {
+        if (state == null || state.trim().isEmpty()) {
+            return Set.of();
+        }
+        Map<String, Set<String>> locations = getLocationsFromCacheOrApi();
+        String normalizedState = state.trim().toUpperCase();
+        Set<String> districts = locations.get(normalizedState);
+        return districts != null ? districts : Set.of();
     }
 
     @Override
@@ -78,6 +90,54 @@ public class LocationMasterServiceImpl implements LocationMasterService {
             // Don't throw - application should start even if cache warming fails
         }
     }
+
+    // ---- SEO Category Location Cache ----
+
+    @Override
+    public void initCategoryLocations(String categoryId) {
+        Cache cache = cacheManager.getCache(CacheNames.SEO_CATEGORY_LOCATIONS);
+        if (cache != null) {
+            cache.put(categoryId, ConcurrentHashMap.newKeySet());
+            log.debug("Initialized category location cache for category: {}", categoryId);
+        } else {
+            log.warn("SEO_CATEGORY_LOCATIONS cache not found");
+        }
+    }
+
+    @Override
+    public void addCategoryLocation(String categoryId, String location) {
+        Cache cache = cacheManager.getCache(CacheNames.SEO_CATEGORY_LOCATIONS);
+        if (cache != null) {
+            @SuppressWarnings("unchecked")
+            Set<String> locations = cache.get(categoryId, Set.class);
+            if (locations != null) {
+                locations.add(location);
+                cache.put(categoryId, locations);
+            }
+        }
+    }
+
+    @Override
+    public Set<String> getCategoryLocations(String categoryId) {
+        Cache cache = cacheManager.getCache(CacheNames.SEO_CATEGORY_LOCATIONS);
+        if (cache != null) {
+            @SuppressWarnings("unchecked")
+            Set<String> locations = cache.get(categoryId, Set.class);
+            return locations != null ? locations : Set.of();
+        }
+        return Set.of();
+    }
+
+    @Override
+    public void clearCategoryLocations(String categoryId) {
+        Cache cache = cacheManager.getCache(CacheNames.SEO_CATEGORY_LOCATIONS);
+        if (cache != null) {
+            cache.evict(categoryId);
+            log.debug("Cleared category location cache for category: {}", categoryId);
+        }
+    }
+
+    // ---- Internal helpers ----
 
     /**
      * Get locations from cache, or fetch from API if cache miss.

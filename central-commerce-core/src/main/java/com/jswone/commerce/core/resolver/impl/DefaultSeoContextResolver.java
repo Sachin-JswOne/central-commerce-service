@@ -126,7 +126,6 @@ public class DefaultSeoContextResolver implements SeoContextResolver {
         return SeoContext.builder()
                 .entityType(SeoEntityType.CATEGORY)
                 .pageType(SeoPageType.PLP)
-                .categoryType("standard")
                 .slug(slug)
                 .location(location)
                 .operationType(SeoOperationType.METADATA_RESOLUTION)
@@ -172,7 +171,6 @@ public class DefaultSeoContextResolver implements SeoContextResolver {
         return SeoContext.builder()
                 .entityType(entityType)
                 .pageType(SeoPageType.PDP)
-                .categoryType("standard")
                 .slug(slug)
                 .location(location)
                 .variantMmid(mmid)
@@ -188,7 +186,6 @@ public class DefaultSeoContextResolver implements SeoContextResolver {
         return SeoContext.builder()
                 .entityType(SeoEntityType.PRODUCT)
                 .pageType(SeoPageType.PDP)
-                .categoryType("standard")
                 .slug(slug)
                 .operationType(SeoOperationType.METADATA_RESOLUTION)
                 .build();

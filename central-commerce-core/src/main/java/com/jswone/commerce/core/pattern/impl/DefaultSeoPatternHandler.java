@@ -1,5 +1,6 @@
 package com.jswone.commerce.core.pattern.impl;
 
+import com.jswone.commerce.core.config.CommerceValueConfig;
 import com.jswone.commerce.core.config.SeoUrlProperties;
 
 import com.jswone.commerce.core.enums.seo.SeoEntityType;
@@ -26,6 +27,7 @@ public class DefaultSeoPatternHandler implements SeoPatternHandler {
     private final UrlTemplateResolver templateResolver;
     private final CentralCatalogueClient catalogueClient;
     private final SeoUrlProperties seoUrlProperties;
+    private final CommerceValueConfig commerceValueConfig;
 
     /**
      * Get title from fetched SeoData
@@ -139,7 +141,7 @@ public class DefaultSeoPatternHandler implements SeoPatternHandler {
                 break;
         }
 
-        String canonical = generateUrl(ctx).getUrl();
+        String canonical = commerceValueConfig.getJoplMsmeWebUrl().concat(generateUrl(ctx).getUrl());
         String ogImage = getImage(data);
 
         return SeoMeta.builder()
@@ -248,7 +250,7 @@ public class DefaultSeoPatternHandler implements SeoPatternHandler {
 
     private String ogType(SeoContext ctx) {
         if (ctx.getEntityType() == SeoEntityType.CATEGORY) {
-            return com.jswone.commerce.core.util.CatalogueUtil.getSeoUrlCategoryPrefix(ctx.getCategoryType());
+            return "category";
         }
         return "product";
     }

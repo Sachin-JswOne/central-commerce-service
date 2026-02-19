@@ -27,22 +27,19 @@ import com.jswone.commerce.core.resolver.SeoContextResolver;
 import com.jswone.commerce.core.rest.CentralCatalogueClient;
 import com.jswone.commerce.core.service.SeoService;
 import com.jswone.commerce.core.service.GcsService;
+import com.jswone.commerce.core.service.LocationMasterService;
 import com.jswone.commerce.core.util.SitemapGenerator;
 import com.jswone.commerce.core.service.ProductTypeService;
-import com.jswone.commerce.core.constants.CacheNames;
 import com.jswone.commerce.core.constants.SeoConstants;
 import com.jswone.commerce.core.util.CatalogueUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.cache.Cache;
-import org.springframework.cache.CacheManager;
 import org.springframework.stereotype.Service;
 
 import java.io.ByteArrayInputStream;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -64,8 +61,8 @@ public class DefaultSeoService implements SeoService {
         private final SeoPatternFactory patternFactory;
         private final SeoContextResolver contextResolver;
         private final CentralCatalogueClient centralCatalogueClient;
-        private final CacheManager cacheManager;
         private final ProductTypeService productTypeService;
+        private final LocationMasterService locationMasterService;
         private final CommerceValueConfig commerceValueConfig;
 
         // Using available processors for optimal performance
@@ -172,7 +169,7 @@ public class DefaultSeoService implements SeoService {
 
                         List<String> sitemapIndexUrls = new ArrayList<>();
                         // Add hardcoded sitemap entry
-                        sitemapIndexUrls.add(commerceValueConfig.getSitemapXmlUrlPrefix() + "/sitemap.xml");
+                        sitemapIndexUrls.add(commerceValueConfig.getJoplMsmeWebUrl() + "/sitemap.xml");
 
                         // Upload all collected URL groups dynamically
                         for (Map.Entry<String, List<UrlMeta>> entry : sitemapUrlMap.entrySet()) {
@@ -217,7 +214,7 @@ public class DefaultSeoService implements SeoService {
                         int partNumber = (i / chunkSize) + 1;
                         String fileName = fileBaseName + "-" + partNumber + ".xml.gz";
                         String xml = SitemapGenerator.generateSitemapXmlFromMeta(subList,
-                                        commerceValueConfig.getSitemapXmlUrlPrefix());
+                                        commerceValueConfig.getJoplMsmeWebUrl());
                         byte[] compressed = compress(xml);
                         gcsService.uploadFile(commerceValueConfig.getSeoBucketName(), fileName, compressed,
                                         "application/xml",
@@ -230,7 +227,7 @@ public class DefaultSeoService implements SeoService {
 
         private String uploadListToGcs(List<UrlMeta> urls, String fileName) {
                 String xml = SitemapGenerator.generateSitemapXmlFromMeta(urls,
-                                commerceValueConfig.getSitemapXmlUrlPrefix());
+                                commerceValueConfig.getJoplMsmeWebUrl());
                 byte[] compressed = compress(xml);
                 gcsService.uploadFile(commerceValueConfig.getSeoBucketName(), fileName, compressed, "application/xml",
                                 "gzip");
@@ -251,7 +248,7 @@ public class DefaultSeoService implements SeoService {
         private CategoryResponse processCategory(String categoryId, String categorySlug, String categoryType) {
 
                 // Initialize cache for this category
-                initializeCategoryLocationCache(categoryId);
+                locationMasterService.initCategoryLocations(categoryId);
 
                 SeoContext categoryContext = SeoContext.builder()
                                 .entityType(SeoEntityType.CATEGORY)
@@ -268,13 +265,13 @@ public class DefaultSeoService implements SeoService {
                 if (SeoConstants.CATEGORY_TYPE_ALL_PRODUCTS.equalsIgnoreCase(categoryType)) {
                         List<ProductResponse> products = processProducts(categoryId);
 
-                        Set<String> cachedLocations = getLocationsFromCache(categoryId);
+                        Set<String> cachedLocations = locationMasterService.getCategoryLocations(categoryId);
                         log.debug("Retrieved {} locations from cache for category: {}", cachedLocations.size(),
                                         categoryId);
 
                         UrlGroup categoryUrls = buildCategoryUrls(categoryContext, handler, cachedLocations);
 
-                        clearCategoryLocationCache(categoryId);
+                        locationMasterService.clearCategoryLocations(categoryId);
 
                         return new CategoryResponse(
                                         categoryId,
@@ -289,13 +286,13 @@ public class DefaultSeoService implements SeoService {
                 // but we DO NOT include the products in the Sitemap response.
                 processProducts(categoryId);
 
-                Set<String> cachedLocations = getLocationsFromCache(categoryId);
+                Set<String> cachedLocations = locationMasterService.getCategoryLocations(categoryId);
                 log.debug("Retrieved {} locations from cache for category: {}", cachedLocations.size(),
                                 categoryId);
 
                 UrlGroup categoryUrls = buildCategoryUrls(categoryContext, handler, cachedLocations);
 
-                clearCategoryLocationCache(categoryId);
+                locationMasterService.clearCategoryLocations(categoryId);
 
                 return new CategoryResponse(
                                 categoryId,
@@ -389,7 +386,7 @@ public class DefaultSeoService implements SeoService {
 
                 Map<String, UrlMeta> cityUrls = buildProductLocationUrls(
                                 product, productBaseSlug, productLastMod, categoryId, handler,
-                                extractProductCities(product));
+                                extractProductDistricts(product));
 
                 // Combine for backwards compatibility or just use base in UrlGroup
                 Map<String, UrlMeta> allLocationUrls = new HashMap<>();
@@ -511,38 +508,6 @@ public class DefaultSeoService implements SeoService {
                 return new UrlGroup(base, locationUrls);
         }
 
-        /*
-         * CAFFEINE CACHE HELPERS
-         */
-
-        /**
-         * Initialize an empty location set for a category in cache
-         */
-        private void initializeCategoryLocationCache(String categoryId) {
-                Cache cache = cacheManager.getCache(CacheNames.SEO_CATEGORY_LOCATIONS);
-                if (cache != null) {
-                        cache.put(categoryId, new HashSet<String>());
-                        log.debug("Initialized location cache for category: {}", categoryId);
-                } else {
-                        log.warn("SEO_CATEGORY_LOCATIONS cache not found");
-                }
-        }
-
-        /**
-         * Add a location to the category's cached location set
-         */
-        private void addLocationToCache(String categoryId, String location) {
-                Cache cache = cacheManager.getCache(CacheNames.SEO_CATEGORY_LOCATIONS);
-                if (cache != null) {
-                        @SuppressWarnings("unchecked")
-                        Set<String> locations = cache.get(categoryId, HashSet.class);
-                        if (locations != null) {
-                                locations.add(location);
-                                cache.put(categoryId, locations);
-                        }
-                }
-        }
-
         /**
          * Parse last modified timestamp from product (ISO 8601 format)
          */
@@ -555,30 +520,6 @@ public class DefaultSeoService implements SeoService {
                 } catch (Exception e) {
                         log.warn("Failed to parse lastModifiedAt: {}", lastModifiedAt);
                         return null;
-                }
-        }
-
-        /**
-         * Retrieve all cached locations for a category
-         */
-        private Set<String> getLocationsFromCache(String categoryId) {
-                Cache cache = cacheManager.getCache(CacheNames.SEO_CATEGORY_LOCATIONS);
-                if (cache != null) {
-                        @SuppressWarnings("unchecked")
-                        Set<String> locations = cache.get(categoryId, HashSet.class);
-                        return locations != null ? locations : Set.of();
-                }
-                return Set.of();
-        }
-
-        /**
-         * Clear cached locations for a category after processing is complete
-         */
-        private void clearCategoryLocationCache(String categoryId) {
-                Cache cache = cacheManager.getCache(CacheNames.SEO_CATEGORY_LOCATIONS);
-                if (cache != null) {
-                        cache.evict(categoryId);
-                        log.debug("Cleared location cache for category: {}", categoryId);
                 }
         }
 
@@ -675,15 +616,27 @@ public class DefaultSeoService implements SeoService {
                                 .collect(Collectors.toSet());
         }
 
-        private Set<String> extractProductCities(Product product) {
+        private Set<String> extractProductDistricts(Product product) {
                 if (product.getProductLocation() == null) {
                         return Set.of();
                 }
-                return product.getProductLocation().stream()
-                                .map(ProductLocation::getDistrict)
-                                .filter(loc -> loc != null && !loc.isBlank())
-                                .filter(loc -> !SeoConstants.LOCATION_ALL.equalsIgnoreCase(loc))
-                                .collect(Collectors.toSet());
+                Set<String> districts = new java.util.HashSet<>();
+                for (ProductLocation location : product.getProductLocation()) {
+                        String district = location.getDistrict();
+                        if (district == null || district.isBlank()) {
+                                continue;
+                        }
+                        if (SeoConstants.LOCATION_ALL.equalsIgnoreCase(district)) {
+                                // Expand ALL → get all districts for this state
+                                String state = location.getState();
+                                if (state != null && !state.isBlank()) {
+                                        districts.addAll(locationMasterService.getDistrictsForState(state));
+                                }
+                        } else {
+                                districts.add(district);
+                        }
+                }
+                return districts;
         }
 
         /**
@@ -701,7 +654,7 @@ public class DefaultSeoService implements SeoService {
 
                 for (String location : locations) {
                         // Add to cache for category URL generation
-                        addLocationToCache(categoryId, location);
+                        locationMasterService.addCategoryLocation(categoryId, location);
 
                         SeoContext locationContext = SeoContext.builder()
                                         .entityType(SeoEntityType.PRODUCT)
