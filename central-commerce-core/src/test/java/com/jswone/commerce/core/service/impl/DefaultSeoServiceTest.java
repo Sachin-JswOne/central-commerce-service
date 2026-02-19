@@ -3,6 +3,7 @@ package com.jswone.commerce.core.service.impl;
 import com.jswone.commerce.core.enums.seo.SeoEntityType;
 import com.jswone.commerce.core.enums.seo.SeoPageType;
 
+import com.jswone.commerce.core.constants.SeoConstants;
 import com.jswone.commerce.core.factory.SeoPatternFactory;
 import com.jswone.commerce.core.model.seo.SeoContext;
 import com.jswone.commerce.core.model.seo.SeoData;
@@ -422,7 +423,7 @@ class DefaultSeoServiceTest {
 
                 // Then
                 // Verify sitemap index upload
-                verify(gcsService, times(1)).uploadFile(eq(seoBucketName), eq("sitemap-index.xml"),
+                verify(gcsService, times(1)).uploadFile(eq(seoBucketName), eq(SeoConstants.SITEMAP_INDEX_FILENAME),
                                 any(java.io.InputStream.class),
                                 eq("application/xml"));
 

@@ -62,5 +62,20 @@ public final class SeoConstants {
     public static final String SITEMAP_PRIORITY_MEDIUM = "0.8";
     public static final String SITEMAP_PRIORITY_LOW = "0.5";
 
+    // ============ Sitemap Keys ============
+    public static final String SITEMAP_KEY_SUFFIX_PLP = "-plp";
+    public static final String SITEMAP_KEY_CATEGORIES_PLP = "categories-plp";
+    public static final String SITEMAP_KEY_PDP_BASE = "pdp-base";
+    public static final String SITEMAP_KEY_PDP_STATES = "pdp-states";
+    public static final String SITEMAP_KEY_PDP_DISTRICTS = "pdp-districts";
+    public static final String SITEMAP_KEY_CONFIGURED_PDP = "configured-pdp";
+
+    // ============ Sitemap Files ============
+    public static final String SITEMAP_INDEX_FILENAME = "sitemap-index.xml";
+    public static final String SITEMAP_XML_SUFFIX = ".xml.gz";
+    public static final String SITEMAP_STATIC_PATH = "/sitemap.xml";
+    public static final String CONTENT_TYPE_XML = "application/xml";
+    public static final String CONTENT_ENCODING_GZIP = "gzip";
+
     public static final String PRODUCT_DETAIL = "product-detail/";
 }

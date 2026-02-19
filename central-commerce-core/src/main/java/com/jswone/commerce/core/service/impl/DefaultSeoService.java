@@ -106,10 +106,11 @@ public class DefaultSeoService implements SeoService {
                                         String sitemapKey;
                                         if (SeoConstants.CATEGORY_TYPE_ALL_PRODUCTS
                                                         .equalsIgnoreCase(cat.getCategoryType())) {
-                                                sitemapKey = "categories-plp";
+                                                sitemapKey = SeoConstants.SITEMAP_KEY_CATEGORIES_PLP;
                                         } else {
                                                 sitemapKey = CatalogueUtil.getSeoUrlCategoryPrefix(
-                                                                cat.getCategoryType()) + "-plp";
+                                                                cat.getCategoryType())
+                                                                + SeoConstants.SITEMAP_KEY_SUFFIX_PLP;
                                         }
 
                                         // Collect Category URLs
@@ -128,19 +129,22 @@ public class DefaultSeoService implements SeoService {
                                                 for (ProductResponse prod : response.products()) {
                                                         UrlGroup prodUrls = prod.getUrls();
                                                         if (prodUrls != null && prodUrls.getBase() != null) {
-                                                                sitemapUrlMap.computeIfAbsent("pdp-base",
+                                                                sitemapUrlMap.computeIfAbsent(
+                                                                                SeoConstants.SITEMAP_KEY_PDP_BASE,
                                                                                 k -> new ArrayList<>())
                                                                                 .add(prodUrls.getBase());
                                                         }
 
                                                         if (prod.getStateUrls() != null) {
-                                                                sitemapUrlMap.computeIfAbsent("pdp-states",
+                                                                sitemapUrlMap.computeIfAbsent(
+                                                                                SeoConstants.SITEMAP_KEY_PDP_STATES,
                                                                                 k -> new ArrayList<>())
                                                                                 .addAll(prod.getStateUrls().values());
                                                         }
 
                                                         if (prod.getDistrictUrls() != null) {
-                                                                sitemapUrlMap.computeIfAbsent("pdp-districts",
+                                                                sitemapUrlMap.computeIfAbsent(
+                                                                                SeoConstants.SITEMAP_KEY_PDP_DISTRICTS,
                                                                                 k -> new ArrayList<>())
                                                                                 .addAll(prod.getDistrictUrls()
                                                                                                 .values());
@@ -154,7 +158,7 @@ public class DefaultSeoService implements SeoService {
                                                                         if (vUrls != null && vUrls
                                                                                         .getLocations() != null) {
                                                                                 sitemapUrlMap.computeIfAbsent(
-                                                                                                "configured-pdp",
+                                                                                                SeoConstants.SITEMAP_KEY_CONFIGURED_PDP,
                                                                                                 k -> new ArrayList<>())
                                                                                                 .addAll(vUrls.getLocations()
                                                                                                                 .values());
@@ -171,7 +175,8 @@ public class DefaultSeoService implements SeoService {
 
                         List<String> sitemapIndexUrls = new ArrayList<>();
                         // Add hardcoded sitemap entry
-                        sitemapIndexUrls.add(commerceValueConfig.getJoplMsmeWebUrl() + "/sitemap.xml");
+                        sitemapIndexUrls.add(
+                                        commerceValueConfig.getJoplMsmeWebUrl() + SeoConstants.SITEMAP_STATIC_PATH);
 
                         // Upload all collected URL groups dynamically
                         for (Map.Entry<String, List<UrlMeta>> entry : sitemapUrlMap.entrySet()) {
@@ -185,9 +190,10 @@ public class DefaultSeoService implements SeoService {
 
                         // Generate Sitemap Index
                         String sitemapIndexXml = SitemapGenerator.generateSitemapIndexXml(sitemapIndexUrls);
-                        gcsService.uploadFile(commerceValueConfig.getSeoBucketName(), "sitemap-index.xml",
+                        gcsService.uploadFile(commerceValueConfig.getSeoBucketName(),
+                                        SeoConstants.SITEMAP_INDEX_FILENAME,
                                         new ByteArrayInputStream(sitemapIndexXml.getBytes()),
-                                        "application/xml");
+                                        SeoConstants.CONTENT_TYPE_XML);
 
                         log.info("Sitemap generation completed successfully.");
 
@@ -203,7 +209,7 @@ public class DefaultSeoService implements SeoService {
 
                 // If total URLs are less than chunk size, just upload one file
                 if (urls.size() <= chunkSize) {
-                        String fileName = fileBaseName + ".xml.gz";
+                        String fileName = fileBaseName + SeoConstants.SITEMAP_XML_SUFFIX;
                         uploadedUrls.add(uploadListToGcs(urls, fileName));
                         return uploadedUrls;
                 }
@@ -214,13 +220,13 @@ public class DefaultSeoService implements SeoService {
                         List<UrlMeta> subList = urls.subList(i, end);
                         // 1-based index for file names: name-1.xml.gz, name-2.xml.gz ...
                         int partNumber = (i / chunkSize) + 1;
-                        String fileName = fileBaseName + "-" + partNumber + ".xml.gz";
+                        String fileName = fileBaseName + "-" + partNumber + SeoConstants.SITEMAP_XML_SUFFIX;
                         String xml = SitemapGenerator.generateSitemapXmlFromMeta(subList,
                                         commerceValueConfig.getJoplMsmeWebUrl());
                         byte[] compressed = compress(xml);
                         gcsService.uploadFile(commerceValueConfig.getSeoBucketName(), fileName, compressed,
-                                        "application/xml",
-                                        "gzip");
+                                        SeoConstants.CONTENT_TYPE_XML,
+                                        SeoConstants.CONTENT_ENCODING_GZIP);
                         uploadedUrls.add(commerceValueConfig.getSitemapBaseUrl() + fileName);
                 }
 
@@ -231,8 +237,9 @@ public class DefaultSeoService implements SeoService {
                 String xml = SitemapGenerator.generateSitemapXmlFromMeta(urls,
                                 commerceValueConfig.getJoplMsmeWebUrl());
                 byte[] compressed = compress(xml);
-                gcsService.uploadFile(commerceValueConfig.getSeoBucketName(), fileName, compressed, "application/xml",
-                                "gzip");
+                gcsService.uploadFile(commerceValueConfig.getSeoBucketName(), fileName, compressed,
+                                SeoConstants.CONTENT_TYPE_XML,
+                                SeoConstants.CONTENT_ENCODING_GZIP);
                 return commerceValueConfig.getSitemapBaseUrl() + fileName;
         }
 
