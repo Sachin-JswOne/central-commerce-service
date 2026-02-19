@@ -221,4 +221,7 @@ public class CommerceValueConfig {
 
     @Value("${sitemap.disabled.parent.category}")
     private Set<String> disabledParentCategorySet;
+
+    @Value("${sitemap.configured.pdp.urls.enabled}")
+    private boolean configuredPdpUrlsEnabled;
 }

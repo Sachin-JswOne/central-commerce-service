@@ -146,7 +146,8 @@ public class DefaultSeoService implements SeoService {
                                                         }
 
                                                         // Collect Variant URLs
-                                                        if (prod.getVariants() != null) {
+                                                        if (commerceValueConfig.isConfiguredPdpUrlsEnabled()
+                                                                        && prod.getVariants() != null) {
                                                                 for (VariantResponse variant : prod.getVariants()) {
                                                                         UrlGroup vUrls = variant.getUrls();
                                                                         if (vUrls != null && vUrls
