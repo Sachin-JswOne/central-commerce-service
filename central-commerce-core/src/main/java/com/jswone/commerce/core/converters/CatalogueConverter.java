@@ -246,7 +246,9 @@ public class CatalogueConverter {
     // PRODUCT LISTING CONVERTER ======================================================================================
     public ProductListingResponse convertCataloguePLPResponseToPLPResponse(
             ProductListingCatalogueResponse listingCatalogueResponse,
-            ProductListingRequest listingRequest) {
+            ProductListingRequest listingRequest,
+            CategoryTreeResponse categoryTreeResponse,
+            ProductFilterConditions categoryFilterConditions) {
 
         try {
             List<Product> products = Optional.ofNullable(listingCatalogueResponse.getProducts())
@@ -256,17 +258,17 @@ public class CatalogueConverter {
 
             // Dynamic Filters
             response.setFilterConditions(buildDynamicFiltersProductListing(listingCatalogueResponse, listingRequest));
-//            if(Objects.nonNull(categoryTreeResponse)) {
-//                response.getFilterConditions().add(ProductFilterConditions.builder()
-//                        .displayText("Category")
-//                        .id("CATEGORY")
-//                        .selectedValues(new ArrayList<>())
-//                        .type("selection")
-//                        .values(categoryTreeResponse.getNavigation().getFirst().getSubMenu())
-//                        .build());
-//            }else {
-//                response.getFilterConditions().add(categoryFilterConditions);
-//            }
+            if(Objects.nonNull(categoryTreeResponse)) {
+                response.getFilterConditions().add(ProductFilterConditions.builder()
+                        .displayText("Category")
+                        .id("CATEGORY")
+                        .selectedValues(new ArrayList<>())
+                        .type("selection")
+                        .values(categoryTreeResponse.getNavigation().getFirst().getSubMenu())
+                        .build());
+            }else {
+                response.getFilterConditions().add(categoryFilterConditions);
+            }
             List<PLPCard> plpCards = products.stream()
                     .map(this::convertToPLPCard)
                     .toList();

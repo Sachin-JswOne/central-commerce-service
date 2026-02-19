@@ -129,33 +129,32 @@ public class CentralCatalogueServiceImpl implements CentralCatalogueService {
                         : productListingRequest.getSlug());
 
         ProductListingCatalogueResponse catalogueResponse = centralCatalogueClient.productListing(productListingRequest);
-//        CategoryTreeResponse categoryTreeResponse = null;
-//        ProductFilterConditions categoryFilterConditions =
-//                Optional.ofNullable(productListingRequest.getFilterConditions())
-//                        .orElse(Collections.emptyList())
-//                        .stream()
-//                        .filter(fc -> fc.getId().equalsIgnoreCase("CATEGORY"))
-//                        .filter(fc -> fc.getSelectedValues() != null && !fc.getSelectedValues().isEmpty())
-//                        .findAny()
-//                        .orElse(null);
-//
-//        if(Objects.isNull(categoryFilterConditions) || Objects.isNull(categoryFilterConditions.getId())){
-//            if (Objects.nonNull(productListingRequest.getSlug())) {
-//                categoryTreeResponse = categoryService.getBulkCatalogueCategoryTree(
-//                        BulkCategoryRequestDTO
-//                                .builder()
-//                                .categorySlugs(List.of(productListingRequest.getSlug()))
-//                                .build());
-//            } else {
-//                categoryTreeResponse = categoryService.getBulkCatalogueCategoryTree(
-//                        BulkCategoryRequestDTO
-//                                .builder()
-//                                .categoryIds(List.of(productListingRequest.getCategoryId()))
-//                                .build());
-//            }
-//        }
-//        return catalogueConverter.convertCataloguePLPResponseToPLPResponse(catalogueResponse, productListingRequest, categoryTreeResponse, categoryFilterConditions);
-        return catalogueConverter.convertCataloguePLPResponseToPLPResponse(catalogueResponse,productListingRequest);
+        CategoryTreeResponse categoryTreeResponse = null;
+        ProductFilterConditions categoryFilterConditions =
+                Optional.ofNullable(productListingRequest.getFilterConditions())
+                        .orElse(Collections.emptyList())
+                        .stream()
+                        .filter(fc -> fc.getId().equalsIgnoreCase("CATEGORY"))
+                        .filter(fc -> fc.getSelectedValues() != null && !fc.getSelectedValues().isEmpty())
+                        .findAny()
+                        .orElse(null);
+
+        if(Objects.isNull(categoryFilterConditions) || Objects.isNull(categoryFilterConditions.getId())){
+            if (Objects.nonNull(productListingRequest.getSlug())) {
+                categoryTreeResponse = categoryService.getBulkCatalogueCategoryTree(
+                        BulkCategoryRequestDTO
+                                .builder()
+                                .categorySlugs(List.of(productListingRequest.getSlug()))
+                                .build());
+            } else {
+                categoryTreeResponse = categoryService.getBulkCatalogueCategoryTree(
+                        BulkCategoryRequestDTO
+                                .builder()
+                                .categoryIds(List.of(productListingRequest.getCategoryId()))
+                                .build());
+            }
+        }
+        return catalogueConverter.convertCataloguePLPResponseToPLPResponse(catalogueResponse, productListingRequest, categoryTreeResponse, categoryFilterConditions);
     }
 
     /**
