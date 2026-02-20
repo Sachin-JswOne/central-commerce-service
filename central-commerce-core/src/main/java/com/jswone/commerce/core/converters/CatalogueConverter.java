@@ -4,6 +4,7 @@ import com.jswone.commerce.core.config.CatalogueDynamicConfig;
 import com.jswone.commerce.core.exceptions.CentralCommerceServiceException;
 import com.jswone.commerce.core.model.CategoryTreeResponse;
 import com.jswone.commerce.core.model.NavigationItem;
+import com.jswone.commerce.core.model.centralCatalogue.AssociatedCategory;
 import com.jswone.commerce.core.model.centralCatalogue.Product;
 import com.jswone.commerce.core.model.request.FilterRequestProvider;
 import com.jswone.commerce.core.model.request.ProductListingRequest;
@@ -402,5 +403,68 @@ public class CatalogueConverter {
             });
         }
         return out;
+    }
+
+    public List<NavigationItem> buildFilteredMenu(ProductListingCatalogueResponse catalogueResponse,CategoryTreeResponse categoryTreeResponse) {
+        Set<String> categoryIds = Optional.ofNullable(catalogueResponse.getProducts())
+                .orElse(Collections.emptyList())
+                .stream()
+                .filter(Objects::nonNull)
+                .flatMap(product ->
+                        Optional.ofNullable(product.getAssociatedCategories())
+                                .orElse(Collections.emptyList())
+                                .stream()
+                )
+                .map(AssociatedCategory::getId)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toSet());
+
+
+        return Optional.ofNullable(categoryTreeResponse.getNavigation())
+                .orElse(Collections.emptyList())
+                .stream()
+                .map(navigationItem -> filterCategory(navigationItem, categoryIds))
+                .filter(Objects::nonNull)
+                .toList();
+    }
+
+
+    private NavigationItem filterCategory(NavigationItem navigationItem, Set<String> categoryIds) {
+
+        if (navigationItem == null) {
+            return null;
+        }
+
+        // Recursively filter children
+        List<NavigationItem> filteredSubMenu = Optional.ofNullable(navigationItem.getSubMenu())
+                .orElse(Collections.emptyList())
+                .stream()
+                .map(child -> filterCategory(child, categoryIds))
+                .filter(Objects::nonNull)
+                .collect(Collectors.toList());
+
+        // Keep this category if:
+        // - its id exists in products
+        // - OR any child matched
+        if (categoryIds.contains(navigationItem.getId()) || !filteredSubMenu.isEmpty()) {
+
+            // Create new instance (avoid mutating original tree)
+            NavigationItem copy = new NavigationItem();
+            copy.setId(navigationItem.getId());
+            copy.setName(navigationItem.getName());
+            copy.setSlug(navigationItem.getSlug());
+            copy.setSeoUrl(navigationItem.getSeoUrl());
+            copy.setMetaTitle(navigationItem.getMetaTitle());
+            copy.setMetaDescription(navigationItem.getMetaDescription());
+            copy.setHref(navigationItem.getHref());
+            copy.setLinkTitleSeoPurpose(navigationItem.getLinkTitleSeoPurpose());
+            copy.setLinkTitle(navigationItem.getLinkTitle());
+            copy.setMetaImage(navigationItem.getMetaImage());
+            copy.setSubMenu(filteredSubMenu);
+
+            return copy;
+        }
+
+        return null;
     }
 }

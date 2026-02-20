@@ -5,6 +5,8 @@ import com.jswone.commerce.core.enums.seo.SeoEntityType;
 import com.jswone.commerce.core.exceptions.CentralCommerceServiceException;
 import com.jswone.commerce.core.model.CategoryTreeResponse;
 import com.jswone.commerce.core.model.ImageMetadata;
+import com.jswone.commerce.core.model.NavigationItem;
+import com.jswone.commerce.core.model.centralCatalogue.AssociatedCategory;
 import com.jswone.commerce.core.model.request.BulkCategoryRequestDTO;
 import com.jswone.commerce.core.model.request.ProductBulkRequest;
 import com.jswone.commerce.core.model.request.ProductListingRequest;
@@ -153,6 +155,8 @@ public class CentralCatalogueServiceImpl implements CentralCatalogueService {
                                 .categoryIds(List.of(productListingRequest.getCategoryId()))
                                 .build());
             }
+            List<NavigationItem> navigationItems = catalogueConverter.buildFilteredMenu(catalogueResponse,categoryTreeResponse);
+            categoryTreeResponse.setNavigation(navigationItems);
         }
         return catalogueConverter.convertCataloguePLPResponseToPLPResponse(catalogueResponse, productListingRequest, categoryTreeResponse, categoryFilterConditions);
     }

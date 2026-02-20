@@ -20,6 +20,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Objects;
 
@@ -230,7 +231,7 @@ public class CatalogueCategoryServiceImpl implements CatalogueCategoryService {
 
             for (String categoryId : categoryIds) {
                 NavigationItem matched =
-                        findNodeRecursively(nav.getSubMenu(), categoryId);
+                        findNodeRecursively(nav.getSubMenu(), categoryId, "category");
                 if (matched != null) {
                     matchedSubMenus.add(matched);
                 }
@@ -256,7 +257,7 @@ public class CatalogueCategoryServiceImpl implements CatalogueCategoryService {
 
             for (String brandId : brandCategoryIds) {
                 NavigationItem matched =
-                        findNodeRecursively(nav.getSubMenu(), brandId);
+                        findNodeRecursively(nav.getSubMenu(), brandId, "brand");
                 if (matched != null) {
                     matchedSubMenus.add(matched);
                 }
@@ -275,14 +276,14 @@ public class CatalogueCategoryServiceImpl implements CatalogueCategoryService {
         categoryTreeResponse.getNavigation().removeIf(
                 nav -> !"All products".equalsIgnoreCase(nav.getName()));
 
-        if(!slugs.isEmpty() && !slugs.contains("all-products")){
+        if(!slugs.isEmpty() && !slugs.contains("all-products")) {
             categoryTreeResponse.getNavigation().forEach(nav -> {
 
                 List<NavigationItem> matchedSubMenus = new ArrayList<>();
 
                 for (String slug : slugs) {
                     NavigationItem matched =
-                            findNodeRecursivelySlug(nav.getSubMenu(), slug);
+                            findNodeRecursively(nav.getSubMenu(), slug, "slug");
                     if (matched != null) {
                         matchedSubMenus.add(matched);
                     }
@@ -293,17 +294,17 @@ public class CatalogueCategoryServiceImpl implements CatalogueCategoryService {
     }
 
     private NavigationItem findNodeRecursively(
-            List<NavigationItem> subMenus, String targetId) {
+            List<NavigationItem> subMenus, String targetId, String findBy) {
 
         if (subMenus == null || targetId == null) {
             return null;
         }
 
         for (NavigationItem item : subMenus) {
-            if (targetId.equals(item.getId())) {
+            if (matches(item, targetId, findBy)) {
                 return item;
             }
-            NavigationItem found = findNodeRecursively(item.getSubMenu(), targetId);
+            NavigationItem found = findNodeRecursively(item.getSubMenu(), targetId, findBy);
             if (found != null) {
                 return found;
             }
@@ -311,23 +312,12 @@ public class CatalogueCategoryServiceImpl implements CatalogueCategoryService {
         return null;
     }
 
-    private NavigationItem findNodeRecursivelySlug(
-            List<NavigationItem> subMenus, String targetId) {
+    private boolean matches(NavigationItem item, String targetId, String findBy) {
 
-        if (subMenus == null || targetId == null) {
-            return null;
-        }
-
-        for (NavigationItem item : subMenus) {
-            if (targetId.equals(item.getSlug())) {
-                return item;
-            }
-            NavigationItem found =
-                    findNodeRecursivelySlug(item.getSubMenu(), targetId);
-            if (found != null) {
-                return found;
-            }
-        }
-        return null;
+        return switch (findBy) {
+            case "category", "brand" -> targetId.equals(item.getId());
+            case "slug" -> targetId.equals(item.getSlug());
+            default -> false;
+        };
     }
 }
