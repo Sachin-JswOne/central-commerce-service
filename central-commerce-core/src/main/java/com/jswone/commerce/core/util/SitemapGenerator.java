@@ -20,10 +20,10 @@ public class SitemapGenerator {
             .withZone(ZoneId.of("UTC"));
 
     public static String generateSitemapXmlFromMeta(
-            List<? extends com.jswone.commerce.core.model.seo.UrlMeta> urlMetas, String baseUrl) {
+            List<? extends com.jswone.commerce.core.model.seo.UrlMeta> urlMetas) {
         StringBuilder xml = new StringBuilder(SITEMAP_HEADER);
         for (com.jswone.commerce.core.model.seo.UrlMeta meta : urlMetas) {
-            xml.append("<url><loc>").append(baseUrl).append(meta.getUrl()).append("</loc>");
+            xml.append("<url><loc>").append(meta.getUrl()).append("</loc>");
             if (meta.getLastMod() != null) {
                 xml.append("<lastmod>").append(DATE_FORMATTER.format(meta.getLastMod())).append("</lastmod>");
             }

@@ -78,4 +78,7 @@ public final class SeoConstants {
     public static final String CONTENT_ENCODING_GZIP = "gzip";
 
     public static final String PRODUCT_DETAIL = "product-detail/";
+
+    // ============ URL Construction ===========
+    public static final String URL_PATH_SEPARATOR = "/";
 }

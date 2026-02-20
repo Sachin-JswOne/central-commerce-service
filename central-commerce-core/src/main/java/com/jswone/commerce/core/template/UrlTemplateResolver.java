@@ -18,7 +18,7 @@ public class UrlTemplateResolver {
             return props.getCategory().getBase();
         }
         String prefix = CatalogueUtil.getSeoUrlCategoryPrefix(ctx.getCategoryType());
-        return "/" + prefix + "/{slug}";
+        return SeoConstants.URL_PATH_SEPARATOR + prefix + "/{slug}";
     }
 
     public String categoryLocation(SeoContext ctx) {
@@ -26,7 +26,7 @@ public class UrlTemplateResolver {
             return props.getCategory().getLocation();
         }
         String prefix = CatalogueUtil.getSeoUrlCategoryPrefix(ctx.getCategoryType());
-        return "/" + prefix + "/{location}/{slug}";
+        return SeoConstants.URL_PATH_SEPARATOR + prefix + "/{location}/{slug}";
     }
 
     public String productBase() {

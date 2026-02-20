@@ -35,10 +35,11 @@ import org.springframework.context.annotation.Lazy;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.retry.support.RetryTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.HttpClientErrorException;
-import org.springframework.web.util.UriComponentsBuilder;
 import org.springframework.web.client.HttpServerErrorException;
+import org.springframework.web.util.UriComponentsBuilder;
 
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
@@ -64,6 +65,7 @@ public class CentralCatalogueClientImpl implements CentralCatalogueClient {
         private final RestUtil restUtil;
         private final CommerceValueConfig commerceValueConfig;
         private final LocationMasterService locationMasterService;
+        private final RetryTemplate catalogueRetryTemplate;
 
         // Dedicated thread pool for parallel pagination fetching
         private final ExecutorService paginationExecutor = Executors.newFixedThreadPool(10, new ThreadFactory() {
@@ -78,10 +80,12 @@ public class CentralCatalogueClientImpl implements CentralCatalogueClient {
         });
 
         public CentralCatalogueClientImpl(RestUtil restUtil, CommerceValueConfig commerceValueConfig,
-                        @Lazy LocationMasterService locationMasterService) {
+                        @Lazy LocationMasterService locationMasterService,
+                        RetryTemplate catalogueRetryTemplate) {
                 this.restUtil = restUtil;
                 this.commerceValueConfig = commerceValueConfig;
                 this.locationMasterService = locationMasterService;
+                this.catalogueRetryTemplate = catalogueRetryTemplate;
         }
 
         @Override
@@ -753,8 +757,7 @@ public class CentralCatalogueClientImpl implements CentralCatalogueClient {
         }
 
         /**
-         * Retry a failed page fetch with exponential backoff.
-         * Base delay is 500ms, doubling with each attempt, up to maxRetries.
+         * Retry a failed page fetch using Spring Retry with exponential backoff.
          */
         private List<Product> retryPageWithBackoff(
                         String categoryId,
@@ -764,35 +767,17 @@ public class CentralCatalogueClientImpl implements CentralCatalogueClient {
                         String url,
                         Map<String, String> headers) {
 
-                int maxRetries = 3;
-                long baseDelayMs = 500;
-
-                for (int attempt = 1; attempt <= maxRetries; attempt++) {
-                        try {
-                                long delay = baseDelayMs * (1L << (attempt - 1)); // 500, 1000, 2000
-                                log.info("Retry attempt {}/{} for page {} of category {} after {}ms delay",
-                                                attempt, maxRetries, page, categoryId, delay);
-                                Thread.sleep(delay);
-
-                                List<Product> result = fetchProductPage(categoryId, storefront, page, pageSize,
-                                                url, headers);
-                                log.info("Successfully fetched page {} on retry attempt {} for category {}",
-                                                page, attempt, categoryId);
-                                return result;
-
-                        } catch (InterruptedException ie) {
-                                Thread.currentThread().interrupt();
-                                log.error("Retry interrupted for page {} of category {}", page, categoryId);
-                                return List.of();
-                        } catch (Exception e) {
-                                log.warn("Retry attempt {}/{} failed for page {} of category {}: {}",
-                                                attempt, maxRetries, page, categoryId, e.getMessage());
-                        }
-                }
-
-                log.error("All {} retry attempts failed for page {} of category {}. Skipping page.",
-                                maxRetries, page, categoryId);
-                return List.of();
+                return catalogueRetryTemplate.execute(
+                                context -> {
+                                        log.info("Retry attempt {}/{} for page {} of category {}",
+                                                        context.getRetryCount() + 1, 3, page, categoryId);
+                                        return fetchProductPage(categoryId, storefront, page, pageSize, url, headers);
+                                },
+                                context -> {
+                                        log.error("All retry attempts exhausted for page {} of category {}. Skipping page.",
+                                                        page, categoryId);
+                                        return List.of();
+                                });
         }
 
         public Map<String, String> getStates() {

@@ -73,10 +73,12 @@ public class DefaultSeoPatternHandler implements SeoPatternHandler {
                 ? ctx.getLocation().toLowerCase().replaceAll("\\s+", "-")
                 : "";
 
-        String url = template
+        String path = template
                 .replace("{slug}", ctx.getSlug())
                 .replace("{location}", urlLocation)
                 .replace("{variantMmid}", ctx.getVariantMmid() == null ? "" : ctx.getVariantMmid());
+
+        String url = commerceValueConfig.getJoplMsmeWebUrl().concat(path);
 
         // Use lastModifiedAt from context if available, otherwise use current time
         Instant lastMod = ctx.getLastModifiedAt() != null ? ctx.getLastModifiedAt() : Instant.now();
@@ -141,7 +143,7 @@ public class DefaultSeoPatternHandler implements SeoPatternHandler {
                 break;
         }
 
-        String canonical = commerceValueConfig.getJoplMsmeWebUrl().concat(generateUrl(ctx).getUrl());
+        String canonical = generateUrl(ctx).getUrl();
         String ogImage = getImage(data);
 
         return SeoMeta.builder()

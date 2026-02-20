@@ -227,4 +227,17 @@ public class CommerceValueConfig {
 
     @Value("${sitemap.chunk.size.default}")
     private int sitemapDefaultChunkSize;
+
+    // ============ Retry Configuration ===========
+    @Value("${catalogue.retry.max-attempts:3}")
+    private int catalogueRetryMaxAttempts;
+
+    @Value("${catalogue.retry.initial-interval:500}")
+    private long catalogueRetryInitialInterval;
+
+    @Value("${catalogue.retry.multiplier:2.0}")
+    private double catalogueRetryMultiplier;
+
+    @Value("${catalogue.retry.max-interval:2000}")
+    private long catalogueRetryMaxInterval;
 }

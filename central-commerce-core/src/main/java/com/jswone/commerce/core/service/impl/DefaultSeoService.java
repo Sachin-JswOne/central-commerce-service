@@ -221,8 +221,7 @@ public class DefaultSeoService implements SeoService {
                         // 1-based index for file names: name-1.xml.gz, name-2.xml.gz ...
                         int partNumber = (i / chunkSize) + 1;
                         String fileName = fileBaseName + "-" + partNumber + SeoConstants.SITEMAP_XML_SUFFIX;
-                        String xml = SitemapGenerator.generateSitemapXmlFromMeta(subList,
-                                        commerceValueConfig.getJoplMsmeWebUrl());
+                        String xml = SitemapGenerator.generateSitemapXmlFromMeta(subList);
                         byte[] compressed = compress(xml);
                         gcsService.uploadFile(commerceValueConfig.getSeoBucketName(), fileName, compressed,
                                         SeoConstants.CONTENT_TYPE_XML,
@@ -234,8 +233,7 @@ public class DefaultSeoService implements SeoService {
         }
 
         private String uploadListToGcs(List<UrlMeta> urls, String fileName) {
-                String xml = SitemapGenerator.generateSitemapXmlFromMeta(urls,
-                                commerceValueConfig.getJoplMsmeWebUrl());
+                String xml = SitemapGenerator.generateSitemapXmlFromMeta(urls);
                 byte[] compressed = compress(xml);
                 gcsService.uploadFile(commerceValueConfig.getSeoBucketName(), fileName, compressed,
                                 SeoConstants.CONTENT_TYPE_XML,
@@ -466,7 +464,7 @@ public class DefaultSeoService implements SeoService {
                                 .filter(e -> selectorKeys.contains(e.getKey())) // Only include attributes in selectors
                                 .sorted(Map.Entry.comparingByKey()) // stable URLs
                                 .map(e -> e.getKey().toLowerCase() + "-"
-                                                + e.getValue().toLowerCase().replaceAll("\\s+", "-"))
+                                                + formatAttributeValue(e.getValue()))
                                 .collect(Collectors.joining("-"));
 
                 return attributePart.isEmpty() ? baseSlug : baseSlug + "-" + attributePart;
@@ -480,10 +478,19 @@ public class DefaultSeoService implements SeoService {
                                 .stream()
                                 .sorted(Map.Entry.comparingByKey()) // stable URLs
                                 .map(e -> e.getKey().toLowerCase() + "-"
-                                                + e.getValue().toLowerCase().replaceAll("\\s+", "-"))
+                                                + formatAttributeValue(e.getValue()))
                                 .collect(Collectors.joining("-"));
 
                 return attributePart.isEmpty() ? baseSlug : baseSlug + "-" + attributePart;
+        }
+
+        /**
+         * Format attribute value for URL: strip trailing .0 from whole numbers,
+         * lowercase, and replace whitespace with hyphens.
+         */
+        private String formatAttributeValue(String value) {
+                String formatted = value.replaceAll("\\.0$", "");
+                return formatted.toLowerCase().replaceAll("\\s+", "-");
         }
 
         private UrlGroup buildCategoryUrls(
