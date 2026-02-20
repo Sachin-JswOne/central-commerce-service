@@ -48,7 +48,8 @@ public class CacheConfig {
             Pair.of(CacheNames.BARRED_TRENDING_SEARCHES_CACHE_PREFIX, null),
             Pair.of(CacheNames.DEDUPE_TRENDING_SEARCHES_CACHE_PREFIX, duration(43200L)),
             Pair.of(CacheNames.LOCATION_MASTER_ALL, Duration.ZERO),
-            Pair.of(CacheNames.SEO_PRODUCT_TYPES, duration(1440L)));
+            Pair.of(CacheNames.SEO_PRODUCT_TYPES, duration(1440L)),
+            Pair.of(CacheNames.SEO_CATEGORY_LOCATIONS, duration(60L)));
 
     private final CommerceValueConfig commerceValueConfig;
 

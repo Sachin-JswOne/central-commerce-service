@@ -1,6 +1,5 @@
 package com.jswone.commerce.core.resolver.impl;
 
-import com.jswone.commerce.core.enums.seo.CategoryType;
 import com.jswone.commerce.core.enums.seo.SeoEntityType;
 import com.jswone.commerce.core.enums.seo.SeoPageType;
 import com.jswone.commerce.core.exceptions.CentralCommerceServiceException;
@@ -183,7 +182,6 @@ class DefaultSeoContextResolverTest {
             assertNotNull(context);
             assertEquals(SeoEntityType.CATEGORY, context.getEntityType());
             assertEquals(SeoPageType.PLP, context.getPageType());
-            assertEquals(CategoryType.STANDARD, context.getCategoryType());
             assertEquals("construction-materials", context.getSlug());
             assertNull(context.getLocation());
         }

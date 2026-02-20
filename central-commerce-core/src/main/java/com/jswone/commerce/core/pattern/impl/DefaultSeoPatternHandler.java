@@ -1,14 +1,9 @@
 package com.jswone.commerce.core.pattern.impl;
 
+import com.jswone.commerce.core.config.CommerceValueConfig;
 import com.jswone.commerce.core.config.SeoUrlProperties;
-import com.jswone.commerce.core.enums.seo.CategoryType;
+
 import com.jswone.commerce.core.enums.seo.SeoEntityType;
-import com.jswone.commerce.core.enums.seo.SeoOperationType;
-import com.jswone.commerce.core.exceptions.CentralCommerceServiceException;
-import com.jswone.commerce.core.model.CatalogueBreadCrumbData;
-import com.jswone.commerce.core.model.centralCatalogue.Product;
-import com.jswone.commerce.core.model.request.ProductBulkRequest;
-import com.jswone.commerce.core.model.response.centralCatalogue.ProductBulkResponse;
 import com.jswone.commerce.core.model.seo.SeoContext;
 import com.jswone.commerce.core.model.seo.SeoData;
 import com.jswone.commerce.core.model.seo.SeoMeta;
@@ -17,16 +12,12 @@ import com.jswone.commerce.core.pattern.SeoPatternHandler;
 import com.jswone.commerce.core.rest.CentralCatalogueClient;
 import com.jswone.commerce.core.template.UrlTemplateResolver;
 import com.jswone.commerce.core.constants.SeoConstants;
-import com.jswone.commerce.core.util.CatalogueUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
 import java.time.Instant;
 import java.util.*;
-
-import static com.jswone.commerce.core.constants.SeoConstants.LOCALE_EN_US;
-import static com.jswone.commerce.core.constants.SeoConstants.STOREFRONT_MSME;
 
 @Slf4j
 @Component
@@ -36,6 +27,7 @@ public class DefaultSeoPatternHandler implements SeoPatternHandler {
     private final UrlTemplateResolver templateResolver;
     private final CentralCatalogueClient catalogueClient;
     private final SeoUrlProperties seoUrlProperties;
+    private final CommerceValueConfig commerceValueConfig;
 
     /**
      * Get title from fetched SeoData
@@ -81,10 +73,12 @@ public class DefaultSeoPatternHandler implements SeoPatternHandler {
                 ? ctx.getLocation().toLowerCase().replaceAll("\\s+", "-")
                 : "";
 
-        String url = template
+        String path = template
                 .replace("{slug}", ctx.getSlug())
                 .replace("{location}", urlLocation)
                 .replace("{variantMmid}", ctx.getVariantMmid() == null ? "" : ctx.getVariantMmid());
+
+        String url = commerceValueConfig.getJoplMsmeWebUrl().concat(path);
 
         // Use lastModifiedAt from context if available, otherwise use current time
         Instant lastMod = ctx.getLastModifiedAt() != null ? ctx.getLastModifiedAt() : Instant.now();
@@ -162,7 +156,7 @@ public class DefaultSeoPatternHandler implements SeoPatternHandler {
                 .ogImage(ogImage)
                 .ogDescription(description)
                 .ogTitle(title)
-                .ogType(ctx.getEntityType().name())
+                .ogType(ogType(ctx))
                 .build();
     }
 
@@ -258,9 +252,7 @@ public class DefaultSeoPatternHandler implements SeoPatternHandler {
 
     private String ogType(SeoContext ctx) {
         if (ctx.getEntityType() == SeoEntityType.CATEGORY) {
-            return ctx.getCategoryType() == CategoryType.BRAND
-                    ? "brand"
-                    : "category";
+            return "category";
         }
         return "product";
     }

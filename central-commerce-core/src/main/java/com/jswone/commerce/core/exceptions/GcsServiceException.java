@@ -4,31 +4,31 @@ import org.springframework.http.HttpStatus;
 
 import static org.springframework.http.HttpStatus.INTERNAL_SERVER_ERROR;
 
-public class UserTokenException extends RuntimeException {
+public class GcsServiceException extends RuntimeException {
 
     private final HttpStatus httpStatus;
 
-    public UserTokenException(String message, Throwable throwable, HttpStatus httpStatus) {
+    public GcsServiceException(String message, Throwable throwable, HttpStatus httpStatus) {
         super(message, throwable);
         this.httpStatus = httpStatus;
     }
 
-    public UserTokenException(String message, HttpStatus httpStatus, Throwable throwable) {
+    public GcsServiceException(String message, HttpStatus httpStatus, Throwable throwable) {
         super(message, throwable);
         this.httpStatus = httpStatus;
     }
 
-    public UserTokenException(String message, Throwable throwable) {
+    public GcsServiceException(String message, Throwable throwable) {
         super(message, throwable);
         this.httpStatus = INTERNAL_SERVER_ERROR;
     }
 
-    public UserTokenException(String message) {
+    public GcsServiceException(String message) {
         super(message);
         this.httpStatus = INTERNAL_SERVER_ERROR;
     }
 
-    public UserTokenException(String message, HttpStatus httpStatus) {
+    public GcsServiceException(String message, HttpStatus httpStatus) {
         super(message);
         this.httpStatus = httpStatus;
     }

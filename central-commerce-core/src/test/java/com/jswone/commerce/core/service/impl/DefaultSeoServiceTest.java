@@ -2,20 +2,27 @@ package com.jswone.commerce.core.service.impl;
 
 import com.jswone.commerce.core.enums.seo.SeoEntityType;
 import com.jswone.commerce.core.enums.seo.SeoPageType;
+
+import com.jswone.commerce.core.constants.SeoConstants;
 import com.jswone.commerce.core.factory.SeoPatternFactory;
 import com.jswone.commerce.core.model.seo.SeoContext;
 import com.jswone.commerce.core.model.seo.SeoData;
 import com.jswone.commerce.core.model.seo.SeoMeta;
+import com.jswone.commerce.core.model.seo.UrlMeta;
 import com.jswone.commerce.core.pattern.SeoPatternHandler;
 import com.jswone.commerce.core.resolver.SeoContextResolver;
 import com.jswone.commerce.core.rest.CentralCatalogueClient;
+import com.jswone.commerce.core.service.GcsService;
 import com.jswone.commerce.core.service.ProductTypeService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.cache.CacheManager;
+import com.jswone.commerce.core.service.LocationMasterService;
+import com.jswone.commerce.core.config.CommerceValueConfig;
+
+import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
@@ -28,334 +35,402 @@ import static org.mockito.Mockito.*;
 @ExtendWith(MockitoExtension.class)
 class DefaultSeoServiceTest {
 
-    @Mock
-    private SeoPatternFactory patternFactory;
+        @Mock
+        private SeoPatternFactory patternFactory;
 
-    @Mock
-    private SeoContextResolver contextResolver;
+        @Mock
+        private SeoContextResolver contextResolver;
 
-    @Mock
-    private CentralCatalogueClient centralCatalogueClient;
+        @Mock
+        private CentralCatalogueClient centralCatalogueClient;
 
-    @Mock
-    private ProductTypeService productTypeService;
+        @Mock
+        private ProductTypeService productTypeService;
 
-    @Mock
-    private CacheManager cacheManager;
+        @Mock
+        private GcsService gcsService;
 
-    @Mock
-    private SeoPatternHandler mockHandler;
+        @Mock
+        private LocationMasterService locationMasterService;
 
-    private DefaultSeoService seoService;
+        @Mock
+        private CommerceValueConfig commerceValueConfig;
 
-    @BeforeEach
-    void setUp() {
-        seoService = new DefaultSeoService(
-                patternFactory,
-                contextResolver,
-                centralCatalogueClient,
-                cacheManager,
-                productTypeService
-        );
-    }
+        @Mock
+        private SeoPatternHandler mockHandler;
 
-    // ==================== resolveSeoMeta() Tests ====================
+        private DefaultSeoService seoService;
 
-    @Test
-    void resolveSeoMeta_shouldReturnSeoMeta_whenValidInputProvided() {
-        // Given
-        SeoContext seoContext = SeoContext.builder()
-                .slug("tmt-bars")
-                .entityType(SeoEntityType.PRODUCT)
-                .pageType(SeoPageType.PDP)
-                .build();
+        @BeforeEach
+        void setUp() {
+                seoService = new DefaultSeoService(
+                                patternFactory,
+                                contextResolver,
+                                centralCatalogueClient,
+                                productTypeService,
+                                locationMasterService,
+                                commerceValueConfig,
+                                gcsService);
+        }
 
-        SeoData seoData = SeoData.builder()
-                .title("TMT Bars")
-                .image("https://example.com/tmt-bars.jpg")
-                .build();
+        // ==================== resolveSeoMeta() Tests ====================
 
-        SeoMeta expectedMeta = new SeoMeta(
-                "TMT Bars - JSW One",
-                "High quality TMT bars",
-                "https://jswone.com/product-detail/tmt-bars",
-                "TMT Bars - JSW One",
-                "product",
-                "https://jswone.com/product-detail/tmt-bars",
-                "https://example.com/tmt-bars.jpg",
-                "High quality TMT bars");
+        @Test
+        void resolveSeoMeta_shouldReturnSeoMeta_whenValidInputProvided() {
+                // Given
+                SeoContext seoContext = SeoContext.builder()
+                                .slug("tmt-bars")
+                                .entityType(SeoEntityType.PRODUCT)
+                                .pageType(SeoPageType.PDP)
+                                .build();
 
-        when(patternFactory.resolve(seoContext)).thenReturn(mockHandler);
-        when(mockHandler.generateMeta(seoContext, seoData)).thenReturn(expectedMeta);
+                SeoData seoData = SeoData.builder()
+                                .title("TMT Bars")
+                                .image("https://example.com/tmt-bars.jpg")
+                                .build();
 
-        // When
-        SeoMeta result = seoService.resolveSeoMeta(seoContext, seoData);
+                SeoMeta expectedMeta = new SeoMeta(
+                                "TMT Bars - JSW One",
+                                "High quality TMT bars",
+                                "https://jswone.com/product-detail/tmt-bars",
+                                "TMT Bars - JSW One",
+                                "product",
+                                "https://jswone.com/product-detail/tmt-bars",
+                                "https://example.com/tmt-bars.jpg",
+                                "High quality TMT bars");
 
-        // Then
-        assertNotNull(result);
-        assertEquals("TMT Bars - JSW One", result.getTitle());
-        assertEquals("High quality TMT bars", result.getDescription());
-        assertEquals("https://jswone.com/product-detail/tmt-bars", result.getCanonical());
-        assertEquals("product", result.getOgType());
-        verify(patternFactory, times(1)).resolve(seoContext);
-        verify(mockHandler, times(1)).generateMeta(seoContext, seoData);
-    }
+                when(patternFactory.resolve(seoContext)).thenReturn(mockHandler);
+                when(mockHandler.generateMeta(seoContext, seoData)).thenReturn(expectedMeta);
 
-    @Test
-    void resolveSeoMeta_shouldSelectCorrectHandler_forProductContext() {
-        // Given
-        SeoContext productContext = SeoContext.builder()
-                .slug("steel-pipe")
-                .entityType(SeoEntityType.PRODUCT)
-                .pageType(SeoPageType.PDP)
-                .build();
+                // When
+                SeoMeta result = seoService.resolveSeoMeta(seoContext, seoData);
 
-        SeoData seoData = SeoData.builder()
-                .title("Steel Pipe")
-                .build();
+                // Then
+                assertNotNull(result);
+                assertEquals("TMT Bars - JSW One", result.getTitle());
+                assertEquals("High quality TMT bars", result.getDescription());
+                assertEquals("https://jswone.com/product-detail/tmt-bars", result.getCanonical());
+                assertEquals("product", result.getOgType());
+                verify(patternFactory, times(1)).resolve(seoContext);
+                verify(mockHandler, times(1)).generateMeta(seoContext, seoData);
+        }
 
-        SeoMeta mockMeta = new SeoMeta(
-                "Steel Pipe", "Description", "url", "og", "product", "og-url", "img", "og-desc");
+        @Test
+        void resolveSeoMeta_shouldSelectCorrectHandler_forProductContext() {
+                // Given
+                SeoContext productContext = SeoContext.builder()
+                                .slug("steel-pipe")
+                                .entityType(SeoEntityType.PRODUCT)
+                                .pageType(SeoPageType.PDP)
+                                .build();
 
-        when(patternFactory.resolve(productContext)).thenReturn(mockHandler);
-        when(mockHandler.generateMeta(any(), any())).thenReturn(mockMeta);
+                SeoData seoData = SeoData.builder()
+                                .title("Steel Pipe")
+                                .build();
 
-        // When
-        seoService.resolveSeoMeta(productContext, seoData);
+                SeoMeta mockMeta = new SeoMeta(
+                                "Steel Pipe", "Description", "url", "og", "product", "og-url", "img", "og-desc");
 
-        // Then
-        verify(patternFactory).resolve(productContext);
-        verify(mockHandler).generateMeta(productContext, seoData);
-    }
+                when(patternFactory.resolve(productContext)).thenReturn(mockHandler);
+                when(mockHandler.generateMeta(any(SeoContext.class), any(SeoData.class))).thenReturn(mockMeta);
 
-    @Test
-    void resolveSeoMeta_shouldHandleLocationSpecificContext() {
-        // Given
-        SeoContext contextWithLocation = SeoContext.builder()
-                .slug("tmt-bars")
-                .location("mumbai")
-                .entityType(SeoEntityType.PRODUCT)
-                .pageType(SeoPageType.PDP)
-                .build();
+                // When
+                seoService.resolveSeoMeta(productContext, seoData);
 
-        SeoData seoData = SeoData.builder()
-                .title("TMT Bars")
-                .build();
+                // Then
+                verify(patternFactory).resolve(productContext);
+                verify(mockHandler).generateMeta(productContext, seoData);
+        }
 
-        SeoMeta locationMeta = new SeoMeta(
-                "TMT Bars in Mumbai",
-                "TMT Bars in Mumbai",
-                "https://jswone.com/product-detail/mumbai/tmt-bars",
-                "TMT Bars in Mumbai",
-                "product",
-                "https://jswone.com/product-detail/mumbai/tmt-bars",
-                "img.jpg",
-                "TMT Bars in Mumbai");
+        @Test
+        void resolveSeoMeta_shouldHandleLocationSpecificContext() {
+                // Given
+                SeoContext contextWithLocation = SeoContext.builder()
+                                .slug("tmt-bars")
+                                .location("mumbai")
+                                .entityType(SeoEntityType.PRODUCT)
+                                .pageType(SeoPageType.PDP)
+                                .build();
 
-        when(patternFactory.resolve(contextWithLocation)).thenReturn(mockHandler);
-        when(mockHandler.generateMeta(contextWithLocation, seoData)).thenReturn(locationMeta);
+                SeoData seoData = SeoData.builder()
+                                .title("TMT Bars")
+                                .build();
 
-        // When
-        SeoMeta result = seoService.resolveSeoMeta(contextWithLocation, seoData);
+                SeoMeta locationMeta = new SeoMeta(
+                                "TMT Bars in Mumbai",
+                                "TMT Bars in Mumbai",
+                                "https://jswone.com/product-detail/mumbai/tmt-bars",
+                                "TMT Bars in Mumbai",
+                                "product",
+                                "https://jswone.com/product-detail/mumbai/tmt-bars",
+                                "img.jpg",
+                                "TMT Bars in Mumbai");
 
-        // Then
-        assertNotNull(result);
-        assertTrue(result.getTitle().contains("Mumbai"));
-        assertTrue(result.getCanonical().contains("mumbai"));
-    }
+                when(patternFactory.resolve(contextWithLocation)).thenReturn(mockHandler);
+                when(mockHandler.generateMeta(contextWithLocation, seoData)).thenReturn(locationMeta);
 
-    @Test
-    void resolveSeoMeta_shouldHandleVariantContext() {
-        // Given
-        SeoContext variantContext = SeoContext.builder()
-                .slug("tmt-bars-8mm")
-                .variantMmid("12345678-10000001")
-                .entityType(SeoEntityType.VARIANT)
-                .pageType(SeoPageType.PDP)
-                .build();
+                // When
+                SeoMeta result = seoService.resolveSeoMeta(contextWithLocation, seoData);
 
-        SeoData seoData = SeoData.builder()
-                .title("TMT Bars 8mm")
-                .build();
+                // Then
+                assertNotNull(result);
+                assertTrue(result.getTitle().contains("Mumbai"));
+                assertTrue(result.getCanonical().contains("mumbai"));
+        }
 
-        SeoMeta variantMeta = new SeoMeta(
-                "TMT Bars 8mm",
-                "8mm TMT Bars",
-                "https://jswone.com/product-detail/tmt-bars-8mm/12345678-10000001",
-                "TMT Bars 8mm",
-                "product",
-                "https://jswone.com/product-detail/tmt-bars-8mm/12345678-10000001",
-                "img.jpg",
-                "8mm TMT Bars");
+        @Test
+        void resolveSeoMeta_shouldHandleVariantContext() {
+                // Given
+                SeoContext variantContext = SeoContext.builder()
+                                .slug("tmt-bars-8mm")
+                                .variantMmid("12345678-10000001")
+                                .entityType(SeoEntityType.VARIANT)
+                                .pageType(SeoPageType.PDP)
+                                .build();
 
-        when(patternFactory.resolve(variantContext)).thenReturn(mockHandler);
-        when(mockHandler.generateMeta(variantContext, seoData)).thenReturn(variantMeta);
+                SeoData seoData = SeoData.builder()
+                                .title("TMT Bars 8mm")
+                                .build();
 
-        // When
-        SeoMeta result = seoService.resolveSeoMeta(variantContext, seoData);
+                SeoMeta variantMeta = new SeoMeta(
+                                "TMT Bars 8mm",
+                                "8mm TMT Bars",
+                                "https://jswone.com/product-detail/tmt-bars-8mm/12345678-10000001",
+                                "TMT Bars 8mm",
+                                "product",
+                                "https://jswone.com/product-detail/tmt-bars-8mm/12345678-10000001",
+                                "img.jpg",
+                                "8mm TMT Bars");
 
-        // Then
-        assertNotNull(result);
-        assertEquals("TMT Bars 8mm", result.getTitle());
-        assertTrue(result.getCanonical().contains("12345678-10000001"));
-    }
+                when(patternFactory.resolve(variantContext)).thenReturn(mockHandler);
+                when(mockHandler.generateMeta(variantContext, seoData)).thenReturn(variantMeta);
 
-    @Test
-    void resolveSeoMeta_shouldHandleCategoryContext() {
-        // Given
-        SeoContext categoryContext = SeoContext.builder()
-                .slug("steel-products")
-                .entityType(SeoEntityType.CATEGORY)
-                .pageType(SeoPageType.PLP)
-                .build();
+                // When
+                SeoMeta result = seoService.resolveSeoMeta(variantContext, seoData);
 
-        SeoData seoData = SeoData.builder()
-                .title("Steel Products")
-                .build();
+                // Then
+                assertNotNull(result);
+                assertEquals("TMT Bars 8mm", result.getTitle());
+                assertTrue(result.getCanonical().contains("12345678-10000001"));
+        }
 
-        SeoMeta categoryMeta = new SeoMeta(
-                "Steel Products - JSW One",
-                "Browse steel products",
-                "https://jswone.com/product-listing/steel-products",
-                "Steel Products",
-                "website",
-                "https://jswone.com/product-listing/steel-products",
-                "img.jpg",
-                "Browse steel products");
+        @Test
+        void resolveSeoMeta_shouldHandleCategoryContext() {
+                // Given
+                SeoContext categoryContext = SeoContext.builder()
+                                .slug("steel-products")
+                                .entityType(SeoEntityType.CATEGORY)
+                                .pageType(SeoPageType.PLP)
+                                .build();
 
-        when(patternFactory.resolve(categoryContext)).thenReturn(mockHandler);
-        when(mockHandler.generateMeta(categoryContext, seoData)).thenReturn(categoryMeta);
+                SeoData seoData = SeoData.builder()
+                                .title("Steel Products")
+                                .build();
 
-        // When
-        SeoMeta result = seoService.resolveSeoMeta(categoryContext, seoData);
+                SeoMeta categoryMeta = new SeoMeta(
+                                "Steel Products - JSW One",
+                                "Browse steel products",
+                                "https://jswone.com/product-listing/steel-products",
+                                "Steel Products",
+                                "website",
+                                "https://jswone.com/product-listing/steel-products",
+                                "img.jpg",
+                                "Browse steel products");
 
-        // Then
-        assertNotNull(result);
-        assertEquals("Steel Products - JSW One", result.getTitle());
-        assertEquals("website", result.getOgType());
-    }
+                when(patternFactory.resolve(categoryContext)).thenReturn(mockHandler);
+                when(mockHandler.generateMeta(categoryContext, seoData)).thenReturn(categoryMeta);
 
-    @Test
-    void resolveSeoMeta_shouldDelegateToHandler_withCorrectParameters() {
-        // Given
-        SeoContext context = SeoContext.builder()
-                .slug("test-product")
-                .entityType(SeoEntityType.PRODUCT)
-                .pageType(SeoPageType.PDP)
-                .build();
+                // When
+                SeoMeta result = seoService.resolveSeoMeta(categoryContext, seoData);
 
-        SeoData data = SeoData.builder()
-                .title("Test Product")
-                .build();
+                // Then
+                assertNotNull(result);
+                assertEquals("Steel Products - JSW One", result.getTitle());
+                assertEquals("website", result.getOgType());
+        }
 
-        SeoMeta mockMeta = new SeoMeta(
-                "Test", "Desc", "url", "og", "product", "og-url", "img", "og-desc");
+        @Test
+        void resolveSeoMeta_shouldDelegateToHandler_withCorrectParameters() {
+                // Given
+                SeoContext context = SeoContext.builder()
+                                .slug("test-product")
+                                .entityType(SeoEntityType.PRODUCT)
+                                .pageType(SeoPageType.PDP)
+                                .build();
 
-        when(patternFactory.resolve(context)).thenReturn(mockHandler);
-        when(mockHandler.generateMeta(context, data)).thenReturn(mockMeta);
+                SeoData data = SeoData.builder()
+                                .title("Test Product")
+                                .build();
 
-        // When
-        seoService.resolveSeoMeta(context, data);
+                SeoMeta mockMeta = new SeoMeta(
+                                "Test", "Desc", "url", "og", "product", "og-url", "img", "og-desc");
 
-        // Then
-        verify(patternFactory, times(1)).resolve(context);
-        verify(mockHandler, times(1)).generateMeta(context, data);
-        verifyNoMoreInteractions(patternFactory, mockHandler);
-    }
+                when(patternFactory.resolve(context)).thenReturn(mockHandler);
+                when(mockHandler.generateMeta(context, data)).thenReturn(mockMeta);
 
-    @Test
-    void resolveSeoMeta_shouldHandleEmptySeoData() {
-        // Given
-        SeoContext context = SeoContext.builder()
-                .slug("product")
-                .entityType(SeoEntityType.PRODUCT)
-                .pageType(SeoPageType.PDP)
-                .build();
+                // When
+                seoService.resolveSeoMeta(context, data);
 
-        SeoData emptyData = SeoData.builder().build();
+                // Then
+                verify(patternFactory, times(1)).resolve(context);
+                verify(mockHandler, times(1)).generateMeta(context, data);
+                verifyNoMoreInteractions(patternFactory, mockHandler);
+        }
 
-        SeoMeta defaultMeta = new SeoMeta(
-                "Default Title",
-                "Default Description",
-                "url",
-                "og",
-                "product",
-                "og-url",
-                "",
-                "og-desc");
+        @Test
+        void resolveSeoMeta_shouldHandleEmptySeoData() {
+                // Given
+                SeoContext context = SeoContext.builder()
+                                .slug("product")
+                                .entityType(SeoEntityType.PRODUCT)
+                                .pageType(SeoPageType.PDP)
+                                .build();
 
-        when(patternFactory.resolve(context)).thenReturn(mockHandler);
-        when(mockHandler.generateMeta(context, emptyData)).thenReturn(defaultMeta);
+                SeoData emptyData = SeoData.builder().build();
 
-        // When
-        SeoMeta result = seoService.resolveSeoMeta(context, emptyData);
+                SeoMeta defaultMeta = new SeoMeta(
+                                "Default Title",
+                                "Default Description",
+                                "url",
+                                "og",
+                                "product",
+                                "og-url",
+                                "",
+                                "og-desc");
 
-        // Then
-        assertNotNull(result);
-        assertEquals("Default Title", result.getTitle());
-    }
+                when(patternFactory.resolve(context)).thenReturn(mockHandler);
+                when(mockHandler.generateMeta(context, emptyData)).thenReturn(defaultMeta);
 
-    @Test
-    void resolveSeoMeta_shouldHandleComplexLocationWithVariant() {
-        // Given
-        SeoContext complexContext = SeoContext.builder()
-                .slug("tmt-bars-10mm")
-                .location("bangalore")
-                .variantMmid("12345678-20000002")
-                .entityType(SeoEntityType.VARIANT)
-                .pageType(SeoPageType.PDP)
-                .build();
+                // When
+                SeoMeta result = seoService.resolveSeoMeta(context, emptyData);
 
-        SeoData seoData = SeoData.builder()
-                .title("TMT Bars 10mm")
-                .image("https://example.com/tmt-10mm.jpg")
-                .build();
+                // Then
+                assertNotNull(result);
+                assertEquals("Default Title", result.getTitle());
+        }
 
-        SeoMeta complexMeta = new SeoMeta(
-                "TMT Bars 10mm in Bangalore",
-                "TMT Bars 10mm in Bangalore",
-                "https://jswone.com/product-detail/bangalore/tmt-bars-10mm/12345678-20000002",
-                "TMT Bars 10mm in Bangalore",
-                "product",
-                "https://jswone.com/product-detail/bangalore/tmt-bars-10mm/12345678-20000002",
-                "https://example.com/tmt-10mm.jpg",
-                "TMT Bars 10mm in Bangalore");
+        @Test
+        void resolveSeoMeta_shouldHandleComplexLocationWithVariant() {
+                // Given
+                SeoContext complexContext = SeoContext.builder()
+                                .slug("tmt-bars-10mm")
+                                .location("bangalore")
+                                .variantMmid("12345678-20000002")
+                                .entityType(SeoEntityType.VARIANT)
+                                .pageType(SeoPageType.PDP)
+                                .build();
 
-        when(patternFactory.resolve(complexContext)).thenReturn(mockHandler);
-        when(mockHandler.generateMeta(complexContext, seoData)).thenReturn(complexMeta);
+                SeoData seoData = SeoData.builder()
+                                .title("TMT Bars 10mm")
+                                .image("https://example.com/tmt-10mm.jpg")
+                                .build();
 
-        // When
-        SeoMeta result = seoService.resolveSeoMeta(complexContext, seoData);
+                SeoMeta complexMeta = new SeoMeta(
+                                "TMT Bars 10mm in Bangalore",
+                                "TMT Bars 10mm in Bangalore",
+                                "https://jswone.com/product-detail/bangalore/tmt-bars-10mm/12345678-20000002",
+                                "TMT Bars 10mm in Bangalore",
+                                "product",
+                                "https://jswone.com/product-detail/bangalore/tmt-bars-10mm/12345678-20000002",
+                                "https://example.com/tmt-10mm.jpg",
+                                "TMT Bars 10mm in Bangalore");
 
-        // Then
-        assertNotNull(result);
-        assertTrue(result.getTitle().contains("Bangalore"));
-        assertTrue(result.getCanonical().contains("bangalore"));
-        assertTrue(result.getCanonical().contains("12345678-20000002"));
-        assertEquals("https://example.com/tmt-10mm.jpg", result.getOgImage());
-    }
+                when(patternFactory.resolve(complexContext)).thenReturn(mockHandler);
+                when(mockHandler.generateMeta(complexContext, seoData)).thenReturn(complexMeta);
 
-    @Test
-    void resolveSeoMeta_shouldVerifyPatternFactoryInvocation() {
-        // Given
-        SeoContext context = SeoContext.builder()
-                .slug("test")
-                .entityType(SeoEntityType.PRODUCT)
-                .pageType(SeoPageType.PDP)
-                .build();
+                // When
+                SeoMeta result = seoService.resolveSeoMeta(complexContext, seoData);
 
-        SeoData data = SeoData.builder().title("Test").build();
-        SeoMeta mockMeta = new SeoMeta(
-                "T", "D", "u", "o", "p", "ou", "i", "od");
+                // Then
+                assertNotNull(result);
+                assertTrue(result.getTitle().contains("Bangalore"));
+                assertTrue(result.getCanonical().contains("bangalore"));
+                assertTrue(result.getCanonical().contains("12345678-20000002"));
+                assertEquals("https://example.com/tmt-10mm.jpg", result.getOgImage());
+        }
 
-        when(patternFactory.resolve(any(SeoContext.class))).thenReturn(mockHandler);
-        when(mockHandler.generateMeta(any(), any())).thenReturn(mockMeta);
+        @Test
+        void resolveSeoMeta_shouldVerifyPatternFactoryInvocation() {
+                // Given
+                SeoContext context = SeoContext.builder()
+                                .slug("test")
+                                .entityType(SeoEntityType.PRODUCT)
+                                .pageType(SeoPageType.PDP)
+                                .build();
 
-        // When
-        seoService.resolveSeoMeta(context, data);
+                SeoData data = SeoData.builder().title("Test").build();
+                SeoMeta mockMeta = new SeoMeta(
+                                "T", "D", "u", "o", "p", "ou", "i", "od");
 
-        // Then
-        verify(patternFactory).resolve(argThat(ctx -> ctx.getSlug().equals("test") &&
-                ctx.getEntityType() == SeoEntityType.PRODUCT));
-    }
+                when(patternFactory.resolve(any(SeoContext.class))).thenReturn(mockHandler);
+                when(mockHandler.generateMeta(any(), any())).thenReturn(mockMeta);
+
+                // When
+                seoService.resolveSeoMeta(context, data);
+
+                // Then
+                verify(patternFactory).resolve(argThat(ctx -> ctx.getSlug().equals("test") &&
+                                ctx.getEntityType() == SeoEntityType.PRODUCT));
+        }
+
+        @Test
+        void generateSitemap_shouldChunkAndUpload() {
+                String seoBucketName = "test-bucket";
+                String expectedSitemapBaseUrl = "https://qa-ssr.msme.jswone.in/api/sitemap/";
+                String expectedPrefixUrl = "https://qa-ssr.msme.jswone.in";
+
+                // Given
+                com.jswone.commerce.core.model.CatalogueAttributes attributes = com.jswone.commerce.core.model.CatalogueAttributes
+                                .builder()
+                                .slug("cat-slug")
+                                .build();
+
+                com.jswone.commerce.core.model.CatalogueCategoryTree child = com.jswone.commerce.core.model.CatalogueCategoryTree
+                                .builder()
+                                .id("cat2")
+                                .attributes(attributes)
+                                .build();
+
+                com.jswone.commerce.core.model.CatalogueCategoryTree tree = com.jswone.commerce.core.model.CatalogueCategoryTree
+                                .builder()
+                                .id("cat1")
+                                .key("all_products")
+                                .attributes(attributes)
+                                .sub_menu(List.of(child))
+                                .build();
+
+                when(centralCatalogueClient.getCategoryTree()).thenReturn(List.of(tree));
+
+                UrlMeta baseMeta = UrlMeta.builder().url("http://example.com/cat1").build();
+
+                when(patternFactory.resolve(any(SeoContext.class))).thenReturn(mockHandler);
+                when(mockHandler.generateUrl(any(SeoContext.class))).thenReturn(baseMeta);
+
+                // Fix circular stubbing by returning real values
+                when(commerceValueConfig.getSeoBucketName()).thenReturn(seoBucketName);
+                when(commerceValueConfig.getSitemapBaseUrl()).thenReturn(expectedSitemapBaseUrl);
+                when(commerceValueConfig.getJoplMsmeWebUrl()).thenReturn(expectedPrefixUrl);
+                when(commerceValueConfig.getSitemapDefaultChunkSize()).thenReturn(40000);
+
+                // Mock GCS service
+                doNothing().when(gcsService).uploadFile(anyString(), anyString(), any(byte[].class), anyString(),
+                                anyString());
+                doNothing().when(gcsService).uploadFile(anyString(), anyString(), any(java.io.InputStream.class),
+                                anyString());
+
+                // When
+                seoService.generateSitemap();
+
+                // Then
+                // Verify sitemap index upload
+                verify(gcsService, times(1)).uploadFile(eq(seoBucketName), eq(SeoConstants.SITEMAP_INDEX_FILENAME),
+                                any(java.io.InputStream.class),
+                                eq("application/xml"));
+
+                // Verify category sitemap upload
+                // Since the list size (2) is less than chunk size (40000), it uses the base
+                // name without suffix
+                verify(gcsService).uploadFile(eq(seoBucketName), eq("categories-plp.xml.gz"), any(byte[].class),
+                                eq("application/xml"), eq("gzip"));
+        }
 }

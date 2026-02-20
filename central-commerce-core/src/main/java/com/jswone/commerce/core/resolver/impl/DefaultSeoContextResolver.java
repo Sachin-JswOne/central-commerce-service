@@ -1,6 +1,5 @@
 package com.jswone.commerce.core.resolver.impl;
 
-import com.jswone.commerce.core.enums.seo.CategoryType;
 import com.jswone.commerce.core.enums.seo.SeoEntityType;
 import com.jswone.commerce.core.enums.seo.SeoOperationType;
 import com.jswone.commerce.core.enums.seo.SeoPageType;
@@ -8,18 +7,10 @@ import com.jswone.commerce.core.exceptions.CentralCommerceServiceException;
 import com.jswone.commerce.core.model.seo.SeoContext;
 import com.jswone.commerce.core.resolver.SeoContextResolver;
 import com.jswone.commerce.core.service.LocationMasterService;
-import com.jswone.commerce.core.constants.SeoConstants;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
-import java.util.Map;
-
-/**
- * Default implementation of SeoContextResolver.
- *
- * Converts SEO-friendly URLs into SeoContext.
- */
 @Slf4j
 @Component
 @RequiredArgsConstructor
@@ -27,10 +18,6 @@ public class DefaultSeoContextResolver implements SeoContextResolver {
 
     private final LocationMasterService locationMasterService;
 
-    /**
-     * Resolves with entity type hint - cleaner approach without prefix
-     * construction.
-     */
     @Override
     public SeoContext resolve(String slugOrUrl, SeoEntityType entityType) {
         String normalized = normalize(slugOrUrl);
@@ -47,8 +34,6 @@ public class DefaultSeoContextResolver implements SeoContextResolver {
             return resolveSimpleSlug(normalized);
         }
     }
-
-
 
     private String normalize(String input) {
         if (input == null || input.trim().isEmpty()) {
@@ -76,10 +61,7 @@ public class DefaultSeoContextResolver implements SeoContextResolver {
      * and must exist in the location master data.
      * Valid examples: "mumbai", "new-delhi", "andhra-pradesh"
      * Invalid examples: "Mumbai", "new_delhi", "123delhi", "new delhi"
-     * 
-     * @param location The location string to validate
-     * @throws CentralCommerceServiceException if location format is invalid or
-     *                                         doesn't exist
+     *
      */
     private void validateLocationFormat(String location) {
         if (location == null || location.isEmpty()) {
@@ -94,11 +76,9 @@ public class DefaultSeoContextResolver implements SeoContextResolver {
                     org.springframework.http.HttpStatus.NOT_FOUND);
         }
 
-        // Format normalized location for validation (hyphen to space, capitalize each
-        // word)
         String normalizedLocation = formatSeoLocationNameToUpperCase(location);
 
-//         Validate against location master data
+        // Validate against location master data
         if (!locationMasterService.isValidSeoLocation(normalizedLocation)) {
             log.warn("Location '{}' (normalized: '{}') not found in serviceable locations",
                     location, normalizedLocation);
@@ -117,8 +97,6 @@ public class DefaultSeoContextResolver implements SeoContextResolver {
     private String formatSeoLocationNameToUpperCase(String seoLocation) {
         return seoLocation.replace("-", " ").toUpperCase();
     }
-
-
 
     /*
      * CATEGORY URL
@@ -148,7 +126,6 @@ public class DefaultSeoContextResolver implements SeoContextResolver {
         return SeoContext.builder()
                 .entityType(SeoEntityType.CATEGORY)
                 .pageType(SeoPageType.PLP)
-                .categoryType(CategoryType.STANDARD)
                 .slug(slug)
                 .location(location)
                 .operationType(SeoOperationType.METADATA_RESOLUTION)
@@ -194,7 +171,6 @@ public class DefaultSeoContextResolver implements SeoContextResolver {
         return SeoContext.builder()
                 .entityType(entityType)
                 .pageType(SeoPageType.PDP)
-                .categoryType(CategoryType.STANDARD)
                 .slug(slug)
                 .location(location)
                 .variantMmid(mmid)
@@ -210,7 +186,6 @@ public class DefaultSeoContextResolver implements SeoContextResolver {
         return SeoContext.builder()
                 .entityType(SeoEntityType.PRODUCT)
                 .pageType(SeoPageType.PDP)
-                .categoryType(CategoryType.STANDARD)
                 .slug(slug)
                 .operationType(SeoOperationType.METADATA_RESOLUTION)
                 .build();

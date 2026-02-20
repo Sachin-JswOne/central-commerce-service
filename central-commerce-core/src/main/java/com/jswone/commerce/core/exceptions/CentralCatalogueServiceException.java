@@ -6,7 +6,6 @@ import static org.springframework.http.HttpStatus.INTERNAL_SERVER_ERROR;
 
 public class CentralCatalogueServiceException extends RuntimeException {
 
-    private static final long serialVersionUID = 6405119194042283089L;
     private final HttpStatus httpStatus;
 
     public CentralCatalogueServiceException(String message, Throwable throwable, HttpStatus httpStatus) {

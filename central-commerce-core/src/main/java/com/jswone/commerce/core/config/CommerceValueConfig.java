@@ -4,6 +4,8 @@ import lombok.Getter;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Configuration;
 
+import java.util.Set;
+
 @Getter
 @Configuration
 public class CommerceValueConfig {
@@ -207,4 +209,35 @@ public class CommerceValueConfig {
 
     @Value("${central.catalogue.admin.get.district.endpoint}")
     private String centralCatalogueAdminGetDistrictEndpoint;
+
+    @Value("${gcp.bucket.seo}")
+    private String seoBucketName;
+
+    @Value("${sitemap.base.url}")
+    private String sitemapBaseUrl;
+
+    @Value("${sitemap.xml.url.prefix}")
+    private String joplMsmeWebUrl;
+
+    @Value("${sitemap.disabled.parent.category}")
+    private Set<String> disabledParentCategorySet;
+
+    @Value("${sitemap.configured.pdp.urls.enabled}")
+    private boolean configuredPdpUrlsEnabled;
+
+    @Value("${sitemap.chunk.size.default}")
+    private int sitemapDefaultChunkSize;
+
+    // ============ Retry Configuration ===========
+    @Value("${catalogue.retry.max-attempts:3}")
+    private int catalogueRetryMaxAttempts;
+
+    @Value("${catalogue.retry.initial-interval:500}")
+    private long catalogueRetryInitialInterval;
+
+    @Value("${catalogue.retry.multiplier:2.0}")
+    private double catalogueRetryMultiplier;
+
+    @Value("${catalogue.retry.max-interval:2000}")
+    private long catalogueRetryMaxInterval;
 }

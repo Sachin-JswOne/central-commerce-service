@@ -1,6 +1,5 @@
 package com.jswone.commerce.core.service;
 
-
 import com.jswone.commerce.core.model.seo.CategoryResponse;
 import com.jswone.commerce.core.model.seo.SeoContext;
 import com.jswone.commerce.core.model.seo.SeoData;
@@ -23,8 +22,7 @@ public interface SeoService {
     /**
      * Offline sitemap generation.
      */
-    List<CategoryResponse> generateSitemap();
-
+    boolean generateSitemap();
 
     SeoMeta resolveSeoMeta(SeoContext seoContext, SeoData seoData);
 }
