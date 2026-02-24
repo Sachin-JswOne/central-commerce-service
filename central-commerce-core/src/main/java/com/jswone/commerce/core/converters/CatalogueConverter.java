@@ -259,7 +259,9 @@ public class CatalogueConverter {
 
             // Dynamic Filters
             response.setFilterConditions(buildDynamicFiltersProductListing(listingCatalogueResponse, listingRequest));
-            if(Objects.nonNull(categoryTreeResponse)) {
+            if(Objects.nonNull(categoryTreeResponse) &&
+               Objects.nonNull(categoryTreeResponse.getNavigation()) &&
+               !categoryTreeResponse.getNavigation().isEmpty()) {
                 response.getFilterConditions().add(ProductFilterConditions.builder()
                         .displayText("Category")
                         .id("CATEGORY")
@@ -267,7 +269,7 @@ public class CatalogueConverter {
                         .type("selection")
                         .values(categoryTreeResponse.getNavigation().getFirst().getSubMenu())
                         .build());
-            }else {
+            }else if(Objects.nonNull(categoryFilterConditions)){
                 response.getFilterConditions().add(categoryFilterConditions);
             }
             List<PLPCard> plpCards = products.stream()
