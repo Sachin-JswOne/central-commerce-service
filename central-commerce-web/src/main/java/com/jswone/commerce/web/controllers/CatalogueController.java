@@ -9,6 +9,7 @@ import com.jswone.commerce.core.model.response.centralCatalogue.ProductBulkRespo
 import com.jswone.commerce.core.model.response.search.SearchResponse;
 import com.jswone.commerce.core.service.CentralCatalogueService;
 import com.jswone.commerce.core.util.ApiResponseUtil;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotEmpty;
 import lombok.extern.slf4j.Slf4j;
@@ -33,9 +34,17 @@ public class CatalogueController implements CentralBaseController {
     }
 
     @PostMapping(value = "/catalogue/search", produces = MediaType.APPLICATION_JSON_VALUE)
-    public ApiResponse<SearchResponse> searchCatalogue(@Valid @RequestBody SearchRequest searchRequest) {
+    public ApiResponse<SearchResponse> searchCatalogue(
+            @Valid @RequestBody SearchRequest searchRequest,
+            HttpServletRequest request) {
         log.info("Received request for generic search :{} ", searchRequest.toString());
-        return ApiResponseUtil.createSuccessResponse(centralCatalogueService.searchCatalogue(searchRequest), HttpStatus.OK);
+        
+        // Store request payload in request attributes for exception handler
+        request.setAttribute("searchRequest", searchRequest);
+        
+        return ApiResponseUtil.createSuccessResponse(
+                centralCatalogueService.searchCatalogue(searchRequest), 
+                HttpStatus.OK);
     }
 
     @PostMapping("/catalogue/images")
