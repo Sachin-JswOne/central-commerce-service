@@ -19,10 +19,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 
-import java.util.ArrayList;
-import java.util.Comparator;
-import java.util.List;
-import java.util.Objects;
+import java.util.*;
+import java.util.stream.Stream;
 
 import static org.apache.commons.lang3.StringUtils.EMPTY;
 
@@ -213,6 +211,28 @@ public class CatalogueCategoryServiceImpl implements CatalogueCategoryService {
             throw new CentralCommerceServiceException(
                     ex.getMessage(), HttpStatus.BAD_REQUEST);
         }
+    }
+
+    @Override
+    public CategoryTreeResponse getSearchedCatalogueCategoryTree(Set<String> categoryIds) {
+        SearchedCategoryTree catalogueCategoryTree = centralCatalogueClient.getSearchedCategoryTree(categoryIds);
+        if (catalogueCategoryTree == null) {
+            log.error("Category tree getSearchedCatalogueCategoryTree returned invalid or empty data");
+            throw new CentralCommerceServiceException("Category tree getSearchedCatalogueCategoryTree returned invalid or empty data");
+        }
+        List<CatalogueCategoryTree> catalogueCategoryTreeResponse =
+                Stream.of(Optional.ofNullable(catalogueCategoryTree.getAllProducts())
+                                        .orElse(Collections.emptyList()),
+                                Optional.ofNullable(catalogueCategoryTree.getIndustrySegments())
+                                        .orElse(Collections.emptyList()))
+                        .flatMap(Collection::stream)
+                        .toList();
+        log.info("Mapping getSearchedCatalogueCategoryTree to central commerce format");
+        List<NavigationItem> navigationList = categoryMapper.mapCategories(catalogueCategoryTreeResponse);
+        CategoryTreeResponse categoryTreeResponse = new CategoryTreeResponse();
+        categoryTreeResponse.setNavigation(navigationList);
+        log.info("getSearchedCatalogueCategoryTree mapping completed successfully");
+        return categoryTreeResponse;
     }
 
     private void getCategoryTreeResponse(CategoryTreeResponse categoryTreeResponse, BulkCategoryRequestDTO categoryRequestDTO){

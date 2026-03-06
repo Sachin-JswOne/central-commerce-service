@@ -26,6 +26,8 @@ import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import static com.jswone.commerce.core.constants.GenericConstants.SELECTION;
+
 @Component
 @Slf4j
 public class CatalogueConverter {
@@ -42,7 +44,10 @@ public class CatalogueConverter {
 
     // MAIN CONVERTER ======================================================================================
     public SearchResponse convertGenericSearchToSearchResponse(
-            ProductSearchResponse productSearchResponse, SearchRequest searchRequest) {
+            ProductSearchResponse productSearchResponse,
+            SearchRequest searchRequest,
+            CategoryTreeResponse categoryTreeResponse,
+            ProductFilterConditions categoryFilterConditions) {
 
         try {
             List<Product> products = Optional.ofNullable(productSearchResponse.getProducts())
@@ -52,6 +57,21 @@ public class CatalogueConverter {
 
             // Dynamic Filters
             response.setFilterConditions(buildDynamicFiltersProductListing(productSearchResponse, searchRequest));
+            if(Objects.nonNull(categoryTreeResponse) &&
+                    Objects.nonNull(categoryTreeResponse.getNavigation()) &&
+                    !categoryTreeResponse.getNavigation().isEmpty()) {
+                response.getFilterConditions().add(ProductFilterConditions.builder()
+                        .displayText("Category")
+                        .id("CATEGORY")
+                        .selectedValues(new ArrayList<>())
+                        .type(SELECTION)
+                        .values(categoryTreeResponse.getNavigation())
+                        .build());
+            }else if(Objects.nonNull(categoryFilterConditions)){
+
+                response.getFilterConditions().add(categoryFilterConditions);
+
+            }
 
             // searchAction logic
             if (searchRequest.isSearchAction()) {
@@ -172,67 +192,13 @@ public class CatalogueConverter {
         return finalList;
     }
 
-    // FILTER BUILDER ======================================================================================
-    private List<ProductFilterConditions> buildDynamicFilters(FacetsProvider facetResponse, FilterRequestProvider filterRequest) {
-
-        List<ProductFilterConditions> out = new ArrayList<>();
-
-        // Build and return full facets
-        Map<String, Set<String>> facetValues = new HashMap<>();
-
-        //  Extract facet data from the response
-        for (Map.Entry<String, Set<String>> facet : facetResponse.getFacets().entrySet()) {
-            String key = facet.getKey();
-            Set<String> val = facet.getValue();
-
-            if (!ATTRIBUTE_KEYS.contains(key)) continue;
-            if (val == null || val.isEmpty()) continue;
-
-            facetValues.put(key, val);
-        }
-
-        // Build the response list by facets only
-        facetValues.forEach((key, values) -> {
-                out.add(
-                        ProductFilterConditions.builder()
-                                .id(key.toUpperCase())
-                                .displayText(CatalogueUtil.formatName(key))
-                                .type("selection")
-                                .values(new ArrayList<>(values)) // Available values from facets
-                                .selectedValues(new ArrayList<>()) // No selected values
-                                .build()
-                );
-        });
-
-
-        // Construct the output list only from the filters passed in the request.
-            if (filterRequest.getFilterConditions() != null && !filterRequest.getFilterConditions().isEmpty()) {
-            // READ SELECTED VALUES FROM FE
-            Map<String, List<String>> selectedFromRequestMap = getSelectedFromRequestMap(filterRequest);
-
-            // BUILD FINAL FILTERS
-            facetValues.forEach((key, values) -> {
-                List<String> selected = selectedFromRequestMap.getOrDefault(
-                        key.toLowerCase(),
-                        Collections.emptyList()
-                );
-                out.forEach(productFilterConditions -> {
-                    if (productFilterConditions.getId().equalsIgnoreCase(key)) {
-                        productFilterConditions.setSelectedValues(selected);
-                    }
-                });
-            });
-        }
-        return out;
-    }
-
     private static Map<String, List<String>> getSelectedFromRequestMap(FilterRequestProvider filterRequest) {
         Map<String, List<String>> selectedFromRequestMap = new HashMap<>();
 
         if (filterRequest.getFilterConditions() != null && !filterRequest.getFilterConditions().isEmpty()) {
             for (ProductFilterConditions reqFilter : filterRequest.getFilterConditions()) {
 
-                if (!"selection".equalsIgnoreCase(reqFilter.getType())) continue;
+                if (!SELECTION.equalsIgnoreCase(reqFilter.getType())) continue;
 
                 List<String> selected = reqFilter.getSelectedValues() == null
                         ? Collections.emptyList()
@@ -266,7 +232,7 @@ public class CatalogueConverter {
                         .displayText("Category")
                         .id("CATEGORY")
                         .selectedValues(new ArrayList<>())
-                        .type("selection")
+                        .type(SELECTION)
                         .values(categoryTreeResponse.getNavigation().getFirst().getSubMenu())
                         .build());
             }else if(Objects.nonNull(categoryFilterConditions)){
@@ -288,33 +254,6 @@ public class CatalogueConverter {
             throw new CentralCommerceServiceException(
                     "Exception occurred while mapping central catalogue product listing response: " + e.getMessage()
             );
-        }
-    }
-
-    public static Map<String, List<String>> buildNameToSubMenuMap(List<NavigationItem> menuItems) {
-        Map<String, List<String>> result = new LinkedHashMap<>();
-        traverse(menuItems, result);
-        return result;
-    }
-
-    private static void traverse(List<NavigationItem> items, Map<String, List<String>> map) {
-        if (items == null) return;
-
-        for (NavigationItem item : items) {
-            List<NavigationItem> navItem = item.getSubMenu();
-
-            if (navItem != null && !navItem.isEmpty()) {
-                List<String> navNames = new ArrayList<>();
-                for (NavigationItem nav : navItem) {
-                    if (nav.getName() != null) {
-                        navNames.add(nav.getName());
-                    }
-                }
-                map.put(item.getName(), navNames);
-            }
-
-            // recurse deeper
-            traverse(navItem, map);
         }
     }
 
@@ -377,7 +316,7 @@ public class CatalogueConverter {
                         ProductFilterConditions.builder()
                                 .id(key.toUpperCase())
                                 .displayText(CatalogueUtil.formatName(key))
-                                .type("selection")
+                                .type(SELECTION)
                                 .values(new ArrayList<>(values)) // Available values from facets
                                 .selectedValues(new ArrayList<>()) // No selected values
                                 .build()

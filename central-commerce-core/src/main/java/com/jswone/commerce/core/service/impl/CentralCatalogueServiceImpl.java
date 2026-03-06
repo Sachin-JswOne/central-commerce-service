@@ -74,7 +74,25 @@ public class CentralCatalogueServiceImpl implements CentralCatalogueService {
         catalogueValidator.validateSearchRequest(searchRequest);
         ProductSearchResponse productSearchResponse = centralCatalogueClient.genericSearch(searchRequest);
         userSearchLogsItemPublisher.publish(productSearchResponse, searchRequest);
-        return catalogueConverter.convertGenericSearchToSearchResponse(productSearchResponse, searchRequest);
+        CategoryTreeResponse categoryTreeResponse = null;
+        ProductFilterConditions categoryFilterConditions =
+                Optional.ofNullable(searchRequest.getFilterConditions())
+                        .orElse(Collections.emptyList())
+                        .stream()
+                        .filter(fc -> fc.getId().equalsIgnoreCase("CATEGORY"))
+                        .filter(fc -> fc.getSelectedValues() != null && !fc.getSelectedValues().isEmpty())
+                        .findAny()
+                        .orElse(null);
+        Set<String> categoryIds = productSearchResponse.getFacets().get("category_id");
+        if(Objects.nonNull(categoryIds) &&
+           !categoryIds.isEmpty() &&
+           (Objects.isNull(categoryFilterConditions) ||
+           Objects.isNull(categoryFilterConditions.getId()))) {
+                categoryTreeResponse = categoryService.getSearchedCatalogueCategoryTree(categoryIds);
+            }
+
+
+        return catalogueConverter.convertGenericSearchToSearchResponse(productSearchResponse, searchRequest, categoryTreeResponse, categoryFilterConditions);
     }
 
     @Override

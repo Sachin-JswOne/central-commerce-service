@@ -7,9 +7,7 @@ import com.jswone.commerce.core.model.ImageMetadata;
 import com.jswone.commerce.core.model.request.ProductBulkRequest;
 import com.jswone.commerce.core.model.request.ProductListingRequest;
 import com.jswone.commerce.core.model.request.Search.SearchRequest;
-import com.jswone.commerce.core.model.response.ProductListingResponse;
 import com.jswone.commerce.core.model.response.centralCatalogue.ProductBulkResponse;
-import com.jswone.commerce.core.model.response.centralCatalogue.ProductListingCatalogueResponse;
 import com.jswone.commerce.core.model.response.centralCatalogue.ProductSearchResponse;
 import com.jswone.commerce.core.model.response.plp.ProductFilterConditions;
 import com.jswone.commerce.core.model.response.search.SearchResponse;
@@ -23,7 +21,10 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import java.util.*;
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.Map;
+import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
@@ -56,10 +57,12 @@ class CentralCatalogueServiceImplTest {
         SearchRequest request = mock(SearchRequest.class);
         ProductSearchResponse searchResponse = mock(ProductSearchResponse.class);
         SearchResponse finalResponse = mock(SearchResponse.class);
+        CategoryTreeResponse categoryTreeResponse = mock(CategoryTreeResponse.class);
+        ProductFilterConditions filterConditions = mock(ProductFilterConditions.class);
 
         when(centralCatalogueClient.genericSearch(request)).thenReturn(searchResponse);
         when(catalogueConverter.convertGenericSearchToSearchResponse(
-                searchResponse, request)).thenReturn(finalResponse);
+                searchResponse, request, null, null)).thenReturn(finalResponse);
 
         SearchResponse result = service.searchCatalogue(request);
 

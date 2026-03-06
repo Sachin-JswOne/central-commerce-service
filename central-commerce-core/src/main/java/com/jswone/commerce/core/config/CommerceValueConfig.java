@@ -240,4 +240,7 @@ public class CommerceValueConfig {
 
     @Value("${catalogue.retry.max-interval:2000}")
     private long catalogueRetryMaxInterval;
+
+    @Value("${catalogue.admin.filter.conditions}")
+    private String catalogueAdminFilter;
 }

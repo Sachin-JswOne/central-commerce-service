@@ -1,8 +1,6 @@
 package com.jswone.commerce.core.rest;
 
-import com.jswone.commerce.core.model.CatalogueBreadCrumbData;
-import com.jswone.commerce.core.model.CatalogueCategoryTree;
-import com.jswone.commerce.core.model.ImageMetadata;
+import com.jswone.commerce.core.model.*;
 import com.jswone.commerce.core.model.centralCatalogue.Product;
 import com.jswone.commerce.core.model.request.ProductBulkRequest;
 import com.jswone.commerce.core.model.request.ProductListingRequest;
@@ -42,4 +40,6 @@ public interface CentralCatalogueClient {
     List<Product> getAllProductsForCategoryId(String categoryId, String storefront);
 
     Map<String, Set<String>> getAllServiceableLocations();
+
+    SearchedCategoryTree getSearchedCategoryTree(Set<String> categoryIds);
 }
