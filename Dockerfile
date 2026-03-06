@@ -11,6 +11,7 @@ COPY central-commerce-application/target/central-commerce-application-0.0.1-SNAP
 ENV OTEL_SERVICE_NAME=central-commerce-service
 ENV OTEL_RESOURCE_ATTRIBUTES=service.version=0.0.1,team=ccp,environment=qa
 ENV OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector-opentelemetry-collector.logging.svc.cluster.local:4318
+ENV OTEL_EXPORTER_OTLP_PROTOCOL=http/protobuf
 ENV OTEL_TRACES_SAMPLER_ARG=0.5
 
 ENTRYPOINT ["java", "-javaagent:/opt/opentelemetry-javaagent.jar", "-jar", "/app/app.jar"]
