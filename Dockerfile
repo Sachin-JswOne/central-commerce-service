@@ -7,7 +7,4 @@ USER jswuser
 
 COPY central-commerce-application/target/central-commerce-application-0.0.1-SNAPSHOT.jar /app/app.jar
 
-# Service configuration
-ENV JAVA_TOOL_OPTIONS="-javaagent:/opt/opentelemetry-javaagent.jar"
-
-ENTRYPOINT exec java -jar /app/app.jar
+ENTRYPOINT ["java", "-javaagent:/opt/opentelemetry-javaagent.jar", "-jar", "/app/app.jar"]
