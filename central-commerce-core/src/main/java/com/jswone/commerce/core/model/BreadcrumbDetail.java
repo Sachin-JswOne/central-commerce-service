@@ -25,4 +25,5 @@ public class BreadcrumbDetail {
   private SeoMeta seoMeta;
   private String metaTitle;
   private String metaDescription;
+  private String shortDescription;
 }
