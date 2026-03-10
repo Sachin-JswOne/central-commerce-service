@@ -6,5 +6,6 @@ RUN groupadd -r jswuser && useradd -r -g jswuser jswuser
 USER jswuser
 
 COPY central-commerce-application/target/central-commerce-application-0.0.1-SNAPSHOT.jar /app/app.jar
+ENV OTEL_SERVICE_NAME=central-commerce-service
 
 ENTRYPOINT ["java", "-javaagent:/opt/opentelemetry-javaagent.jar", "-jar", "/app/app.jar"]
