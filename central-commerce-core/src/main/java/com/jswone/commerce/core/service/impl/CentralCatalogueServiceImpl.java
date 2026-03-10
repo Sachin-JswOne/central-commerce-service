@@ -84,12 +84,12 @@ public class CentralCatalogueServiceImpl implements CentralCatalogueService {
                         .findAny()
                         .orElse(null);
         Set<String> categoryIds = productSearchResponse.getFacets().get("category_id");
-        if(Objects.nonNull(categoryIds) &&
-           !categoryIds.isEmpty() &&
-           (Objects.isNull(categoryFilterConditions) ||
-           Objects.isNull(categoryFilterConditions.getId()))) {
-                categoryTreeResponse = categoryService.getSearchedCatalogueCategoryTree(categoryIds);
-            }
+        if (Objects.nonNull(categoryIds) &&
+                !categoryIds.isEmpty() &&
+                (Objects.isNull(categoryFilterConditions) ||
+                        Objects.isNull(categoryFilterConditions.getId()))) {
+            categoryTreeResponse = categoryService.getSearchedCatalogueCategoryTree(categoryIds);
+        }
 
 
         return catalogueConverter.convertGenericSearchToSearchResponse(productSearchResponse, searchRequest, categoryTreeResponse, categoryFilterConditions);
@@ -158,23 +158,10 @@ public class CentralCatalogueServiceImpl implements CentralCatalogueService {
                         .filter(fc -> fc.getSelectedValues() != null && !fc.getSelectedValues().isEmpty())
                         .findAny()
                         .orElse(null);
-
-        if(Objects.isNull(categoryFilterConditions) || Objects.isNull(categoryFilterConditions.getId())){
-            if (Objects.nonNull(productListingRequest.getSlug())) {
-                categoryTreeResponse = categoryService.getBulkCatalogueCategoryTree(
-                        BulkCategoryRequestDTO
-                                .builder()
-                                .categorySlugs(List.of(productListingRequest.getSlug()))
-                                .build());
-            } else {
-                categoryTreeResponse = categoryService.getBulkCatalogueCategoryTree(
-                        BulkCategoryRequestDTO
-                                .builder()
-                                .categoryIds(List.of(productListingRequest.getCategoryId()))
-                                .build());
-            }
-            List<NavigationItem> navigationItems = catalogueConverter.buildFilteredMenu(catalogueResponse,categoryTreeResponse);
-            categoryTreeResponse.setNavigation(navigationItems);
+        Set<String> categoryIds = catalogueResponse.getFacets().get("category_id");
+        if (Objects.isNull(categoryFilterConditions) || Objects.isNull(categoryFilterConditions.getId())) {
+            categoryTreeResponse = categoryService.getSearchedCatalogueCategoryTree(
+                    categoryIds);
         }
         return catalogueConverter.convertCataloguePLPResponseToPLPResponse(catalogueResponse, productListingRequest, categoryTreeResponse, categoryFilterConditions);
     }
