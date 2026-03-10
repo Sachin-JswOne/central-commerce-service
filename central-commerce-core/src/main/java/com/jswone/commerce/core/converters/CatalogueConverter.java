@@ -233,7 +233,7 @@ public class CatalogueConverter {
                         .id("CATEGORY")
                         .selectedValues(new ArrayList<>())
                         .type(SELECTION)
-                        .values(categoryTreeResponse.getNavigation().getFirst().getSubMenu())
+                        .values(categoryTreeResponse.getNavigation())
                         .build());
             }else if(Objects.nonNull(categoryFilterConditions)){
                 response.getFilterConditions().add(categoryFilterConditions);
