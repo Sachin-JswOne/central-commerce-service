@@ -87,11 +87,6 @@ public class CentralCatalogueServiceImpl implements CentralCatalogueService {
         if (Objects.isNull(categoryFilterConditions) || Objects.isNull(categoryFilterConditions.getId())) {
             categoryTreeResponse = categoryService.getSearchedCatalogueCategoryTree(
                     categoryIds);
-            if(Objects.nonNull(categoryTreeResponse) && Objects.nonNull(categoryTreeResponse.getNavigation())) {
-                NavigationItem navigationItem = NavigationItem.builder().name("All Products").slug("all-products")
-                        .subMenu(categoryTreeResponse.getNavigation()).build();
-                categoryTreeResponse.setNavigation(List.of(navigationItem));
-            }
         }
 
 
@@ -165,11 +160,6 @@ public class CentralCatalogueServiceImpl implements CentralCatalogueService {
         if (Objects.isNull(categoryFilterConditions) || Objects.isNull(categoryFilterConditions.getId())) {
             categoryTreeResponse = categoryService.getSearchedCatalogueCategoryTree(
                     categoryIds);
-            if(Objects.nonNull(categoryTreeResponse) && Objects.nonNull(categoryTreeResponse.getNavigation())) {
-                NavigationItem navigationItem = NavigationItem.builder().name("All Products").slug("all-products")
-                        .subMenu(categoryTreeResponse.getNavigation()).build();
-                categoryTreeResponse.setNavigation(List.of(navigationItem));
-            }
         }
         return catalogueConverter.convertCataloguePLPResponseToPLPResponse(catalogueResponse, productListingRequest, categoryTreeResponse, categoryFilterConditions);
     }
