@@ -1,12 +1,17 @@
 package com.jswone.commerce.web.handler;
 
 import com.fasterxml.jackson.databind.exc.MismatchedInputException;
+import com.jsw.notification_common_model.email.NotificationConfig;
+import com.jsw.notification_common_model.email.NotificationData;
+import com.jsw.notification_common_model.email.NotificationModel;
+import com.jswone.commerce.core.config.CommerceValueConfig;
 import com.jswone.commerce.core.exceptions.CentralCatalogueServiceException;
 import com.jswone.commerce.core.exceptions.CentralCommerceServiceException;
 import com.jswone.commerce.core.exceptions.ProductSelectorException;
 import com.jswone.commerce.core.exceptions.UserTokenException;
 import com.jswone.commerce.core.model.ApiResponse;
 import com.jswone.commerce.core.model.ErrorResponse;
+import com.jswone.commerce.core.service.NotificationService;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
 
@@ -25,15 +30,28 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.HandlerMethodValidationException;
 import org.springframework.web.servlet.resource.NoResourceFoundException;
 
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import java.util.List;
 import java.util.Objects;
 import java.util.stream.Collectors;
 
+import static com.jswone.commerce.core.constants.NotificationConstants.SEARCH_API_FAILURE_MESSAGE;
+import static com.jswone.commerce.core.constants.NotificationConstants.TEAMS;
 import static org.springframework.http.HttpStatus.BAD_REQUEST;
 
 @Order(Ordered.HIGHEST_PRECEDENCE)
 @RestControllerAdvice
 @Slf4j
 public class GlobalExceptionHandler {
+
+    private final NotificationService notificationService;
+    private final CommerceValueConfig commerceValueConfig;
+
+    public GlobalExceptionHandler(NotificationService notificationService, CommerceValueConfig commerceValueConfig) {
+        this.notificationService = notificationService;
+        this.commerceValueConfig = commerceValueConfig;
+    }
 
     // ================================================================
     // 1. BUSINESS EXCEPTIONS
@@ -58,8 +76,16 @@ public class GlobalExceptionHandler {
     }
 
     @ExceptionHandler(CentralCatalogueServiceException.class)
-    public ResponseEntity<ApiResponse<Object>> handleCatalogueException(CentralCatalogueServiceException ex) {
+    public ResponseEntity<ApiResponse<Object>> handleCatalogueException(
+            CentralCatalogueServiceException ex,
+            HttpServletRequest request) {
         log.error("CentralCatalogueServiceException:", ex);
+        
+        // Check if this is a search API failure
+        if (request.getRequestURI().contains("/catalogue/search")) {
+            sendSearchFailureNotification(ex, request);
+        }
+        
         return buildErrorResponse(ex.getHttpStatus(), ex.getMessage());
     }
 
@@ -199,5 +225,58 @@ public class GlobalExceptionHandler {
                 .build();
 
         return new ResponseEntity<>(body, status);  // IMPORTANT
+    }
+
+    // ================================================================
+    // Teams Notification for Search API Failures
+    // ================================================================
+
+    private void sendSearchFailureNotification(CentralCatalogueServiceException ex, HttpServletRequest request) {
+        try {
+            String timestamp = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
+            String failureReason = ex.getMessage();
+            String apiPayload = extractRequestPayload(request);
+
+            String message = String.format(
+                    SEARCH_API_FAILURE_MESSAGE,
+                    timestamp,
+                    failureReason,
+                    apiPayload);
+
+            NotificationConfig config = NotificationConfig.builder()
+                    .workflowUrl(commerceValueConfig.getSearchApiFailureTeamsWorkflowUrl())
+                    .build();
+
+            NotificationModel<Object> notificationModel = NotificationModel.builder()
+                    .notificationConfig(config)
+                    .notificationData(NotificationData.builder().message(message).build())
+                    .channels(List.of(TEAMS))
+                    .build();
+
+            notificationService.sendNotificationRequest(notificationModel);
+            
+            log.info("Search API failure notification sent to Teams");
+        } catch (Exception e) {
+            log.error("Failed to send search API failure notification to Teams", e);
+        }
+    }
+
+    private String extractRequestPayload(HttpServletRequest request) {
+        try {
+            // Try to get the request body from request attributes if available
+            Object requestBody = request.getAttribute("searchRequest");
+            if (requestBody != null) {
+                return requestBody.toString();
+            }
+            
+            // Fallback to basic request info
+            return String.format("URI: %s, Method: %s, Query: %s", 
+                    request.getRequestURI(), 
+                    request.getMethod(),
+                    request.getQueryString() != null ? request.getQueryString() : "N/A");
+        } catch (Exception e) {
+            log.error("Failed to extract request payload", e);
+            return "Unable to extract payload";
+        }
     }
 }

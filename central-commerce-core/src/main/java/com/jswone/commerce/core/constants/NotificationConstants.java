@@ -19,4 +19,11 @@ public class NotificationConstants {
                     + "\nTotal Failed Customer IDs: %s\n"
                     + "\nPlease check the Central Commerce Service logs for more details.\n"
                     + "\nNote: Log to search to get list of failed Buy Again Customer IDs - 'Failed buy again cache customer IDs:'";
+
+    public static final String SEARCH_API_FAILURE_MESSAGE =
+            "===== Search API Failure Alert =====\n"
+                    + "\nTime: %s\n"
+                    + "\nFailure Reason: %s\n"
+                    + "\nAPI Payload: %s\n"
+                    + "\nPlease check the Central Commerce Service logs for more details.";
 }
