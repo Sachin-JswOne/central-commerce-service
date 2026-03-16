@@ -1,0 +1,107 @@
+name: Release Tag
+
+on:
+  workflow_dispatch:
+    inputs:
+      version_bump:
+        description: "Select version increment"
+        required: true
+        type: choice
+        options:
+          - patch
+          - minor
+          - major
+      release_notes:
+        description: "Release notes / changelog summary"
+        required: false
+        type: string
+        default: ""
+
+jobs:
+  create-release-tag:
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/master-gke'
+
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout master-gke
+        uses: actions/checkout@v4
+        with:
+          ref: master-gke
+          fetch-depth: 0
+
+      - name: Compute next version
+        id: version
+        run: |
+          DATE=$(date -u +"%Y%m%d")
+
+          git fetch --tags
+
+          # Get latest version tag
+          LATEST_TAG=$(git tag --list 'v*' | sort -V | tail -1)
+
+          echo "Latest tag: $LATEST_TAG"
+
+          if [ -z "$LATEST_TAG" ]; then
+            MAJOR=1
+            MINOR=0
+            PATCH=0
+          else
+            CORE=$(echo "$LATEST_TAG" | sed 's/^v//' | cut -d'-' -f1)
+
+            MAJOR=$(echo "$CORE" | cut -d'.' -f1)
+            MINOR=$(echo "$CORE" | cut -d'.' -f2)
+            PATCH=$(echo "$CORE" | cut -d'.' -f3)
+          fi
+
+          BUMP="${{ github.event.inputs.version_bump }}"
+
+          if [ "$BUMP" = "major" ]; then
+            MAJOR=$((MAJOR + 1))
+            MINOR=0
+            PATCH=0
+          elif [ "$BUMP" = "minor" ]; then
+            MINOR=$((MINOR + 1))
+            PATCH=0
+          else
+            PATCH=$((PATCH + 1))
+          fi
+
+          NEXT_VERSION="v${MAJOR}.${MINOR}.${PATCH}-${DATE}"
+
+          echo "Next version: $NEXT_VERSION"
+
+          echo "version=$NEXT_VERSION" >> $GITHUB_OUTPUT
+          echo "date=$DATE" >> $GITHUB_OUTPUT
+
+      - name: Configure Git identity
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Create and push tag
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          git tag -a "$VERSION" -m "Release $VERSION from master-gke"
+          git push origin "$VERSION"
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.version.outputs.version }}
+          name: "🚀 Release ${{ steps.version.outputs.version }}"
+          body: |
+            ## 🚀 Release ${{ steps.version.outputs.version }}
+
+            | Field | Value |
+            |---|---|
+            | **Branch** | `master-gke` |
+            | **Type** | `${{ github.event.inputs.version_bump }}` |
+            | **Triggered by** | @${{ github.actor }} |
+            | **Commit** | `${{ github.sha }}` |
+            | **Date** | `${{ steps.version.outputs.date }}` |
+
+            ${{ github.event.inputs.release_notes }}
+
