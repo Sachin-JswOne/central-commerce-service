@@ -84,11 +84,13 @@ public class CentralCatalogueServiceImpl implements CentralCatalogueService {
                         .findAny()
                         .orElse(null);
         Set<String> categoryIds = productSearchResponse.getFacets().get("category_id");
-        if (Objects.isNull(categoryFilterConditions) || Objects.isNull(categoryFilterConditions.getId())) {
+
+        boolean hasCategoryIds = categoryIds != null && !categoryIds.isEmpty();
+        boolean isFilterMissing = categoryFilterConditions == null || categoryFilterConditions.getId() == null;
+        if (hasCategoryIds && isFilterMissing) {
             categoryTreeResponse = categoryService.getSearchedCatalogueCategoryTree(
                     categoryIds);
         }
-
 
         return catalogueConverter.convertGenericSearchToSearchResponse(productSearchResponse, searchRequest, categoryTreeResponse, categoryFilterConditions);
     }
@@ -157,7 +159,10 @@ public class CentralCatalogueServiceImpl implements CentralCatalogueService {
                         .findAny()
                         .orElse(null);
         Set<String> categoryIds = catalogueResponse.getFacets().get("category_id");
-        if (Objects.isNull(categoryFilterConditions) || Objects.isNull(categoryFilterConditions.getId())) {
+
+        boolean hasCategoryIds = categoryIds != null && !categoryIds.isEmpty();
+        boolean isFilterMissing = categoryFilterConditions == null || categoryFilterConditions.getId() == null;
+        if (hasCategoryIds && isFilterMissing) {
             categoryTreeResponse = categoryService.getSearchedCatalogueCategoryTree(
                     categoryIds);
         }
