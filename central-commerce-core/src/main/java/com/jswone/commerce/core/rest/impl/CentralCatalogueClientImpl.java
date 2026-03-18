@@ -293,6 +293,7 @@ public class CentralCatalogueClientImpl implements CentralCatalogueClient {
         }
 
         public CatalogueBreadCrumbData getBreadcrumb(String categoryId, String slug) {
+                slug = slug.toLowerCase();
                 String url;
                 if (Objects.nonNull(categoryId) && Objects.isNull(slug)) {
                         url = commerceValueConfig.getCatalogueCategoryBaseUrl().concat("/category?categoryId=")
@@ -459,7 +460,7 @@ public class CentralCatalogueClientImpl implements CentralCatalogueClient {
                                         .page(productListingRequest.getOffSet())
                                         .size(productListingRequest.getLimit())
                                         .category_id(productListingRequest.getCategoryId())
-                                        .slug(productListingRequest.getSlug())
+                                        .slug(productListingRequest.getSlug().toLowerCase())
                                         .storefront(productListingRequest.getStorefront())
                                         .facets_only(false)
                                         .locale("en-US")
@@ -508,7 +509,7 @@ public class CentralCatalogueClientImpl implements CentralCatalogueClient {
                         CentralCatalogueProductListingRequest ccplRequest = CentralCatalogueProductListingRequest
                                         .builder()
                                         .category_id(productListingRequest.getCategoryId())
-                                        .slug(productListingRequest.getSlug())
+                                        .slug(productListingRequest.getSlug().toLowerCase())
                                         .storefront(productListingRequest.getStorefront())
                                         .facets_only(true)
                                         .locale("en-US")
@@ -553,7 +554,7 @@ public class CentralCatalogueClientImpl implements CentralCatalogueClient {
                 try {
 
                         ProductSlugRequestDTO productSlugRequestDTO = ProductSlugRequestDTO.builder()
-                                        .slug(slug)
+                                        .slug(slug.toLowerCase())
                                         .storefront(storeFront)
                                         .locale("en-US").build();
                         Map<String, List<String>> filters = new HashMap<>();
