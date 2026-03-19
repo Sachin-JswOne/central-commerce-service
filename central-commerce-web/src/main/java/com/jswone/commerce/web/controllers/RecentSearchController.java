@@ -19,7 +19,7 @@ import static com.jswone.commerce.core.constants.JWTConstants.USER_ID_CLAIM;
 
 @RestController
 @RequiredArgsConstructor
-public class RecentSearchController implements CentralBaseController {
+public class RecentSearchController {
 
     private final RecentSearchService recentSearchService;
     private final AsyncExecutor asyncExecutor;

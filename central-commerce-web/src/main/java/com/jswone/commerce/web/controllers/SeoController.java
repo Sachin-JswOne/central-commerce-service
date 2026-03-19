@@ -11,7 +11,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequiredArgsConstructor
-public class SeoController implements CentralBaseController {
+public class SeoController {
 
     private final SeoService seoService;
 

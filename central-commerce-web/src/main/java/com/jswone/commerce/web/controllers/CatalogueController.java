@@ -25,7 +25,7 @@ import java.util.Set;
 
 @RestController
 @Slf4j
-public class CatalogueController implements CentralBaseController {
+public class CatalogueController {
 
     private final CentralCatalogueService centralCatalogueService;
 

@@ -13,7 +13,7 @@ import org.springframework.web.bind.annotation.*;
 
 @RestController
 @Slf4j
-public class CatalogueCategoryController implements CentralBaseController {
+public class CatalogueCategoryController {
 
   private final CatalogueCategoryService categoryService;
 

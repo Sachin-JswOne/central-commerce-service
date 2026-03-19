@@ -14,7 +14,7 @@ import java.util.Set;
 
 @RestController
 @RequiredArgsConstructor
-public class TrendingSearchController implements CentralBaseController {
+public class TrendingSearchController {
 
     @Value("${recent.search.limit}")
     private int recentSearchLimit;

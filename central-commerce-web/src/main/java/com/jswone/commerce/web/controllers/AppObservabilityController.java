@@ -13,7 +13,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @AllArgsConstructor
-public class AppObservabilityController implements CentralBaseController{
+public class AppObservabilityController {
 
     private final PageMetricServiceImpl pageMetricService;
     private final ApiMetricServiceImpl apiMetricService;

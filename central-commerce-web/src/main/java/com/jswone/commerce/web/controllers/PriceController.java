@@ -17,7 +17,7 @@ import java.util.List;
 
 @RestController
 @Slf4j
-public class PriceController implements CentralBaseController{
+public class PriceController {
     private final PricingService pricingService;
 
     public PriceController(PricingService pricingService) {

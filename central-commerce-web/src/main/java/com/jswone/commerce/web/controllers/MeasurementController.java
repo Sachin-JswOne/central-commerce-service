@@ -14,7 +14,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @Slf4j
-public class MeasurementController implements CentralBaseController {
+public class MeasurementController {
 
     private final UomConvertService uomConvertService;
 
