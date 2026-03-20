@@ -26,6 +26,9 @@ public interface BreadcrumbMapper {
   @Mapping(source = "attributes.category_faqs_heading", target = "faqsHeading")
   @Mapping(source = "attributes.category_faqs_description", target = "faqsDescription")
   @Mapping(source = "attributes.meta_image", target = "metaImage")
+  @Mapping(source = "attributes.meta_title", target = "metaTitle")
+  @Mapping(source = "attributes.meta_description", target = "metaDescription")
+  @Mapping(source = "attributes.short_description", target = "shortDescription")
   BreadcrumbDetail toBreadcrumbDetail(CatalogueBreadCrumbDetail detail);
 
   @Mapping(source = "title", target = "name")

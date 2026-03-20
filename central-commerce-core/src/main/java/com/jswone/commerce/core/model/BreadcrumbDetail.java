@@ -21,4 +21,7 @@ public class BreadcrumbDetail {
   private String faqsHeading;
   private String faqsDescription;
   private MetaImage metaImage;
+  private String metaTitle;
+  private String metaDescription;
+  private String shortDescription;
 }

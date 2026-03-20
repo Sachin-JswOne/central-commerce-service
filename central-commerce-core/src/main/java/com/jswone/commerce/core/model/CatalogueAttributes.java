@@ -19,4 +19,5 @@ public class CatalogueAttributes {
   private String link_title_seo_purpose;
   private String link_title;
   private CatalogueMetaImage meta_image;
+  private String short_description;
 }

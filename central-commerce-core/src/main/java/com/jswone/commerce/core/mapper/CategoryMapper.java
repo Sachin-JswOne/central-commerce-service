@@ -23,6 +23,7 @@ public interface CategoryMapper {
   @Mapping(source = "attributes.link_title_seo_purpose", target = "linkTitleSeoPurpose")
   @Mapping(source = "attributes.link_title", target = "linkTitle")
   @Mapping(source = "attributes.meta_image", target = "metaImage")
+  @Mapping(source = "attributes.short_description", target = "shortDescription")
   @Mapping(target = "subMenu", expression = "java(mapCategories(category.getSub_menu()))")
   NavigationItem mapCategory(CatalogueCategoryTree category);
 

@@ -124,6 +124,9 @@ public class CommerceValueConfig {
     @Value("${buy.again.cache.warm.up.teams.workflow.url}")
     private String buyAgainCacheWarmUpTeamsWorkflowUrl;
 
+    @Value("${search.api.failure.teams.workflow.url}")
+    private String searchApiFailureTeamsWorkflowUrl;
+
     @Value("${buy.again.cache.chunk.size}")
     private int buyAgainCacheChunkSize;
 

@@ -27,5 +27,8 @@ public class Variant {
     private List<String> enabledStorefront;
 
     private int version;
+
+    @JsonProperty("meta_image")
+    private MetaImageDTO metaImage;
 }
 

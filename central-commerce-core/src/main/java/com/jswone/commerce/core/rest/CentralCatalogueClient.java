@@ -22,4 +22,5 @@ public interface CentralCatalogueClient {
     ProductListingCatalogueResponse productListingFacetsOnly(ProductListingRequest productListingRequest);
     List<CatalogueCategoryTree> getCategoryTree();
     CatalogueBreadCrumbData getBreadcrumb(String categoryId, String slug);
+    ProductBulkResponse getProductFromSlug(String slug, String storeFront);
 }

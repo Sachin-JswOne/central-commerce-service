@@ -22,4 +22,5 @@ public class NavigationItem {
   private String linkTitle;
   private MetaImage metaImage;
   private List<NavigationItem> subMenu;
+  private String shortDescription;
 }

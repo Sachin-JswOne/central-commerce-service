@@ -14,6 +14,7 @@ import com.jswone.commerce.core.model.request.ProductTypeBulkRequest;
 import com.jswone.commerce.core.model.request.Search.SearchRequest;
 import com.jswone.commerce.core.model.request.centralCatalogue.CentralCatalogueProductListingRequest;
 import com.jswone.commerce.core.model.request.centralCatalogue.CentralCatalogueSearchRequest;
+import com.jswone.commerce.core.model.request.centralCatalogue.ProductSlugRequestDTO;
 import com.jswone.commerce.core.model.response.centralCatalogue.ProductBulkResponse;
 import com.jswone.commerce.core.model.response.centralCatalogue.ProductListingCatalogueResponse;
 import com.jswone.commerce.core.model.response.centralCatalogue.ProductSearchResponse;
@@ -446,6 +447,49 @@ public class CentralCatalogueClientImpl implements CentralCatalogueClient {
             throw new CentralCatalogueServiceException(
                     "HttpClientErrorException while calling central catalogue product listing facetsOnly: "
                             + httpClientErrorException.getMessage(),
+                    HttpStatus.valueOf(httpClientErrorException.getStatusCode().value())
+            );
+        }
+    }
+
+    @Override
+    public ProductBulkResponse getProductFromSlug(String slug, String storeFront) {
+        try {
+            ProductSlugRequestDTO productSlugRequestDTO = ProductSlugRequestDTO.builder()
+                    .slug(slug)
+                    .storefront(storeFront)
+                    .locale("en-US").build();
+
+            String url = commerceValueConfig.getCentralCatalogueBaseUrl()
+                    + commerceValueConfig.getCentralCatalogueProductSlugEndpoint();
+
+            Map<String, String> headers = Map.of(
+                    X_API_KEY, commerceValueConfig.getCentralCatalogueApiKey(),
+                    CLIENT_ID, commerceValueConfig.getCentralCatalogueClientId(),
+                    "Content-Type", "application/json"
+            );
+
+            ResponseEntity<ProductBulkResponse> response = RetryUtil.retryHttpCalls(() -> restUtil.makeRestCall(
+                            url,
+                            productSlugRequestDTO,
+                            HttpMethod.POST,
+                            ProductBulkResponse.class,
+                            headers
+                    ), 0,
+                    3,
+                    100, CENTRAL_CATALOGUE_PRODUCT_SLUG);
+
+            return response.getBody();
+
+        } catch (HttpClientErrorException httpClientErrorException) {
+            log.error("HttpClientErrorException while calling Central Catalogue Product Slug API: {}",
+                    httpClientErrorException.getMessage(), httpClientErrorException);
+
+            throw new CentralCatalogueServiceException(
+                    String.format(
+                            "HttpClientErrorException while calling Central Catalogue Product Slug API: %s",
+                            httpClientErrorException.getMessage()
+                    ),
                     HttpStatus.valueOf(httpClientErrorException.getStatusCode().value())
             );
         }

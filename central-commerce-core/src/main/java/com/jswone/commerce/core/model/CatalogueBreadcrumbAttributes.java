@@ -13,6 +13,7 @@ public class CatalogueBreadcrumbAttributes {
   private String slug;
   private String seo_url;
   private String meta_title;
+  private String meta_description;
   private String category_title;
   private String category_description;
   private String category_detail_description;
@@ -21,4 +22,5 @@ public class CatalogueBreadcrumbAttributes {
   private String category_faqs_heading;
   private String category_faqs_description;
   private CatalogueMetaImage meta_image;
+  private String short_description;
 }

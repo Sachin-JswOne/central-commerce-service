@@ -12,4 +12,8 @@ public class VariantSelector {
     @JsonProperty("input_type")
     private String inputType;
     private boolean plp;
+    private Double min;
+    private Double max;
+    private String displayName;
+    private String unitKey;
 }
