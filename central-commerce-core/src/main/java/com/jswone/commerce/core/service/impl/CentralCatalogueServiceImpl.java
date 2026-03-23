@@ -73,6 +73,11 @@ public class CentralCatalogueServiceImpl implements CentralCatalogueService {
     public SearchResponse searchCatalogue(SearchRequest searchRequest) {
         catalogueValidator.validateSearchRequest(searchRequest);
         ProductSearchResponse productSearchResponse = centralCatalogueClient.genericSearch(searchRequest);
+        if(productSearchResponse.getProducts().isEmpty() && Objects.nonNull(searchRequest.getFilterConditions())){
+            SearchResponse searchResponse = new SearchResponse();
+            searchResponse.setFilterConditions(searchRequest.getFilterConditions());
+            return searchResponse;
+        }
         userSearchLogsItemPublisher.publish(productSearchResponse, searchRequest);
         CategoryTreeResponse categoryTreeResponse = null;
         ProductFilterConditions categoryFilterConditions =
@@ -149,6 +154,11 @@ public class CentralCatalogueServiceImpl implements CentralCatalogueService {
                         : productListingRequest.getSlug());
 
         ProductListingCatalogueResponse catalogueResponse = centralCatalogueClient.productListing(productListingRequest);
+        if(catalogueResponse.getProducts().isEmpty() && Objects.nonNull(productListingRequest.getFilterConditions())){
+            ProductListingResponse productListingResponse = new ProductListingResponse();
+            productListingResponse.setFilterConditions(productListingRequest.getFilterConditions());
+         return productListingResponse;
+        }
         CategoryTreeResponse categoryTreeResponse = null;
         ProductFilterConditions categoryFilterConditions =
                 Optional.ofNullable(productListingRequest.getFilterConditions())
