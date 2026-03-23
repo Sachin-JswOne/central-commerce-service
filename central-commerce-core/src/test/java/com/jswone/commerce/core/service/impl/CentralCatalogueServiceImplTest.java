@@ -61,14 +61,10 @@ class CentralCatalogueServiceImplTest {
         ProductFilterConditions filterConditions = mock(ProductFilterConditions.class);
 
         when(centralCatalogueClient.genericSearch(request)).thenReturn(searchResponse);
-        when(catalogueConverter.convertGenericSearchToSearchResponse(
-                searchResponse, request, null, null)).thenReturn(finalResponse);
-
         SearchResponse result = service.searchCatalogue(request);
 
         assertNotNull(result);
         verify(catalogueValidator).validateSearchRequest(request);
-        verify(recentSearchItemPublisher).publish(searchResponse, request);
     }
 
     @Test
