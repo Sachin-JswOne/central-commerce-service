@@ -2,12 +2,9 @@ package com.jswone.commerce.core.rest.impl;
 
 import com.jswone.commerce.core.config.CommerceValueConfig;
 import com.jswone.commerce.core.exceptions.CentralCatalogueServiceException;
-import com.jswone.commerce.core.model.CatalogueBreadCrumbData;
-import com.jswone.commerce.core.model.CatalogueBreadcrumbResponse;
+import com.jswone.commerce.core.model.*;
 import com.jswone.commerce.core.model.request.FilterRequestProvider;
 import com.jswone.commerce.core.exceptions.CentralCommerceServiceException;
-import com.jswone.commerce.core.model.CatalogueCategoryTree;
-import com.jswone.commerce.core.model.CatalogueCategoryTreeResponse;
 import com.jswone.commerce.core.model.request.ProductBulkRequest;
 import com.jswone.commerce.core.model.request.ProductListingRequest;
 import com.jswone.commerce.core.model.request.ProductTypeBulkRequest;
@@ -492,6 +489,51 @@ public class CentralCatalogueClientImpl implements CentralCatalogueClient {
                     ),
                     HttpStatus.valueOf(httpClientErrorException.getStatusCode().value())
             );
+        }
+    }
+
+    @Override
+    public SearchedCategoryTree getSearchedCategoryTree(Set<String> categoryIds) {
+        try {
+            log.info(
+                    "Calling external central catalogue to getSearchedCategoryTree: {}",
+                    commerceValueConfig.getCatalogueCategoryBaseUrl());
+
+            Map<String, String> headers = Map.of(
+                    X_API_KEY, commerceValueConfig.getCatalogueCategoryApiKey(),
+                    CLIENT_ID, commerceValueConfig.getCatalogueCategoryClientId(),
+                    "Content-Type", "application/json");
+
+            String url = UriComponentsBuilder
+                    .fromHttpUrl(commerceValueConfig.getCatalogueCategoryBaseUrl())
+                    .path("/category-tree")
+                    .queryParam("rootCategoryKeys", commerceValueConfig.getCatalogueAdminFilter())
+                    .toUriString();
+
+            ResponseEntity<SearchedCategoryTreeResponse> response = restUtil.makeRestCall(url, new ArrayList<>(categoryIds),
+                    HttpMethod.POST, SearchedCategoryTreeResponse.class, headers);
+
+            if (response.getStatusCode() != HttpStatus.OK || response.getBody() == null) {
+                log.error("Failed to fetch catalogue category getSearchedCategoryTree: {}", response.getStatusCode());
+                throw new CentralCommerceServiceException(
+                        "Failed to fetch catalogue category getSearchedCategoryTree ",
+                        (HttpStatus) response.getStatusCode());
+            }
+
+            log.info("Central catalogue getSearchedCategoryTree API call successful");
+            return response.getBody() != null ? response.getBody().getData() : new SearchedCategoryTree();
+
+        } catch (HttpClientErrorException | HttpServerErrorException ex) {
+            log.error("Error calling catalogue getSearchedCategoryTree API: {}", ex.getMessage(), ex);
+            String errorMessage = extractErrorMessage(ex.getResponseBodyAsString());
+            throw new CentralCatalogueServiceException(errorMessage, (HttpStatus) ex.getStatusCode());
+
+        } catch (Exception ex) {
+            log.error("Error calling external Catalogue to getSearchedCategoryTree API: {}", ex.getMessage(), ex);
+            throw new CentralCommerceServiceException(
+                    "Error calling central catalogue category getSearchedCategoryTree API: ",
+                    HttpStatus.INTERNAL_SERVER_ERROR,
+                    ex);
         }
     }
 

@@ -14,4 +14,5 @@ import java.util.List;
 public class BulkCategoryRequestDTO {
     private List<String> categoryIds;
     private List<String> brandCategoryIds;
+    private List<String> categorySlugs;
 }

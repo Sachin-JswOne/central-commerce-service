@@ -15,7 +15,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @Slf4j
-public class BuyAgainController implements CentralBaseController {
+public class BuyAgainController {
 
     private final BuyAgainServiceV2 buyAgainServiceV2;
 

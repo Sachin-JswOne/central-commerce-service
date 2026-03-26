@@ -7,7 +7,6 @@ import com.jswone.commerce.core.model.response.SkuInfo;
 import com.jswone.commerce.core.service.ProductService;
 import com.jswone.commerce.core.util.ApiResponseUtil;
 import jakarta.validation.Valid;
-import lombok.extern.log4j.Log4j2;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -15,7 +14,7 @@ import org.springframework.web.bind.annotation.*;
 
 @RestController
 @Slf4j
-public class ProductController implements CentralBaseController{
+public class ProductController {
     private final ProductService productService;
 
     public ProductController(ProductService productService) {

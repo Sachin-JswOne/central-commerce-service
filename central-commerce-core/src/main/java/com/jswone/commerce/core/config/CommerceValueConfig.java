@@ -192,4 +192,7 @@ public class CommerceValueConfig {
 
     @Value("${central.catalogue.product.slug.endpoint}")
     private String centralCatalogueProductSlugEndpoint;
+
+    @Value("${catalogue.admin.filter.conditions}")
+    private String catalogueAdminFilter;
 }

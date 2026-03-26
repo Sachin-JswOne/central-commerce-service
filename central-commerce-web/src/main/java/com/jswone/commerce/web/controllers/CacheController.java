@@ -15,7 +15,7 @@ import java.util.Map;
 
 @Slf4j
 @RestController
-public class CacheController implements CentralBaseController {
+public class CacheController {
 
     private final CacheService cacheService;
 
