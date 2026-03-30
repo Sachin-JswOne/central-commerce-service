@@ -23,7 +23,7 @@ public class ShortLinkRepository {
     private final NamedParameterJdbcTemplate jdbcTemplate;
 
     public ShortLinkRepository(
-            @Qualifier("centralCommerceJdbcTemplate") JdbcTemplate jdbcTemplate, PurchasedSkuRowMapper purchasedSkuRowMapper) {
+            @Qualifier("centralCommerceJdbcTemplate") JdbcTemplate jdbcTemplate) {
         this.jdbcTemplate = new NamedParameterJdbcTemplate(jdbcTemplate);
 
     }
@@ -39,10 +39,6 @@ public class ShortLinkRepository {
                     .businessId(rs.getString("business_id"))
                     .channel(rs.getString("channel"))
                     .targetTemplate(rs.getString("target_template"))
-//                    .utmSource(rs.getString("utm_source"))
-//                    .utmMedium(rs.getString("utm_medium"))
-//                    .utmCampaign(rs.getString("utm_campaign"))
-//                    .utmContent(rs.getString("utm_content"))
                     .expiresAt(getLocalDateTime(rs, "expires_at"))
                     .createdAt(getLocalDateTime(rs, "created_at"))
                     .updatedAt(getLocalDateTime(rs, "updated_at"))
@@ -81,10 +77,6 @@ public class ShortLinkRepository {
                 .addValue("businessId", link.getBusinessId())
                 .addValue("channel", link.getChannel())
                 .addValue("targetTemplate", link.getTargetTemplate())
-//                .addValue("utmSource", link.getUtmSource())
-//                .addValue("utmMedium", link.getUtmMedium())
-//                .addValue("utmCampaign", link.getUtmCampaign())
-//                .addValue("utmContent", link.getUtmContent())
                 .addValue("expiresAt", link.getExpiresAt())
                 .addValue("createdAt", link.getCreatedAt())
                 .addValue("updatedAt", link.getUpdatedAt());
@@ -115,10 +107,6 @@ public class ShortLinkRepository {
                 .addValue("businessId", link.getBusinessId())
                 .addValue("channel", link.getChannel())
                 .addValue("targetTemplate", link.getTargetTemplate())
-//                .addValue("utmSource", link.getUtmSource())
-//                .addValue("utmMedium", link.getUtmMedium())
-//                .addValue("utmCampaign", link.getUtmCampaign())
-//                .addValue("utmContent", link.getUtmContent())
                 .addValue("expiresAt", link.getExpiresAt())
                 .addValue("updatedAt", link.getUpdatedAt())
                 .addValue("lastAccessedAt", link.getLastAccessedAt());

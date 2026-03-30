@@ -23,19 +23,6 @@ public class CreateShortLinkRequest {
     @JsonProperty("expires_at")
     private LocalDateTime expiresAt;
 
-    // Optional UTM overrides
-    @JsonProperty("utm_source")
-    private String utmSource;
-
-    @JsonProperty("utm_medium")
-    private String utmMedium;
-
-    @JsonProperty("utm_campaign")
-    private String utmCampaign;
-
-    @JsonProperty("utm_content")
-    private String utmContent;
-
     @JsonProperty("link")
     private String link;
 

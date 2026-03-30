@@ -16,10 +16,9 @@ import org.springframework.cache.CacheManager;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.util.UriComponentsBuilder;
 
-import java.time.Duration;
 import java.time.LocalDateTime;
-import java.util.Map;
 import java.util.Optional;
 
 import static com.jswone.commerce.core.config.ProfileAwareCacheConfig.getCacheNameWithProfile;
@@ -38,13 +37,6 @@ public class ShortLinkService {
     @Value("${short.link.app.base.url}")
     private String portalBaseUrl;
 
-    private static final Map<LinkType, String> TEMPLATES = Map.of(
-            LinkType.LEDGER, "/ledger?tab=usable-ledger-balance&customerId={id}",
-            LinkType.INVOICE, "/invoices?invoiceId={id}",
-            LinkType.SHIPMENT, "/shipment/{id}?view=details",
-            LinkType.ORDER, "/orders/{id}",
-            LinkType.DOWNLOAD, "/download/{id}"
-    );
 
     @Transactional
     public ShortLink createShortLink(CreateShortLinkRequest request) {
@@ -64,10 +56,6 @@ public class ShortLinkService {
                 .businessId(request.getBusinessId())
                 .channel(request.getChannel())
                 .expiresAt(isPermanentType(request.getType()) ? null : request.getExpiresAt())
-//                .utmSource(request.getUtmSource())
-//                .utmMedium(request.getUtmMedium())
-//                .utmCampaign(request.getUtmCampaign())
-//                .utmContent(request.getUtmContent())
                 .targetTemplate(request.getLink())
                 .code("") // Temporary
                 .build();
@@ -79,29 +67,44 @@ public class ShortLinkService {
         link.setCode(code);
         repository.save(link);
 
-        // Cache the link metadata
-        cacheLink(link);
+        // Cache only the resolved target URL
+        cacheTargetUrl(link);
 
         return link;
     }
 
-    public Optional<ShortLink> getLink(String prefix, String code) {
+    /**
+     * Returns the resolved target URL for the given short link prefix+code.
+     * Checks Redis first (stores only the URL string); falls back to the DB on cache miss.
+     *
+     * @return the target URL string, or {@link Optional#empty()} if the link does not exist.
+     */
+    public Optional<String> getTargetUrl(String prefix, String code) {
         String cacheKey = prefix + ":" + code;
         Cache cache = getShortLinkCache();
         Cache.ValueWrapper wrapper = cache.get(cacheKey);
 
-        ShortLink cachedLink = (ShortLink) wrapper.get();
-
-        if (cachedLink != null) {
-            log.debug("Cache hit for {}", cacheKey);
-            return Optional.of(cachedLink);
+        if (wrapper != null) {
+            String cachedUrl = (String) wrapper.get();
+            if (cachedUrl != null) {
+                log.debug("Cache hit for short link key '{}'", cacheKey);
+                return Optional.of(cachedUrl);
+            }
         }
 
-        log.debug("Cache miss for {}", cacheKey);
+        log.debug("Cache miss for short link key '{}' – falling back to DB", cacheKey);
         Optional<ShortLink> dbLink = repository.findByPrefixAndCode(prefix, code);
-        dbLink.ifPresent(this::cacheLink);
+        dbLink.ifPresent(this::cacheTargetUrl);
 
-        return dbLink;
+        return dbLink.map(this::buildTargetUrl);
+    }
+
+    /**
+     * Loads the full {@link ShortLink} entity directly from the DB.
+     * Use this when you need the complete entity (e.g. expiry check, click recording).
+     */
+    public Optional<ShortLink> getLinkFromDb(String prefix, String code) {
+        return repository.findByPrefixAndCode(prefix, code);
     }
 
     @Async
@@ -126,7 +129,7 @@ public class ShortLinkService {
 
     public String buildTargetUrl(ShortLink link) {
         String url = portalBaseUrl + buildPortalUrl(link);
-        return appendUtmParams(url, link);
+        return appendUtmParams(url);
     }
 
     private String buildPortalUrl(ShortLink link) {
@@ -139,14 +142,9 @@ public class ShortLinkService {
         return template.replace("{id}", link.getBusinessId());
     }
 
-    private String appendUtmParams(String url, ShortLink link) {
-        org.springframework.web.util.UriComponentsBuilder builder =
-                org.springframework.web.util.UriComponentsBuilder.fromUriString(url);
-
-//        if (link.getUtmSource() != null) builder.queryParam("utm_source", link.getUtmSource());
-//        if (link.getUtmMedium() != null) builder.queryParam("utm_medium", link.getUtmMedium());
-//        if (link.getUtmCampaign() != null) builder.queryParam("utm_campaign", link.getUtmCampaign());
-//        if (link.getUtmContent() != null) builder.queryParam("utm_content", link.getUtmContent());
+    private String appendUtmParams(String url) {
+        UriComponentsBuilder builder =
+                UriComponentsBuilder.fromUriString(url);
 
         return builder.toUriString();
     }
@@ -163,24 +161,16 @@ public class ShortLinkService {
                 type == LinkType.INVOICE;
     }
 
-    private void cacheLink(ShortLink link) {
-
+    /**
+     * Stores only the resolved target URL string in Redis.
+     * This keeps the cache payload minimal – no serialized entity, no type metadata.
+     */
+    private void cacheTargetUrl(ShortLink link) {
         Cache cache = getShortLinkCache();
-
         String cacheKey = link.getPrefix() + ":" + link.getCode();
 
-        // If it's a download link, set TTL based on expiry
-        if (link.getType() == LinkType.DOWNLOAD && link.getExpiresAt() != null) {
-            Duration ttl = Duration.between(LocalDateTime.now(), link.getExpiresAt());
-            if (ttl.getSeconds() > 0) {
-                cache.put(cacheKey, link);
-//                redisTemplate.opsForValue().set(cacheKey, link, ttl);
-            }
-        } else {
-            // Permanent links or default TTL (e.g., 30 days)
-            cache.put(cacheKey, link);
-//            redisTemplate.opsForValue().set(cacheKey, link, Duration.ofDays(30));
-        }
+        cache.put(cacheKey, link.getTargetTemplate());
+        log.debug("Cached target URL for key '{}': {}", cacheKey, link.getTargetTemplate());
     }
 
     private Cache getShortLinkCache() {

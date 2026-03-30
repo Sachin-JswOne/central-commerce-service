@@ -30,14 +30,6 @@ public class ShortLink {
 
     private String targetTemplate;
 
-//    private String utmSource;
-//
-//    private String utmMedium;
-//
-//    private String utmCampaign;
-//
-//    private String utmContent;
-
     private LocalDateTime expiresAt;
 
     private LocalDateTime createdAt;

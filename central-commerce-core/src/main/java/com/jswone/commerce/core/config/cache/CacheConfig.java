@@ -60,8 +60,6 @@ public class CacheConfig {
 
     private final RedisConfiguration redisConfiguration;
 
-    private final ObjectMapper objectMapper;
-
     private static Duration duration(long minutes) {
         return Duration.ofMinutes(minutes);
     }
@@ -104,9 +102,9 @@ public class CacheConfig {
         RedisTemplate<String, Object> redisTemplate = new RedisTemplate<>();
         redisTemplate.setConnectionFactory(redisConnectionFactory);
         redisTemplate.setKeySerializer(new StringRedisSerializer());
-        redisTemplate.setValueSerializer(new GenericJackson2JsonRedisSerializer(objectMapper));
+        redisTemplate.setValueSerializer(new GenericJackson2JsonRedisSerializer());
         redisTemplate.setHashKeySerializer(new StringRedisSerializer());
-        redisTemplate.setHashValueSerializer(new GenericJackson2JsonRedisSerializer(objectMapper));
+        redisTemplate.setHashValueSerializer(new GenericJackson2JsonRedisSerializer());
 
         redisTemplate.afterPropertiesSet(); // IMPORTANT
 
@@ -121,7 +119,7 @@ public class CacheConfig {
     }
 
     private RedisCacheConfiguration getDefaultCacheConfig() {
-        GenericJackson2JsonRedisSerializer jsonSerializer = new GenericJackson2JsonRedisSerializer(objectMapper);
+        GenericJackson2JsonRedisSerializer jsonSerializer = new GenericJackson2JsonRedisSerializer();
         return RedisCacheConfiguration.defaultCacheConfig()
                 .disableCachingNullValues() // Don't cache null values
                 .serializeValuesWith(
@@ -145,8 +143,7 @@ public class CacheConfig {
         SslOptions sslOptions = null;
         try {
             String pem;
-            if (commerceValueConfig.getRedisCacheProfile().equals("local")
-                    || commerceValueConfig.getRedisCacheProfile().equals("dev")) {
+            if (commerceValueConfig.getRedisCacheProfile().equals("local")) {
                 pem = redisConfiguration.getPemContentFromClassPath();
                 log.info("Fetched PEM certificate from class path for Redis connection.");
             } else {

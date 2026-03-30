@@ -6,7 +6,6 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.web.bind.annotation.*;
 
 import java.io.IOException;
@@ -20,9 +19,6 @@ public class RedirectController {
 
     private final ShortLinkService shortLinkService;
 
-    @Value("${short.link.app.base.url}")
-    private String portalBaseUrl;
-
     @GetMapping("/sl/{prefix}/{code}")
     public void handleRedirect(
             @PathVariable String prefix,
@@ -31,7 +27,17 @@ public class RedirectController {
             HttpServletRequest request,
             HttpServletResponse response) throws IOException {
 
-        Optional<ShortLink> shortLinkOpt = shortLinkService.getLink(prefix, code);
+        // Fast path: resolve the target URL from cache (stores only the URL string)
+        Optional<String> targetUrlOpt = shortLinkService.getTargetUrl(prefix, code);
+
+        if (targetUrlOpt.isEmpty()) {
+            response.sendError(HttpServletResponse.SC_NOT_FOUND);
+            return;
+        }
+
+        // We still need the full entity for the expiry check and async click recording.
+        // This is a DB call only on cache-miss paths or when we need entity-level data.
+        Optional<ShortLink> shortLinkOpt = shortLinkService.getLinkFromDb(prefix, code);
 
         if (shortLinkOpt.isEmpty()) {
             response.sendError(HttpServletResponse.SC_NOT_FOUND);
@@ -45,8 +51,7 @@ public class RedirectController {
             return;
         }
 
-        String targetUrl = shortLink.getTargetTemplate();
-        String portalPath = shortLinkService.buildTargetUrl(shortLink).replace(portalBaseUrl, "");
+        String targetUrl = targetUrlOpt.get();
 
         // Record click asynchronously
         String userAgent = request.getHeader("User-Agent");
