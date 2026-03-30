@@ -49,7 +49,8 @@ public class CacheConfig {
             Pair.of(CacheNames.DEDUPE_TRENDING_SEARCHES_CACHE_PREFIX, duration(43200L)),
             Pair.of(CacheNames.LOCATION_MASTER_ALL, Duration.ZERO),
             Pair.of(CacheNames.SEO_PRODUCT_TYPES, duration(1440L)),
-            Pair.of(CacheNames.SEO_CATEGORY_LOCATIONS, duration(60L)));
+            Pair.of(CacheNames.SEO_CATEGORY_LOCATIONS, duration(60L)),
+            Pair.of(CacheNames.SHORT_LINK_CACHE_PREFIX, null));
 
     private final CommerceValueConfig commerceValueConfig;
 
@@ -140,7 +141,7 @@ public class CacheConfig {
         SslOptions sslOptions = null;
         try {
             String pem;
-            if (commerceValueConfig.getRedisCacheProfile().equals("local")) {
+            if (commerceValueConfig.getRedisCacheProfile().equals("local") || commerceValueConfig.getRedisCacheProfile().equals("dev")) {
                 pem = redisConfiguration.getPemContentFromClassPath();
                 log.info("Fetched PEM certificate from class path for Redis connection.");
             } else {

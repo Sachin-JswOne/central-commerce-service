@@ -39,7 +39,7 @@ public class RedisConfiguration {
         ConnectionPoolConfig poolConfig = createConnectionPoolConfig();
 
         String pem;
-        if (commerceValueConfig.getRedisCacheProfile().equals("local")) {
+        if (commerceValueConfig.getRedisCacheProfile().equals("local") || commerceValueConfig.getRedisCacheProfile().equals("dev")) {
             pem = getPemContentFromClassPath();
             log.info("Fetched PEM certificate from class path for Redis connection.");
         } else {

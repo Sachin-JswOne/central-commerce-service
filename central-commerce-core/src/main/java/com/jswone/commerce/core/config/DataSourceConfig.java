@@ -81,4 +81,28 @@ public class DataSourceConfig {
             @Qualifier("mouDataSource") DataSource dataSource) {
         return new JdbcTemplate(dataSource);
     }
+
+    // Central Commerce DB DataSource
+    @Bean
+    @Primary
+    @ConfigurationProperties("central.commerce.datasource")
+    public DataSourceProperties centralCommerceDataSourceProperties() {
+        return new DataSourceProperties();
+    }
+
+    @Bean(name = "centralCommerceDataSource")
+    @Primary
+    @ConfigurationProperties("central.commerce.datasource.hikari")
+    public HikariDataSource centralCommerceDataSource() {
+        return centralCommerceDataSourceProperties()
+                .initializeDataSourceBuilder()
+                .type(HikariDataSource.class)
+                .build();
+    }
+
+    @Bean(name = "centralCommerceJdbcTemplate")
+    public JdbcTemplate centralCommerceJdbcTemplate(
+            @Qualifier("centralCommerceDataSource") DataSource dataSource) {
+        return new JdbcTemplate(dataSource);
+    }
 }

@@ -17,7 +17,8 @@ public class JWTConstants {
                     "/cart/notification/**",
                     "/import/cart",
                     "/cart/dlq/cart-opportunity",
-                    "/**/actuator/**");
+                    "/**/actuator/**",
+                    "/**/sl/**");
 
     public static final String USER_ID_CLAIM = "userId";
     public static final String SF_ID_CLAIM = "sfCustomerId";
