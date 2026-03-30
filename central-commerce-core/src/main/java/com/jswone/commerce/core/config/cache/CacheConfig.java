@@ -30,6 +30,8 @@ import org.springframework.data.redis.serializer.GenericJackson2JsonRedisSeriali
 import org.springframework.data.redis.serializer.RedisSerializationContext;
 import org.springframework.data.redis.serializer.StringRedisSerializer;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+
 import java.time.Duration;
 import java.util.HashMap;
 import java.util.Map;
@@ -57,6 +59,8 @@ public class CacheConfig {
     private final RedisProperties redisProperties;
 
     private final RedisConfiguration redisConfiguration;
+
+    private final ObjectMapper objectMapper;
 
     private static Duration duration(long minutes) {
         return Duration.ofMinutes(minutes);
@@ -100,9 +104,9 @@ public class CacheConfig {
         RedisTemplate<String, Object> redisTemplate = new RedisTemplate<>();
         redisTemplate.setConnectionFactory(redisConnectionFactory);
         redisTemplate.setKeySerializer(new StringRedisSerializer());
-        redisTemplate.setValueSerializer(new GenericJackson2JsonRedisSerializer());
+        redisTemplate.setValueSerializer(new GenericJackson2JsonRedisSerializer(objectMapper));
         redisTemplate.setHashKeySerializer(new StringRedisSerializer());
-        redisTemplate.setHashValueSerializer(new GenericJackson2JsonRedisSerializer());
+        redisTemplate.setHashValueSerializer(new GenericJackson2JsonRedisSerializer(objectMapper));
 
         redisTemplate.afterPropertiesSet(); // IMPORTANT
 
@@ -117,7 +121,7 @@ public class CacheConfig {
     }
 
     private RedisCacheConfiguration getDefaultCacheConfig() {
-        GenericJackson2JsonRedisSerializer jsonSerializer = new GenericJackson2JsonRedisSerializer();
+        GenericJackson2JsonRedisSerializer jsonSerializer = new GenericJackson2JsonRedisSerializer(objectMapper);
         return RedisCacheConfiguration.defaultCacheConfig()
                 .disableCachingNullValues() // Don't cache null values
                 .serializeValuesWith(
@@ -141,7 +145,8 @@ public class CacheConfig {
         SslOptions sslOptions = null;
         try {
             String pem;
-            if (commerceValueConfig.getRedisCacheProfile().equals("local") || commerceValueConfig.getRedisCacheProfile().equals("dev")) {
+            if (commerceValueConfig.getRedisCacheProfile().equals("local")
+                    || commerceValueConfig.getRedisCacheProfile().equals("dev")) {
                 pem = redisConfiguration.getPemContentFromClassPath();
                 log.info("Fetched PEM certificate from class path for Redis connection.");
             } else {
