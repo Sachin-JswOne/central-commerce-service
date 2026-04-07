@@ -1,4 +1,4 @@
-package com.jswone.commerce.core.service.recentSearch.impl;
+package com.jswone.commerce.core.service.recent.search.impl;
 
 import co.elastic.clients.elasticsearch.core.SearchResponse;
 import co.elastic.clients.elasticsearch.core.search.Hit;
@@ -6,7 +6,7 @@ import com.jswone.commerce.core.config.CommerceValueConfig;
 import com.jswone.commerce.core.constants.CacheNames;
 import com.jswone.commerce.core.model.elastic.index.RecentSearchIndex;
 import com.jswone.commerce.core.repository.elastic.RecentSearchElasticIndexRepository;
-import com.jswone.commerce.core.service.recentSearch.RecentSearchService;
+import com.jswone.commerce.core.service.recent.search.RecentSearchService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.slf4j.MDC;

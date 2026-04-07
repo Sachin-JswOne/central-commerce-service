@@ -28,5 +28,37 @@ public class GenericConstants {
     public static final String CENTRAL_CATALOGUE_PDP_IDENTIFIER = "TABLE_WITH_QUANTITY_FIELDS";
     public static final String CENTRAL_CATALOGUE_STANDARD_ATTRIBUTE_UNIT_KEY = "unit_key";
     public static final String SELECTION = "selection";
-
+    public static final String GRAPHQL_QUERY_FOR_CARTS_FROM_CUSTOMER_ID =
+            "query($condition: String) {\n"
+                    + "  carts(where: $condition, sort: \"createdAt desc\", limit: 1) {\n"
+                    + "    results {\n"
+                    + "      id\n"
+                    + "      version\n"
+                    + "      lineItems {\n"
+                    + "        id\n"
+                    + "        quantity\n"
+                    + "        addedAt\n"
+                    + "        state {\n"
+                    + "          quantity\n"
+                    + "          state {\n"
+                    + "            id\n"
+                    + "            type\n"
+                    + "          }\n"
+                    + "        }\n"
+                    + "        custom {\n"
+                    + "          customFieldsRaw {\n"
+                    + "            name\n"
+                    + "            value\n"
+                    + "          }\n"
+                    + "        }\n"
+                    + "      }\n"
+                    + "    }\n"
+                    + "  }\n"
+                    + "}\n";
+    public static final String QUERY_CONDITION = "condition";
+    public static final String CARTS_DATA_FROM_CUSTOMER_ID =
+            "customerId=\"%s\" and custom(fields(cartType=\"%s\")) and"
+                    + " custom(fields(cart_journey_type=\"%s\")) and cartState = \"Active\"";
+    public static final String CARTS = "carts";
+    public static final String PRD_MATERIAL_MASTER_ID = "productMaterialMasterId";
 }

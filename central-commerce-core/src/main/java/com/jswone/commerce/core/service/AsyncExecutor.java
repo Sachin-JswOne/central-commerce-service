@@ -1,6 +1,6 @@
 package com.jswone.commerce.core.service;
 
-import com.jswone.commerce.core.service.recentSearch.RecentSearchService;
+import com.jswone.commerce.core.service.recent.search.RecentSearchService;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 

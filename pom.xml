@@ -58,7 +58,7 @@
             <dependency>
                 <groupId>com.jswone.ordering.common</groupId>
                 <artifactId>jsw_ordering_common_model</artifactId>
-                <version>0.0.300</version>
+                <version>0.0.311</version>
             </dependency>
             <dependency>
                 <groupId>com.jswonemsme</groupId>
