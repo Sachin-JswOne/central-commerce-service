@@ -39,21 +39,6 @@ public class CartServiceImpl implements CartService {
         return getCartsResponseFromGraphQL(orderGraphQLResponse);
     }
 
-    @Override
-    public Set<String> getProductMMID(OrdersV2 cart){
-        return Optional.ofNullable(cart)
-                .map(OrdersV2::getResults)
-                .stream()
-                .flatMap(Collection::stream)
-                .findFirst()
-                .map(ResultV2::getLineItems)
-                .map(lineItems ->
-                        lineItems.stream()
-                                .map(li -> CartUtil.customDataV2toString(li.getCustom().getCustomFieldsRaw(),PRD_MATERIAL_MASTER_ID))
-                                .collect(Collectors.toSet()))
-                .orElse(null);
-    }
-
     private GraphQLResponse getCartsResponse(
             String customerId, CartType cartType, CartJourneyType cartJourneyType) {
 

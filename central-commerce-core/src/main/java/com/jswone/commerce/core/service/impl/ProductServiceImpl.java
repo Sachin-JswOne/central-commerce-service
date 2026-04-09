@@ -80,7 +80,7 @@ public class ProductServiceImpl implements ProductService {
         } catch (Exception e) {
             throw new CentralCommerceServiceException(
                     e.getLocalizedMessage(),
-                    HttpStatus.BAD_GATEWAY);
+                    HttpStatus.BAD_REQUEST);
         }
     }
     private ProductBulkResponse fetchProductBulkResponse(
@@ -155,13 +155,13 @@ public class ProductServiceImpl implements ProductService {
         if (Objects.isNull(response) || response.getProducts().isEmpty()) {
             throw new CentralCommerceServiceException(
                     "Product is not available",
-                    HttpStatus.BAD_GATEWAY);
+                    HttpStatus.BAD_REQUEST);
         }
 
         if (Objects.isNull(response.getProducts().getFirst().getProductTypeId())) {
             throw new CentralCommerceServiceException(
                     "Product type ID is missing",
-                    HttpStatus.BAD_GATEWAY);
+                    HttpStatus.BAD_REQUEST);
         }
     }
 
@@ -184,7 +184,7 @@ public class ProductServiceImpl implements ProductService {
 
             throw new CentralCommerceServiceException(
                     "Product type data missing",
-                    HttpStatus.BAD_GATEWAY);
+                    HttpStatus.BAD_REQUEST);
         }
 
         return response;
@@ -365,7 +365,7 @@ public class ProductServiceImpl implements ProductService {
         } catch (CentralCommerceServiceException e) {
             throw new CentralCommerceServiceException(e.getLocalizedMessage(), HttpStatus.BAD_REQUEST);
         } catch (Exception e) {
-            throw new ProductSelectorException(productSkuRequest, e.getLocalizedMessage(), HttpStatus.BAD_GATEWAY);
+            throw new ProductSelectorException(productSkuRequest, e.getLocalizedMessage(), HttpStatus.BAD_REQUEST);
         }
     }
 

@@ -7,20 +7,22 @@ import com.jswone.commerce.core.model.RecentViewedResponse;
 import com.jswone.commerce.core.service.CartService;
 import com.jswone.commerce.core.service.impl.BuyAgainServiceImplV2;
 import com.jswone.commerce.core.service.recent.viewed.RecentViewedService;
+import com.jswone.commerce.core.util.CartUtil;
 import com.jswone.commons.enums.CartJourneyType;
 import com.jswone.commons.enums.CartType;
 import com.jswone.commons.graphql.v2.OrdersV2;
+import com.jswone.commons.graphql.v2.ResultV2;
 import com.jswone.commons.util.JwtTokenUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 
-import java.util.HashSet;
-import java.util.Objects;
-import java.util.Set;
+import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
+
+import static com.jswone.commerce.core.constants.GenericConstants.PRD_MATERIAL_MASTER_ID;
 
 @Slf4j
 @Service
@@ -63,14 +65,14 @@ public class RecentViewedServiceImpl implements RecentViewedService {
             final OrdersV2 orderInfo = orderCartInfoCompletableFuture.join();
             final OrdersV2 enquiryCartInfo = enquiryCartInfoCompletableFuture.join();
             if(Objects.nonNull(orderInfo) && !orderInfo.getResults().isEmpty()) {
-                Set<String> orderProductMMID = cartService.getProductMMID(orderInfo);
-                if (!orderProductMMID.isEmpty()) {
+                Set<String> orderProductMMID = getProductMMID(orderInfo);
+                if (Objects.nonNull(orderProductMMID) && !orderProductMMID.isEmpty()) {
                     removeProducts.addAll(orderProductMMID);
                 }
             }
             if(Objects.nonNull(enquiryCartInfo) && !enquiryCartInfo.getResults().isEmpty()) {
-                Set<String> cartProductMMID = cartService.getProductMMID(enquiryCartInfo);
-                if (!cartProductMMID.isEmpty()) {
+                Set<String> cartProductMMID = getProductMMID(enquiryCartInfo);
+                if (Objects.nonNull(cartProductMMID) && !cartProductMMID.isEmpty()) {
                     removeProducts.addAll(cartProductMMID);
                 }
             }
@@ -82,5 +84,9 @@ public class RecentViewedServiceImpl implements RecentViewedService {
         }catch (Exception e){
             throw new CentralCommerceServiceException(e.getMessage(), HttpStatus.BAD_REQUEST);
         }
+    }
+
+    private Set<String> getProductMMID(OrdersV2 cart){
+        return CartUtil.getProductMMID(cart, PRD_MATERIAL_MASTER_ID);
     }
 }

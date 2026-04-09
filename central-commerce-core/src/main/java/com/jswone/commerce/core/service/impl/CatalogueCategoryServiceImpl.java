@@ -111,7 +111,7 @@ public class CatalogueCategoryServiceImpl implements CatalogueCategoryService {
         } catch (Exception e) {
             throw new CentralCommerceServiceException(
                     e.getLocalizedMessage(),
-                    HttpStatus.BAD_GATEWAY);
+                    HttpStatus.BAD_REQUEST);
         }
     }
 
@@ -125,7 +125,7 @@ public class CatalogueCategoryServiceImpl implements CatalogueCategoryService {
 
             throw new CentralCommerceServiceException(
                     "Category breadcrumb API returned invalid or empty data",
-                    HttpStatus.BAD_GATEWAY);
+                    HttpStatus.BAD_REQUEST);
         }
     }
 
