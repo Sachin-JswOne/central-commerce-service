@@ -37,15 +37,10 @@ public class RecentViewedServiceImpl implements RecentViewedService {
         try {
             RecentViewedResponse recentViewedResponse = new RecentViewedResponse();
             Set<String> removeProducts = new HashSet<>();
+
             BuyAgainResponse buyAgainResponse = buyAgainServiceImplV2.getRecentPurchasedOrdersList(0, 50);
-            if(Objects.nonNull(buyAgainResponse) && !buyAgainResponse.getVariantList().isEmpty()){
-                Set<String> buyAgainProductMMID = buyAgainResponse.getVariantList().stream()
-                                                   .map(PurchasedLineItemResponse::getProductMMID)
-                                                   .collect(Collectors.toSet());
-                if(!buyAgainProductMMID.isEmpty()) {
-                    removeProducts.addAll(buyAgainProductMMID);
-                }
-            }
+            getRemoveProductsForBuyAgain(buyAgainResponse, removeProducts);
+
             String customerId = JwtTokenUtil.getUserIdForSession();
             CompletableFuture<OrdersV2> enquiryCartInfoCompletableFuture =
                     CompletableFuture.supplyAsync(
@@ -64,25 +59,40 @@ public class RecentViewedServiceImpl implements RecentViewedService {
                                             CartJourneyType.SALES_LEAD_CART));
             final OrdersV2 orderInfo = orderCartInfoCompletableFuture.join();
             final OrdersV2 enquiryCartInfo = enquiryCartInfoCompletableFuture.join();
-            if(Objects.nonNull(orderInfo) && !orderInfo.getResults().isEmpty()) {
-                Set<String> orderProductMMID = getProductMMID(orderInfo);
-                if (Objects.nonNull(orderProductMMID) && !orderProductMMID.isEmpty()) {
-                    removeProducts.addAll(orderProductMMID);
-                }
-            }
-            if(Objects.nonNull(enquiryCartInfo) && !enquiryCartInfo.getResults().isEmpty()) {
-                Set<String> cartProductMMID = getProductMMID(enquiryCartInfo);
-                if (Objects.nonNull(cartProductMMID) && !cartProductMMID.isEmpty()) {
-                    removeProducts.addAll(cartProductMMID);
-                }
-            }
-
+            getRemoveProductsForCart(orderInfo, enquiryCartInfo, removeProducts);
             if (!removeProducts.isEmpty()) {
                 recentViewedResponse.setRemoveProduct(removeProducts);
             }
             return recentViewedResponse;
         }catch (Exception e){
             throw new CentralCommerceServiceException(e.getMessage(), HttpStatus.BAD_REQUEST);
+        }
+    }
+
+    private void getRemoveProductsForBuyAgain(BuyAgainResponse buyAgainResponse, Set<String> removeProducts){
+        if(Objects.nonNull(buyAgainResponse) && !buyAgainResponse.getVariantList().isEmpty()){
+            Set<String> buyAgainProductMMID = buyAgainResponse.getVariantList().stream()
+                    .map(PurchasedLineItemResponse::getProductMMID)
+                    .collect(Collectors.toSet());
+            if(!buyAgainProductMMID.isEmpty()) {
+                removeProducts.addAll(buyAgainProductMMID);
+            }
+        }
+    }
+
+    private void getRemoveProductsForCart(OrdersV2 orderInfo, OrdersV2 enquiryCartInfo, Set<String> removeProducts){
+        if(Objects.nonNull(orderInfo) && !orderInfo.getResults().isEmpty()) {
+            Set<String> orderProductMMID = getProductMMID(orderInfo);
+            if (Objects.nonNull(orderProductMMID) && !orderProductMMID.isEmpty()) {
+                removeProducts.addAll(orderProductMMID);
+            }
+        }else{
+            if(Objects.nonNull(enquiryCartInfo) && !enquiryCartInfo.getResults().isEmpty()) {
+                Set<String> cartProductMMID = getProductMMID(enquiryCartInfo);
+                if (Objects.nonNull(cartProductMMID) && !cartProductMMID.isEmpty()) {
+                    removeProducts.addAll(cartProductMMID);
+                }
+            }
         }
     }
 
