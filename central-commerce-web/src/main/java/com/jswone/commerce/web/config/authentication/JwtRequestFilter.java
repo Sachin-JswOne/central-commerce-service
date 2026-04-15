@@ -29,6 +29,7 @@ import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
 import java.util.*;
+import java.util.UUID;
 
 import static com.jswone.commerce.core.constants.JWTConstants.*;
 
@@ -54,19 +55,13 @@ public class JwtRequestFilter extends OncePerRequestFilter {
 
         AuthenticationMode authenticationMode = this.getAuthenticationMode(request);
 
-        if (authenticationMode == null) {
-            log.error("Authentication mode is null for request: {}", request.getRequestURI());
-            response.sendError(
-                    HttpServletResponse.SC_BAD_REQUEST,
-                    "Authentication header is missing in the request");
-            return;
-        }
-
         try {
             if (authenticationMode == AuthenticationMode.JWT) {
                 handleJwtAuthentication(request, response);
             } else if (authenticationMode == AuthenticationMode.X_API) {
                 handleApiKeyAuthentication(request, response);
+            } else if (authenticationMode == AuthenticationMode.GUEST) {
+                handleGuestAuthentication(request);
             }
         } catch (Exception e) {
             if (Objects.nonNull(e.getMessage()) && e.getMessage().contains(TOKEN_EXPIRE_MESSAGE)
@@ -108,7 +103,7 @@ public class JwtRequestFilter extends OncePerRequestFilter {
             MDC.put(USER_ID_CLAIM,userId);
             MDC.put(SF_ID_CLAIM, (String) claims.getOrDefault(SF_ID_CLAIM,null));
             MDC.put(USER_TYPE_CLAIM, (String) claims.getOrDefault(USER_TYPE_CLAIM,null));
-            UserDetails userDetails = new User(userId, jwtAccessToken, getAuthorities());
+            UserDetails userDetails = new User(userId, jwtAccessToken, getAuthorities("REGUSER"));
             UsernamePasswordAuthenticationToken authentication =
                     new UsernamePasswordAuthenticationToken(
                             userDetails, null, userDetails.getAuthorities());
@@ -119,6 +114,21 @@ public class JwtRequestFilter extends OncePerRequestFilter {
             log.error("JWT validation failed: {}", e.getMessage());
             response.sendError(HttpServletResponse.SC_UNAUTHORIZED, e.getMessage());
         }
+    }
+
+    private void handleGuestAuthentication(HttpServletRequest request) {
+        String sessionId = StringUtils.defaultIfBlank(
+                request.getHeader(SESSION_ID_HEADER),
+                UUID.randomUUID().toString());
+        MDC.put(USER_ID_CLAIM, sessionId);
+        MDC.put(USER_TYPE_CLAIM, GUEST_USER_TYPE);
+
+        UserDetails userDetails = new User(sessionId, "", getAuthorities("GUEST"));
+        UsernamePasswordAuthenticationToken authentication =
+                new UsernamePasswordAuthenticationToken(
+                        userDetails, null, userDetails.getAuthorities());
+        authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
+        SecurityContextHolder.getContext().setAuthentication(authentication);
     }
 
     private void handleApiKeyAuthentication(
@@ -134,7 +144,7 @@ public class JwtRequestFilter extends OncePerRequestFilter {
             if (apiKeyParts.size() >= 3) {
                 String userId = apiKeyParts.get(0);
                 String token = apiKeyParts.get(2);
-                UserDetails userDetails = new User(userId, token, getAuthorities());
+                UserDetails userDetails = new User(userId, token, getAuthorities("REGUSER"));
                 UsernamePasswordAuthenticationToken authentication =
                         new UsernamePasswordAuthenticationToken(
                                 userDetails, null, userDetails.getAuthorities());
@@ -161,9 +171,9 @@ public class JwtRequestFilter extends OncePerRequestFilter {
         return jwtAccessToken;
     }
 
-    private Collection<? extends GrantedAuthority> getAuthorities() {
-        ArrayList<SimpleGrantedAuthority> authorities = new ArrayList();
-        authorities.add(new SimpleGrantedAuthority("REGUSER"));
+    private Collection<? extends GrantedAuthority> getAuthorities(String authority) {
+        List<SimpleGrantedAuthority> authorities = new ArrayList<>();
+        authorities.add(new SimpleGrantedAuthority(authority));
         // add actual authorities when RBAC implemented
         return authorities;
     }
@@ -183,12 +193,13 @@ public class JwtRequestFilter extends OncePerRequestFilter {
     }
 
     private AuthenticationMode getAuthenticationMode(HttpServletRequest request) {
-        if (request.getHeader(X_API_KEY) != null) {
+        if (StringUtils.isNotBlank(request.getHeader(X_API_KEY))) {
             return AuthenticationMode.X_API;
-        } else if (request.getHeader(ACCESS_TOKEN) != null) {
+        } else if (StringUtils.isNotBlank(request.getHeader(HttpHeaders.AUTHORIZATION))
+                || StringUtils.isNotBlank(request.getHeader(ACCESS_TOKEN))) {
             return AuthenticationMode.JWT;
         } else {
-            return null;
+            return AuthenticationMode.GUEST;
         }
     }
 }

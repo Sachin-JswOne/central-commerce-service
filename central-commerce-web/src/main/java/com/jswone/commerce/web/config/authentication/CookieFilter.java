@@ -16,6 +16,8 @@ import java.util.Objects;
 @Component
 @Log4j2
 public class CookieFilter extends OncePerRequestFilter {
+    private static final String SESSION_ID_COOKIE_NAME = "jsw_session_id";
+
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response,
                                     FilterChain filterChain) throws ServletException, IOException {
@@ -24,6 +26,9 @@ public class CookieFilter extends OncePerRequestFilter {
         if (Objects.nonNull(request.getCookies())){
             for (Cookie cookie : request.getCookies()) {
                 String cookieName = cookie.getName();
+                if (SESSION_ID_COOKIE_NAME.equals(cookieName)) {
+                    continue;
+                }
                 Cookie cookieToDelete = new Cookie(cookieName, "");
                 cookieToDelete.setMaxAge(0);
                 response.addCookie(cookieToDelete);
