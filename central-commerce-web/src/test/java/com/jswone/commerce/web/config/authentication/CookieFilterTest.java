@@ -3,17 +3,20 @@ package com.jswone.commerce.web.config.authentication;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.Cookie;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 import org.junit.jupiter.api.Test;
-import org.springframework.mock.web.MockHttpServletRequest;
-import org.springframework.mock.web.MockHttpServletResponse;
+import org.mockito.ArgumentCaptor;
 
 import java.io.IOException;
-import java.util.Arrays;
+import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 class CookieFilterTest {
 
@@ -21,17 +24,24 @@ class CookieFilterTest {
 
     @Test
     void shouldKeepSessionCookieWhileDeletingOthers() throws ServletException, IOException {
-        MockHttpServletRequest request = new MockHttpServletRequest("GET", "/catalogue/products");
-        request.setCookies(new Cookie("jsw_session_id", "session-123"), new Cookie("legacy_cookie", "legacy"));
-        MockHttpServletResponse response = new MockHttpServletResponse();
+        HttpServletRequest request = mock(HttpServletRequest.class);
+        HttpServletResponse response = mock(HttpServletResponse.class);
         FilterChain chain = mock(FilterChain.class);
+        when(request.getCookies()).thenReturn(new Cookie[]{
+                new Cookie("jsw_session_id", "session-123"),
+                new Cookie("legacy_cookie", "legacy")
+        });
 
         cookieFilter.doFilterInternal(request, response, chain);
 
-        assertEquals(1, response.getCookies().length);
-        assertEquals("legacy_cookie", response.getCookies()[0].getName());
-        assertEquals(0, response.getCookies()[0].getMaxAge());
-        assertFalse(Arrays.stream(response.getCookies()).anyMatch(cookie -> "jsw_session_id".equals(cookie.getName())));
-        assertTrue(Arrays.stream(request.getCookies()).anyMatch(cookie -> "jsw_session_id".equals(cookie.getName())));
+        ArgumentCaptor<Cookie> cookieCaptor = ArgumentCaptor.forClass(Cookie.class);
+        verify(response, times(1)).addCookie(cookieCaptor.capture());
+        verify(chain).doFilter(request, response);
+
+        List<Cookie> deletedCookies = cookieCaptor.getAllValues();
+        assertEquals(1, deletedCookies.size());
+        assertEquals("legacy_cookie", deletedCookies.getFirst().getName());
+        assertEquals(0, deletedCookies.getFirst().getMaxAge());
+        assertTrue(deletedCookies.stream().noneMatch(cookie -> "jsw_session_id".equals(cookie.getName())));
     }
 }
