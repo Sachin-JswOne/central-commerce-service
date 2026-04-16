@@ -75,6 +75,12 @@ public class CentralCatalogueClientImpl implements CentralCatalogueClient {
                 }
         });
 
+        private static final String CONTENT_TYPE =  "Content-Type";
+
+        private static final String APP_JSON = "application/json";
+
+        private static final String EN_US = "en-US";
+
         public CentralCatalogueClientImpl(RestUtil restUtil, CommerceValueConfig commerceValueConfig,
                         @Lazy LocationMasterService locationMasterService,
                         RetryTemplate catalogueRetryTemplate) {
@@ -93,7 +99,7 @@ public class CentralCatalogueClientImpl implements CentralCatalogueClient {
                                         .page(searchRequest.getOffSet())
                                         .size(searchRequest.getLimit())
                                         .storefront(searchRequest.getStorefront())
-                                        .locale("en-US")
+                                        .locale(EN_US)
                                         .facets_only(false)
                                         .filters(extractFilters(searchRequest, EMPTY)) // method below
                                         .build();
@@ -139,7 +145,7 @@ public class CentralCatalogueClientImpl implements CentralCatalogueClient {
                         CentralCatalogueSearchRequest ccRequest = CentralCatalogueSearchRequest.builder()
                                         .query(searchRequest.getText())
                                         .storefront(searchRequest.getStorefront())
-                                        .locale("en-US")
+                                        .locale(EN_US)
                                         .facets_only(true)
                                         .build();
 
@@ -226,7 +232,7 @@ public class CentralCatalogueClientImpl implements CentralCatalogueClient {
                         Map<String, String> headers = Map.of(
                                         X_API_KEY, commerceValueConfig.getCentralCatalogueApiKey(),
                                         CLIENT_ID, commerceValueConfig.getCentralCatalogueClientId(),
-                                        "Content-Type", "application/json");
+                                CONTENT_TYPE, APP_JSON);
 
                         ResponseEntity<ProductBulkResponse> response = RetryUtil.retryHttpCalls(
                                         () -> restUtil.makeRestCall(
@@ -360,7 +366,7 @@ public class CentralCatalogueClientImpl implements CentralCatalogueClient {
                         Map<String, String> headers = Map.of(
                                         X_API_KEY, commerceValueConfig.getCentralCatalogueAdminApiKey(),
                                         CLIENT_ID, commerceValueConfig.getCentralCatalogueAdminClientId(),
-                                        "Content-Type", "application/json");
+                                CONTENT_TYPE, APP_JSON);
 
                         ResponseEntity<ProductTypeBulkResponse> response = RetryUtil.retryHttpCalls(
                                         () -> restUtil.makeRestCall(
@@ -395,7 +401,7 @@ public class CentralCatalogueClientImpl implements CentralCatalogueClient {
                         Map<String, String> headers = Map.of(
                                         X_API_KEY, commerceValueConfig.getCentralCatalogueApiKey(),
                                         CLIENT_ID, commerceValueConfig.getCentralCatalogueClientId(),
-                                        "Content-Type", "application/json");
+                                CONTENT_TYPE, APP_JSON);
 
                         ProductBulkRequest productBulkRequest = new ProductBulkRequest();
                         productBulkRequest.setProductMMIDS(productMmIds);
@@ -463,7 +469,7 @@ public class CentralCatalogueClientImpl implements CentralCatalogueClient {
                                         .slug(productListingRequest.getSlug().toLowerCase())
                                         .storefront(productListingRequest.getStorefront())
                                         .facets_only(false)
-                                        .locale("en-US")
+                                        .locale(EN_US)
                                         .filters(extractFilters(productListingRequest,
                                                         productListingRequest.getLocation()))
                                         .build();
@@ -512,7 +518,7 @@ public class CentralCatalogueClientImpl implements CentralCatalogueClient {
                                         .slug(productListingRequest.getSlug().toLowerCase())
                                         .storefront(productListingRequest.getStorefront())
                                         .facets_only(true)
-                                        .locale("en-US")
+                                        .locale(EN_US)
                                         .build();
 
                         String url = commerceValueConfig.getCentralCatalogueBaseUrl()
@@ -556,7 +562,7 @@ public class CentralCatalogueClientImpl implements CentralCatalogueClient {
                         ProductSlugRequestDTO productSlugRequestDTO = ProductSlugRequestDTO.builder()
                                         .slug(slug.toLowerCase())
                                         .storefront(storeFront)
-                                        .locale("en-US").build();
+                                        .locale(EN_US).build();
                         Map<String, List<String>> filters = new HashMap<>();
                         addLocationFiltersToRequestFilters(filters, location);
 
@@ -566,7 +572,7 @@ public class CentralCatalogueClientImpl implements CentralCatalogueClient {
                         Map<String, String> headers = Map.of(
                                         X_API_KEY, commerceValueConfig.getCentralCatalogueApiKey(),
                                         CLIENT_ID, commerceValueConfig.getCentralCatalogueClientId(),
-                                        "Content-Type", "application/json");
+                                CONTENT_TYPE, APP_JSON);
 
                         ResponseEntity<ProductBulkResponse> response = RetryUtil.retryHttpCalls(
                                         () -> restUtil.makeRestCall(
@@ -611,7 +617,7 @@ public class CentralCatalogueClientImpl implements CentralCatalogueClient {
                                         .category_id(categoryId)
                                         .storefront(storefront)
                                         .facets_only(true)
-                                        .locale("en-US")
+                                        .locale(EN_US)
                                         .build();
 
                         String url = commerceValueConfig.getCentralCatalogueBaseUrl()
@@ -723,7 +729,7 @@ public class CentralCatalogueClientImpl implements CentralCatalogueClient {
                                 .category_id(categoryId)
                                 .storefront(storefront)
                                 .facets_only(false)
-                                .locale("en-US")
+                                .locale(EN_US)
                                 .build();
 
                 log.debug("Fetching page {} for category: {}", page, categoryId);
@@ -929,7 +935,7 @@ public class CentralCatalogueClientImpl implements CentralCatalogueClient {
                         Map<String, String> headers = Map.of(
                                 X_API_KEY, commerceValueConfig.getCatalogueCategoryApiKey(),
                                 CLIENT_ID, commerceValueConfig.getCatalogueCategoryClientId(),
-                                "Content-Type", "application/json");
+                                CONTENT_TYPE, APP_JSON);
 
                 String url = UriComponentsBuilder
                         .fromHttpUrl(commerceValueConfig.getCatalogueCategoryBaseUrl())

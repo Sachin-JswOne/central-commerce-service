@@ -151,11 +151,6 @@ public class CacheConfig {
                 log.info("Fetched PEM certificate from secret manager for Redis connection.");
             }
             sslOptions = SslOptions.builder().sslContext(CacheClientConfig.createTrustStoreSSLContext(pem)).build();
-            // sslOptions =
-            // SslOptions.builder().sslContext(CacheClientConfig.createTrustStoreSSLContext(commerceValueConfig.getRedisCacheProfile().equals("qa")
-            // ?
-            // redisConfiguration.getPemContentFromClassPath() :
-            // redisConfiguration.getPemContent())).build();
         } catch (Exception e) {
             throw new RuntimeException(e);
         }

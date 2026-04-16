@@ -2,7 +2,6 @@ package com.jswone.commerce.core.repository.shortlink;
 
 import com.jswone.commerce.core.entity.shortlink.ShortLink;
 import com.jswone.commerce.core.enums.shortlink.LinkType;
-import com.jswone.commerce.core.mapper.PurchasedSkuRowMapper;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.RowMapper;
@@ -22,6 +21,10 @@ public class ShortLinkRepository {
 
     private final NamedParameterJdbcTemplate jdbcTemplate;
 
+    private static final String PREFIX = "prefix";
+
+    private static final String CHANNEL = "channel";
+
     public ShortLinkRepository(
             @Qualifier("centralCommerceJdbcTemplate") JdbcTemplate jdbcTemplate) {
         this.jdbcTemplate = new NamedParameterJdbcTemplate(jdbcTemplate);
@@ -33,11 +36,11 @@ public class ShortLinkRepository {
         public ShortLink mapRow(ResultSet rs, int rowNum) throws SQLException {
             return ShortLink.builder()
                     .id(rs.getLong("id"))
-                    .prefix(rs.getString("prefix"))
+                    .prefix(rs.getString(PREFIX))
                     .code(rs.getString("code"))
                     .type(LinkType.valueOf(rs.getString("type")))
                     .businessId(rs.getString("business_id"))
-                    .channel(rs.getString("channel"))
+                    .channel(rs.getString(CHANNEL))
                     .targetTemplate(rs.getString("target_template"))
                     .expiresAt(getLocalDateTime(rs, "expires_at"))
                     .createdAt(getLocalDateTime(rs, "created_at"))
@@ -71,11 +74,11 @@ public class ShortLinkRepository {
         link.setUpdatedAt(now);
 
         MapSqlParameterSource params = new MapSqlParameterSource()
-                .addValue("prefix", link.getPrefix())
+                .addValue(PREFIX, link.getPrefix())
                 .addValue("code", link.getCode())
                 .addValue("type", link.getType().name())
                 .addValue("businessId", link.getBusinessId())
-                .addValue("channel", link.getChannel())
+                .addValue(CHANNEL, link.getChannel())
                 .addValue("targetTemplate", link.getTargetTemplate())
                 .addValue("expiresAt", link.getExpiresAt())
                 .addValue("createdAt", link.getCreatedAt())
@@ -101,11 +104,11 @@ public class ShortLinkRepository {
 
         MapSqlParameterSource params = new MapSqlParameterSource()
                 .addValue("id", link.getId())
-                .addValue("prefix", link.getPrefix())
+                .addValue(PREFIX, link.getPrefix())
                 .addValue("code", link.getCode())
                 .addValue("type", link.getType().name())
                 .addValue("businessId", link.getBusinessId())
-                .addValue("channel", link.getChannel())
+                .addValue(CHANNEL, link.getChannel())
                 .addValue("targetTemplate", link.getTargetTemplate())
                 .addValue("expiresAt", link.getExpiresAt())
                 .addValue("updatedAt", link.getUpdatedAt())

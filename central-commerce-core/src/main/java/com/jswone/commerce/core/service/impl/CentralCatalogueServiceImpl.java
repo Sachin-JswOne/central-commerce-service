@@ -185,10 +185,10 @@ public class CentralCatalogueServiceImpl implements CentralCatalogueService {
      */
     private String buildUrlPath(String slug, String location) {
         if (StringUtils.isNotBlank(location)) {
-            // If location is provided, build full URL: /category/{location}/{slug}
+            /** If location is provided, build full URL: /category/{location}/{slug} */
             return String.format("/%s/%s", location, slug);
         } else {
-            // If no location, just use slug: /category/{slug}
+            /** If no location, just use slug: /category/{slug} */
             return String.format("/%s", slug);
         }
     }
