@@ -1,0 +1,159 @@
+Search internet for GSTIN, PAN, and Company Name. Provide brief answers/mappings only. No explanations.
+Objectives:
+    - 1: "Describe company activities."
+    - 2: "Map to Business Types."
+    - 3: "Map to Segment and Sub-segment taxonomy."
+
+Business_types:
+    1. Manufacturing companies (End customers): Industrial buyers procuring raw materials like steel and cement for production and operations."
+    2. Construction companies (Processors & Contractors): Processors manufacture building materials; contractors execute construction projects."
+    3. Retailers, distributors, traders: Intermediaries purchasing bulk materials to resell or supply across local markets."
+
+Segments:
+  1. Infra - Water:
+    - "Line Pipes (Medium and Large diameter pipes) for water supply & irrigation"
+    - "Treatment plants"
+    - "Sewage and Waste Management"
+  2. Automotive:
+    - "Auto components - body panels"
+    - "Auto components - chassis, frames, press parts & structural components"
+    - "Auto components - transmission"
+    - "Auto components - Others"
+    - "Aerospace"
+    - "Auto components - engine components"
+  3. Industrial and Machinery:
+    - "Heavy Machinery"
+    - "Manufacturing Equipment - Welding wire converters"
+    - "Manufacturer - TMT / Re - Rollers / Bright Bars"
+    - "Mining Equipment & Yellow Goods"
+    - "Hardware Accessories - Fasteners"
+    - "Hardware Accessories - Others"
+    - "Manufacturing Equipment - Others"
+    - "New subsegment: Gensets, Panels & Switchgears"
+  4. Consumer Goods and Appliances:
+    - "Appliances - AC"
+    - "Appliances - Washing machines"
+    - "Appliances - Refrigeration"
+    - "Appliances - Switches & panels"
+    - "Appliances - others"
+    - "Casing and frames for electronic goods"
+    - "Furniture"
+    - "Appliances - Dish Antenna"
+    - "Appliances - Fans, axial fans, geysers"
+  5. Packaging:
+    - "Food and Beverage - Cans & containers"
+    - "Industrial Packaging - Drums & barrels"
+    - "Industrial Packaging - Oil, industrial chemicals, food pulps"
+    - "Industrial Packaging - Others"
+  6. Healthcare and Medical Equipment:
+    - "Medical Devices"
+  7. Defense and Military:
+    - "Vehicles"
+    - "Weapons"
+  8. Telecommunications:
+    - "Infrastructure"
+    - "Towers"
+  9. Agriculture:
+    - "Equipment"
+    - "Tractors"
+    - "Food & dairy processing equipment"
+    - "Animal feed processing"
+  10. Buildings - Residential:
+    - "Luxury"
+    - "Affordable"
+    - "Economy"
+  11. Buildings - Commercial:
+    - "Offices"
+    - "Retail Centres"
+    - "Financial"
+    - "Entertainment"
+    - "Restaurants"
+    - "Hospitality"
+    - "Data Centers"
+  12. Buildings - Industrial:
+    - "Power Plant Development"
+    - "Storage facilities"
+    - "Industrial Parks"
+    - "Pre-engineered buildings (PEB)"
+    - "Warehouse (Civil)"
+    - "Manufacturing Facilities (Civil)"
+  13. Buildings - Components & extensions:
+    - "Storage racks"
+    - "Parking systems"
+    - "Cable tray"
+    - "Lifts & elevators"
+    - "Clean room panels, doors"
+    - "Others"
+  14. Buildings - HVAC:
+    - "Others"
+    - "Ventilation"
+    - "Ducts"
+    - "Cooling"
+    - "Radiators"
+  15. Pipes & Tubes:
+    - "PVC"
+    - "Precision Tubes"
+    - "Structural Tubes"
+    - "Conveyance Tubes"
+    - "Scaffolding"
+  16. Retailer & traders:
+    - "Buildings"
+    - "Building components & extensions"
+    - "Infra energy"
+    - "Retailers"
+    - "Automotive"
+    - "Consumer Goods and Appliances"
+    - "Packaging"
+    - "Agriculture"
+    - "Telecommunications"
+    - "Pressure Vessels and Tanks"
+    - "Industrial and Machinery"
+  17. Infra - Public:
+    - "Healthcare, social welfare, education, sports facilities, tourism"
+    - "Telecommunications - Tower"
+    - "Telecommunications - Infra"
+    - "Transmission Line Towers"
+    - "Light Poles, Monopoles, High Masts"
+  18. Infra - Transport:
+    - "Airports"
+    - "Bridges & support frames"
+    - "Tunnels & support frames"
+    - "Roads and Highways - Crash barriers"
+    - "Road furniture"
+    - "Roads and Highways - civil work"
+    - "Railway Infrastructure"
+    - "Railway rolling stock"
+    - "Shipbuilding"
+    - "Metro"
+    - "Bus terminal"
+    - "EV infra"
+    - "Ports"
+  19. Pressure Vessels and Tanks:
+    - "LPG - Tanks & cylinders, valve & safety devices"
+    - "Boiler and pressure equipments"
+  20. Infra - Energy:
+    - "Oil and Gas"
+    - "Renewable Energy - Solar"
+    - "Renewable Energy - Others"
+    - "Power Plants"
+  21. Processors:
+    - "RMC"
+    - "Blocks and bricks"
+    - "Hume pipes"
+    - "Poles"
+    - "Pavers"
+    - "Boards and sheets"
+
+Input_data:
+  - pan: "{{PAN}}"
+  - gstin: "{{GSTIN}}"
+  - company name: "{{COMPANY_NAME}}"
+  - Location: "{{LOCATION}}"
+
+Return your response STRICTLY as a valid JSON object matching the exact structure below. Do NOT wrap it in markdown block quotes (```json) or include any other text.
+{
+  "activities": "Description of the company activities",
+  "business_type": "Mapped Business Type from the list above",
+  "segment": "Mapped Segment from the list above",
+  "sub_segment": "Mapped Sub-segment from the list above"
+}
