@@ -8,9 +8,11 @@ import com.jswone.commons.util.JwtTokenUtil;
 import io.jsonwebtoken.JwtException;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
+import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
-import lombok.extern.log4j.Log4j2;
+import lombok.extern.slf4j.Slf4j;
+
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.MDC;
 import org.springframework.http.HttpHeaders;
@@ -34,8 +36,10 @@ import java.util.UUID;
 import static com.jswone.commerce.core.constants.JWTConstants.*;
 
 @Component
-@Log4j2
+@Slf4j
 public class JwtRequestFilter extends OncePerRequestFilter {
+
+    private static final int SESSION_COOKIE_MAX_AGE = 30 * 24 * 60 * 60; // 30 days
 
     private final JwtTokenUtil jwtTokenUtil;
     private final UserTokenService userTokenService;
@@ -61,7 +65,7 @@ public class JwtRequestFilter extends OncePerRequestFilter {
             } else if (authenticationMode == AuthenticationMode.X_API) {
                 handleApiKeyAuthentication(request, response);
             } else if (authenticationMode == AuthenticationMode.GUEST) {
-                handleGuestAuthentication(request);
+                handleGuestAuthentication(request, response);
             }
         } catch (Exception e) {
             if (Objects.nonNull(e.getMessage()) && e.getMessage().contains(TOKEN_EXPIRE_MESSAGE)
@@ -116,10 +120,32 @@ public class JwtRequestFilter extends OncePerRequestFilter {
         }
     }
 
-    private void handleGuestAuthentication(HttpServletRequest request) {
-        String sessionId = StringUtils.defaultIfBlank(
-                request.getHeader(SESSION_ID_HEADER),
-                UUID.randomUUID().toString());
+    private void handleGuestAuthentication(HttpServletRequest request, HttpServletResponse response) {
+        String sessionId = request.getHeader(SESSION_ID_HEADER);
+        boolean cookiePresent = false;
+
+        if (StringUtils.isBlank(sessionId) && request.getCookies() != null) {
+            for (Cookie cookie : request.getCookies()) {
+                if (SESSION_ID_COOKIE_NAME.equals(cookie.getName())) {
+                    sessionId = cookie.getValue();
+                    cookiePresent = true;
+                    break;
+                }
+            }
+        }
+
+        if (StringUtils.isBlank(sessionId)) {
+            sessionId = UUID.randomUUID().toString();
+        }
+
+        if (!cookiePresent) {
+            Cookie sessionCookie = new Cookie(SESSION_ID_COOKIE_NAME, sessionId);
+            sessionCookie.setHttpOnly(true);
+            sessionCookie.setPath("/");
+            sessionCookie.setMaxAge(SESSION_COOKIE_MAX_AGE);
+            response.addCookie(sessionCookie);
+        }
+
         MDC.put(USER_ID_CLAIM, sessionId);
         MDC.put(USER_TYPE_CLAIM, GUEST_USER_TYPE);
 
