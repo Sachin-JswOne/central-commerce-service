@@ -63,14 +63,12 @@ public class DataSourceConfig {
 
     // Central Commerce DB DataSource
     @Bean
-    @Primary
     @ConfigurationProperties("central.commerce.datasource")
     public DataSourceProperties centralCommerceDataSourceProperties() {
         return new DataSourceProperties();
     }
 
     @Bean(name = "centralCommerceDataSource")
-    @Primary
     @ConfigurationProperties("central.commerce.datasource.hikari")
     public HikariDataSource centralCommerceDataSource() {
         return centralCommerceDataSourceProperties()
