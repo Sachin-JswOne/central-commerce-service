@@ -46,7 +46,8 @@ public class CacheConfig {
                     Pair.of(CacheNames.BUY_AGAIN_PRODUCTS_CACHE_PREFIX, duration(1440L)),
                     Pair.of(CacheNames.CLEAR_RECENT_SEARCHES_CACHE_PREFIX, null),
                     Pair.of(CacheNames.BARRED_TRENDING_SEARCHES_CACHE_PREFIX, null),
-                    Pair.of(CacheNames.DEDUPE_TRENDING_SEARCHES_CACHE_PREFIX, duration(43200L))
+                    Pair.of(CacheNames.DEDUPE_TRENDING_SEARCHES_CACHE_PREFIX, duration(43200L)),
+                    Pair.of(CacheNames.SHORT_LINK_CACHE_PREFIX, null)
             );
 
     private final CommerceValueConfig commerceValueConfig;

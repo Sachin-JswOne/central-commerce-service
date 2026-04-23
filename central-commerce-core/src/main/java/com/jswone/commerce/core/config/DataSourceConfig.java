@@ -2,8 +2,8 @@ package com.jswone.commerce.core.config;
 
 import com.zaxxer.hikari.HikariDataSource;
 import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.boot.autoconfigure.jdbc.DataSourceProperties;
 import org.springframework.boot.context.properties.ConfigurationProperties;
-import org.springframework.boot.jdbc.DataSourceBuilder;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Primary;
@@ -14,19 +14,74 @@ import javax.sql.DataSource;
 @Configuration
 public class DataSourceConfig {
 
+    // Historical DB DataSource
+    @Bean
     @Primary
-    @Bean(name = "primaryDataSource")
-    @ConfigurationProperties("spring.datasource")
-    public DataSource primaryDataSource() {
-        return DataSourceBuilder.create()
+    @ConfigurationProperties("historical.datasource")
+    public DataSourceProperties historicalDataSourceProperties() {
+        return new DataSourceProperties();
+    }
+
+    @Bean(name = "historicalDataSource")
+    @Primary
+    @ConfigurationProperties("historical.datasource.hikari")
+    public HikariDataSource historicalDataSource() {
+        return historicalDataSourceProperties()
+                .initializeDataSourceBuilder()
                 .type(HikariDataSource.class)
                 .build();
     }
 
-    @Bean(name = "primaryJdbcTemplate")
+    @Bean(name = "historicalJdbcTemplate")
+    public JdbcTemplate historicalJdbcTemplate(
+            @Qualifier("historicalDataSource") DataSource dataSource) {
+        return new JdbcTemplate(dataSource);
+    }
+
+    // UOM DB DataSource
+    @Bean
+    @ConfigurationProperties("uom.service.datasource")
+    public DataSourceProperties uomDataSourceProperties() {
+        return new DataSourceProperties();
+    }
+
+    @Bean(name = "uomDataSource")
+    @ConfigurationProperties("uom.service.datasource.hikari")
+    public HikariDataSource uomDataSource() {
+        return uomDataSourceProperties()
+                .initializeDataSourceBuilder()
+                .type(HikariDataSource.class)
+                .build();
+    }
+
+    @Bean(name = "uomJdbcTemplate")
+    public JdbcTemplate uomJdbcTemplate(
+            @Qualifier("uomDataSource") DataSource dataSource) {
+        return new JdbcTemplate(dataSource);
+    }
+
+
+    // Central Commerce DB DataSource
+    @Bean
     @Primary
-    public JdbcTemplate primaryJdbcTemplate(
-            @Qualifier("primaryDataSource") DataSource dataSource) {
+    @ConfigurationProperties("central.commerce.datasource")
+    public DataSourceProperties centralCommerceDataSourceProperties() {
+        return new DataSourceProperties();
+    }
+
+    @Bean(name = "centralCommerceDataSource")
+    @Primary
+    @ConfigurationProperties("central.commerce.datasource.hikari")
+    public HikariDataSource centralCommerceDataSource() {
+        return centralCommerceDataSourceProperties()
+                .initializeDataSourceBuilder()
+                .type(HikariDataSource.class)
+                .build();
+    }
+
+    @Bean(name = "centralCommerceJdbcTemplate")
+    public JdbcTemplate centralCommerceJdbcTemplate(
+            @Qualifier("centralCommerceDataSource") DataSource dataSource) {
         return new JdbcTemplate(dataSource);
     }
 }
