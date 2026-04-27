@@ -86,7 +86,7 @@ public class BuyAgainServiceImplV2 implements BuyAgainServiceV2 {
      */
     public BuyAgainResponse getRecentPurchasedOrders(int offset, int limit) {
 
-        String customerId = JwtTokenUtil.getUserIdForSession();
+        String customerId = JSWCustomerUtil.getCustomerId();
 
         log.info("Buy_Again - Fetching customer for customerId={}", customerId);
 

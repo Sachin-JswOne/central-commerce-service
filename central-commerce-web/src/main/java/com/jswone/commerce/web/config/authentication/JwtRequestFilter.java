@@ -1,9 +1,16 @@
 package com.jswone.commerce.web.config.authentication;
 
+import com.commercetools.api.models.customer.Customer;
 import com.jswone.commerce.core.config.CommerceValueConfig;
+import com.jswone.commerce.core.exceptions.CentralCommerceServiceException;
 import com.jswone.commerce.core.exceptions.UserTokenException;
+import com.jswone.commerce.core.model.auth.JwtUserContext;
+import com.jswone.commerce.core.rest.AccountMasterClient;
 import com.jswone.commerce.core.service.UserTokenService;
 
+import com.jswone.commerce.core.util.AuthorityMapper;
+import com.jswone.commerce.core.util.JSWCustomerUtil;
+import com.jswone.commerce.core.util.JwtParserUtil;
 import com.jswone.commons.util.JwtTokenUtil;
 import io.jsonwebtoken.JwtException;
 import jakarta.servlet.FilterChain;
@@ -26,6 +33,7 @@ import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
 import org.springframework.stereotype.Component;
 import org.springframework.util.AntPathMatcher;
+import org.springframework.util.CollectionUtils;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 
@@ -44,12 +52,23 @@ public class JwtRequestFilter extends OncePerRequestFilter {
     private final JwtTokenUtil jwtTokenUtil;
     private final UserTokenService userTokenService;
     private final CommerceValueConfig commerceValueConfig;
+    private final JwtParserUtil jwtParserUtil;
+    private final AuthorityMapper authorityMapper;
+    private final JSWCustomerUtil customerDAO;
+    private final AccountMasterClient accountMasterService;
 
 
-    public JwtRequestFilter(JwtTokenUtil jwtTokenUtil, UserTokenService userTokenService, CommerceValueConfig commerceValueConfig) {
+    public JwtRequestFilter(JwtTokenUtil jwtTokenUtil, UserTokenService userTokenService,
+                            CommerceValueConfig commerceValueConfig, JwtParserUtil jwtParserUtil,
+                            AuthorityMapper authorityMapper, JSWCustomerUtil customerDAO,
+                            AccountMasterClient accountMasterService) {
         this.jwtTokenUtil = jwtTokenUtil;
         this.userTokenService = userTokenService;
         this.commerceValueConfig = commerceValueConfig;
+        this.jwtParserUtil = jwtParserUtil;
+        this.authorityMapper = authorityMapper;
+        this.customerDAO = customerDAO;
+        this.accountMasterService = accountMasterService;
     }
 
     @Override
@@ -72,7 +91,9 @@ public class JwtRequestFilter extends OncePerRequestFilter {
                     || Objects.nonNull(e.getMessage())
                             && e.getMessage().contains(INVALID_TOKEN_MESSAGE)
                     || Objects.nonNull(e.getMessage())
-                            && e.getMessage().contains(TOKEN_NOT_PRESENT_MESSAGE)) {
+                            && e.getMessage().contains(TOKEN_NOT_PRESENT_MESSAGE)
+                    || Objects.nonNull(e.getMessage())
+                            && e.getMessage().contains(USER_NOT_PRESENT_MESSAGE)) {
                 log.error("Unexpected error during authentication: ", e);
                 response.sendError(HttpServletResponse.SC_UNAUTHORIZED, e.getMessage());
                 return;
@@ -102,15 +123,26 @@ public class JwtRequestFilter extends OncePerRequestFilter {
             if (!userTokenService.userTokenExists(jwtAccessToken)) {
                 throw new UserTokenException(TOKEN_EXPIRE_MESSAGE, HttpStatus.UNAUTHORIZED);
             }
-
-            String userId = (String) claims.get(USER_ID_CLAIM);
-            MDC.put(USER_ID_CLAIM,userId);
-            MDC.put(SF_ID_CLAIM, (String) claims.getOrDefault(SF_ID_CLAIM,null));
-            MDC.put(USER_TYPE_CLAIM, (String) claims.getOrDefault(USER_TYPE_CLAIM,null));
-            UserDetails userDetails = new User(userId, jwtAccessToken, getAuthorities("REGUSER"));
+             // Parse Context & map Authorities using auth-common-util
+            JwtUserContext userContext = jwtParserUtil.extractUserContext(jwtAccessToken, null);
+            if("R".equalsIgnoreCase(userContext.getUserType()) && CollectionUtils.isEmpty(userContext.getPermissions())){
+                Customer customer = customerDAO.getCustomerById(userContext.getUserId());
+                if(Objects.nonNull(customer) && Objects.nonNull(customer.getId())){
+                    Map<String,String> permissions = accountMasterService.getAdminPermissionMap();
+                    userContext.setPermissions(permissions);
+                }else {
+                    throw new CentralCommerceServiceException(USER_NOT_PRESENT_MESSAGE, HttpStatus.UNAUTHORIZED);
+                }
+            }
+            Collection<GrantedAuthority> authorities = authorityMapper.mapPermissions(userContext.getPermissions());
+            // Retaining your fallback logic for now
+            if (authorities == null || authorities.isEmpty()) {
+                authorities = new ArrayList<>();
+                authorities.add(new SimpleGrantedAuthority("REGUSER"));
+            }
+            // Set JwtUserContext as the secure Principal natively in Spring
             UsernamePasswordAuthenticationToken authentication =
-                    new UsernamePasswordAuthenticationToken(
-                            userDetails, null, userDetails.getAuthorities());
+                    new UsernamePasswordAuthenticationToken(userContext, null, authorities);
             authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
             SecurityContextHolder.getContext().setAuthentication(authentication);
             addTokenValuesToRequestAttributes(request, claims);
@@ -149,10 +181,17 @@ public class JwtRequestFilter extends OncePerRequestFilter {
         MDC.put(USER_ID_CLAIM, sessionId);
         MDC.put(USER_TYPE_CLAIM, GUEST_USER_TYPE);
 
-        UserDetails userDetails = new User(sessionId, "", getAuthorities("GUEST"));
+        //If token is null auth util consider it as guest user
+        JwtUserContext userContext = jwtParserUtil.extractUserContext(null, sessionId);
+        // Set JwtUserContext as the secure Principal natively in Spring
+        Collection<GrantedAuthority> authorities = authorityMapper.mapPermissions(userContext.getPermissions());
+        // Retaining your fallback logic for now
+        if (authorities == null || authorities.isEmpty()) {
+            authorities = new ArrayList<>();
+            authorities.add(new SimpleGrantedAuthority("GUEST"));
+        }
         UsernamePasswordAuthenticationToken authentication =
-                new UsernamePasswordAuthenticationToken(
-                        userDetails, null, userDetails.getAuthorities());
+                new UsernamePasswordAuthenticationToken(userContext, null, authorities);
         authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
         SecurityContextHolder.getContext().setAuthentication(authentication);
     }

@@ -7,6 +7,7 @@ import com.commercetools.api.models.customer.Customer;
 import com.jswone.commerce.core.config.CommerceValueConfig;
 import com.jswone.commerce.core.config.JSWCommerceToolsConfig;
 import com.jswone.commerce.core.exceptions.CentralCommerceServiceException;
+import com.jswone.commerce.core.model.auth.JwtUserContext;
 import com.jswone.commerce.core.service.ClientService;
 import lombok.extern.log4j.Log4j2;
 import org.apache.commons.lang3.StringUtils;
@@ -120,16 +121,21 @@ public class JSWCustomerUtil {
                 .orElse(null);
     }
 
-    public String getCustomerId() {
+    public static String getCustomerId() {
         try {
             UserDetails userDetails =
                     (UserDetails)
                             SecurityContextHolder.getContext().getAuthentication().getPrincipal();
-            if (userDetails.getUsername().contains("Customer")) {
+            if (userDetails.getUsername().contains("Central")) {
                 throw new CentralCommerceServiceException(
                         "JWT validation failed : Please provide access token instead of X-API-KEY");
             }
             return userDetails.getUsername();
+        } catch (ClassCastException e) {
+            JwtUserContext jwtUserContext =
+                    (JwtUserContext)
+                            SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+            return jwtUserContext.getUserId();
         } catch (Exception e) {
             throw new CentralCommerceServiceException(e.getLocalizedMessage());
         }
