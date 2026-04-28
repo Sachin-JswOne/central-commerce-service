@@ -216,14 +216,14 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(IllegalArgumentException.class)
     public ResponseEntity<ApiResponse<Object>> handleIllegalArgumentException(IllegalArgumentException ex) {
         log.error("IllegalArgumentException: {}", ex.getMessage());
-        return buildErrorResponse(HttpStatus.BAD_REQUEST, " 🚨🚨 FAAAAAAAAAAAH , No illegal activities allowed  🚨🚨");
+        return buildErrorResponse(HttpStatus.BAD_REQUEST, ex.getMessage());
     }
 
     // --- AccessDeniedException ---
     @ExceptionHandler(AccessDeniedException.class)
     public ResponseEntity<ApiResponse<Object>> handleAccessDeniedException(AccessDeniedException ex) {
         log.error("AccessDeniedException: {}", ex.getMessage());
-        return buildErrorResponse(HttpStatus.FORBIDDEN, " Ever heard of consent? \uD83D\uDC85 It’s giving “ask first, act later” energy — always. \uD83D\uDE09");
+        return buildErrorResponse(HttpStatus.FORBIDDEN, "Access denied: Required  permission for this operation");
     }
 
 

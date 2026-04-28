@@ -209,12 +209,20 @@ public class JwtRequestFilter extends OncePerRequestFilter {
             if (apiKeyParts.size() >= 3) {
                 String userId = apiKeyParts.get(0);
                 String token = apiKeyParts.get(2);
-                UserDetails userDetails = new User(userId, token, getAuthorities("REGUSER"));
+                JwtUserContext userContext = jwtParserUtil.extractUserContext(null, userId);
+                // Set JwtUserContext as the secure Principal natively in Spring
+                Collection<GrantedAuthority> authorities =
+                        authorityMapper.mapPermissions(userContext.getPermissions());
+                // Retaining your fallback logic for now
+                if (authorities == null || authorities.isEmpty()) {
+                    authorities = new ArrayList<>();
+                    authorities.add(new SimpleGrantedAuthority("GUEST"));
+                }
+
+                // Set JwtUserContext as the secure Principal natively in Spring
                 UsernamePasswordAuthenticationToken authentication =
-                        new UsernamePasswordAuthenticationToken(
-                                userDetails, null, userDetails.getAuthorities());
-                authentication.setDetails(
-                        new WebAuthenticationDetailsSource().buildDetails(request));
+                        new UsernamePasswordAuthenticationToken(userContext, null, authorities);
+                authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
                 SecurityContextHolder.getContext().setAuthentication(authentication);
                 addTokenValuesToRequestAttributes(request, new HashMap<>());
             } else {

@@ -176,14 +176,19 @@ class JwtRequestFilterTest {
     void shouldKeepApiKeyAuthenticationFlowUnchanged() throws ServletException, IOException {
         headers.put(X_API_KEY, "commerce-service-v1-token");
 
-        when(commerceValueConfig.getX_API_KEY_COMMERCE_SERVICE()).thenReturn("commerce-service-v1-token");
+        JwtUserContext jwtUserContext = new JwtUserContext();
+        jwtUserContext.setUserType("G");
+        jwtUserContext.setStoreKey("msme");
+        jwtUserContext.setUserId("user-789");
 
+        when(commerceValueConfig.getX_API_KEY_COMMERCE_SERVICE()).thenReturn("commerce-service-v1-token");
+        when(jwtParserUtil.extractUserContext(any(), any())).thenReturn(jwtUserContext);
         jwtRequestFilter.doFilterInternal(request, response, filterChain);
 
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         assertNotNull(authentication);
-        assertEquals("REGUSER", authentication.getAuthorities().iterator().next().getAuthority());
-        assertEquals("commerce", ((User) authentication.getPrincipal()).getUsername());
+        assertEquals("GUEST", authentication.getAuthorities().iterator().next().getAuthority());
+        assertEquals("user-789", ((JwtUserContext) authentication.getPrincipal()).getUserId());
         assertFalse(MDC.getCopyOfContextMap() != null && MDC.getCopyOfContextMap().containsKey(USER_ID_CLAIM));
         verifyNoInteractions(jwtTokenUtil, userTokenService);
         verify(filterChain).doFilter(request, response);
