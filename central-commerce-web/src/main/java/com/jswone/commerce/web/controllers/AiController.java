@@ -29,4 +29,11 @@ public class AiController {
         AiInvokeResponse response = aiService.invoke(request);
         return ApiResponseUtil.createSuccessResponse(response, HttpStatus.OK);
     }
+
+    @PostMapping(value = "/ai/invoke-business-classification", produces = MediaType.APPLICATION_JSON_VALUE)
+    public ApiResponse<AiInvokeResponse> invokeBusinessClassification(@Valid @RequestBody AiInvokeRequest request) {
+        log.debug("Received AI business classification request: {}", request);
+        AiInvokeResponse response = aiService.invokeBusinessClassification(request);
+        return ApiResponseUtil.createSuccessResponse(response, HttpStatus.OK);
+    }
 }

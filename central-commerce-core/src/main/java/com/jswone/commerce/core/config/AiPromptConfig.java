@@ -16,6 +16,13 @@ public class AiPromptConfig {
     private String templatePath;
 
     /**
+     * Classpath location of the business classification prompt template file.
+     * The template supports placeholders: {{PAN}}, {{GSTIN}}, {{COMPANY_NAME}},
+     * {{LOCATION}}, {{BUSINESS_DESCRIPTION}}
+     */
+    private String businessClassificationTemplatePath;
+
+    /**
      * The AI model to use for invocation (e.g., gemini-2.5-flash).
      */
     private String model;

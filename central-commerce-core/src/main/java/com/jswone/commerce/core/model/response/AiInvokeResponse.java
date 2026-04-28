@@ -14,9 +14,9 @@ import java.util.Map;
 public class AiInvokeResponse {
     private Object result;
 
-    private String model;
-
-    private Map<String, Object> metadata;
-
-    private long latencyMs;
+//    private String model;
+//
+//    private Map<String, Object> metadata;
+//
+//    private long latencyMs;
 }

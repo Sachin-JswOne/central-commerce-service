@@ -23,4 +23,6 @@ public class AiInvokeRequest {
 
     @NotBlank(message = "Location cannot be null/blank")
     private String location;
+
+    private String businessDescription;
 }

@@ -6,4 +6,6 @@ import com.jswone.commerce.core.model.response.AiInvokeResponse;
 public interface AiService {
 
     AiInvokeResponse invoke(AiInvokeRequest request);
+
+    AiInvokeResponse invokeBusinessClassification(AiInvokeRequest request);
 }

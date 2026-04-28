@@ -1,4 +1,4 @@
-Search the internet using PAN, GSTIN, company name, and location to identify the company. Return brief, factual mappings only. No explanations.
+Search the internet using the business description, PAN, GSTIN, company name, and location to identify the company. Return brief, factual mappings only. No explanations.
 
 Rules:
 
@@ -186,6 +186,7 @@ Segments:
 
 Input:
 
+business description: {{user's description on the business}}
 pan: {{PAN}}
 gstin: {{GSTIN}}
 company name: {{COMPANY_NAME}}

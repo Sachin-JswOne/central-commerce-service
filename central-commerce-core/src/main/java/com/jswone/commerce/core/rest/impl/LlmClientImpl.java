@@ -32,6 +32,11 @@ public class LlmClientImpl implements LlmClient {
 
     @Override
     public String invoke(String resolvedPrompt) {
+        return invoke(resolvedPrompt, false);
+    }
+
+    @Override
+    public String invoke(String resolvedPrompt, boolean webSearch) {
         try {
             String url = aiPromptConfig.getBaseUrl() + aiPromptConfig.getInvokeEndpoint();
 
@@ -49,7 +54,7 @@ public class LlmClientImpl implements LlmClient {
                     .attachments(new ArrayList<>())
                     .maxTokens(aiPromptConfig.getMaxTokens())
                     .temperature(aiPromptConfig.getTemperature())
-                    .webSearch(false)
+                    .webSearch(webSearch)
                     .build();
 
             log.info("Calling LLM Playground API: {}", url);
