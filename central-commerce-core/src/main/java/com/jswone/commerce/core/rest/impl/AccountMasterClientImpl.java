@@ -61,7 +61,7 @@ public class AccountMasterClientImpl implements AccountMasterClient {
             String urlTemplate = UriComponentsBuilder.fromHttpUrl(commerceValueConfig.getTemporalBaseUrl())
                     .path("/jswone/resources/v1/get-all")
                     .queryParam("page", 0)
-                    .queryParam("size", 10)
+                    .queryParam("size", 100)
                     .encode()
                     .toUriString();
 
