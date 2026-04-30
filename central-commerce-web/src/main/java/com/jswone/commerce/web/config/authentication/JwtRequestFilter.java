@@ -119,6 +119,10 @@ public class JwtRequestFilter extends OncePerRequestFilter {
             if (claims == null || !claims.containsKey(USER_ID_CLAIM)) {
                 throw new UserTokenException(INVALID_TOKEN_MESSAGE, HttpStatus.UNAUTHORIZED);
             }
+            String userId = (String) claims.get(USER_ID_CLAIM);
+            MDC.put(USER_ID_CLAIM,userId);
+            MDC.put(SF_ID_CLAIM, (String) claims.getOrDefault(SF_ID_CLAIM,null));
+            MDC.put(USER_TYPE_CLAIM, (String) claims.getOrDefault(USER_TYPE_CLAIM,null));
 
             if (!userTokenService.userTokenExists(jwtAccessToken)) {
                 throw new UserTokenException(TOKEN_EXPIRE_MESSAGE, HttpStatus.UNAUTHORIZED);
