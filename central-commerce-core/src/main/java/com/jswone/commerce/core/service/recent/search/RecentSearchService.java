@@ -1,4 +1,4 @@
-package com.jswone.commerce.core.service.recentSearch;
+package com.jswone.commerce.core.service.recent.search;
 
 import java.util.Date;
 import java.util.List;
