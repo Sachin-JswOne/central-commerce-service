@@ -1,8 +1,10 @@
 package com.jswone.commerce.web.controllers;
 
 import com.jswone.commerce.core.model.ApiResponse;
+import com.jswone.commerce.core.model.RecentViewedResponse;
 import com.jswone.commerce.core.service.AsyncExecutor;
 import com.jswone.commerce.core.service.recent.search.RecentSearchService;
+import com.jswone.commerce.core.service.recent.viewed.RecentViewedService;
 import com.jswone.commerce.core.util.ApiResponseUtil;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.MDC;
@@ -22,6 +24,7 @@ import static com.jswone.commerce.core.constants.JWTConstants.USER_ID_CLAIM;
 public class RecentSearchController {
 
     private final RecentSearchService recentSearchService;
+    private final RecentViewedService recentViewedService;
     private final AsyncExecutor asyncExecutor;
 
     @Value("${recent.search.limit}")
@@ -39,5 +42,10 @@ public class RecentSearchController {
         asyncExecutor.clearRecentSearches(userId, new Date());
 
         return ApiResponseUtil.createSuccessResponse("Clear recent search initiated at : ".concat(d.toString()), HttpStatus.OK);
+    }
+
+    @GetMapping("/recent-viewed/remove")
+    public ApiResponse<RecentViewedResponse> getRecentViewedRemove() {
+        return ApiResponseUtil.createSuccessResponse(recentViewedService.recentViewedRemoval(), HttpStatus.OK);
     }
 }

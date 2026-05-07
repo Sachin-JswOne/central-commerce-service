@@ -58,7 +58,7 @@
             <dependency>
                 <groupId>com.jswone.ordering.common</groupId>
                 <artifactId>jsw_ordering_common_model</artifactId>
-                <version>0.0.300</version>
+                <version>0.0.311</version>
             </dependency>
             <dependency>
                 <groupId>com.jswonemsme</groupId>
@@ -147,6 +147,12 @@
                 <groupId>co.elastic.clients</groupId>
                 <artifactId>elasticsearch-java</artifactId>
                 <version>8.19.5</version>
+            </dependency>
+            <dependency>
+                <groupId>com.graphql-java</groupId>
+                <artifactId>graphql-java-extended-scalars</artifactId>
+                <version>24.0</version>
+                <scope>compile</scope>
             </dependency>
         </dependencies>
     </dependencyManagement>
