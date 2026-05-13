@@ -49,4 +49,7 @@ public class SearchRequest implements FilterRequestProvider {
 
     @NotBlank(message = "searchType cannot be blank")
     private String searchType;
+
+    /** Whether to sort results by rank (relevance score) */
+    @Builder.Default private boolean sortOnRank = false;
 }

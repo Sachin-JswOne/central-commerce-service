@@ -50,3 +50,6 @@ Thumbs.db
 *.wmv
 
 /build/
+/.opencode
+/graphify-out
+/.claude
