@@ -63,7 +63,7 @@ public class CentralCatalogueClientImpl implements CentralCatalogueClient {
                     .locale("en-US")
                     .facets_only(false)
                     .filters(extractFilters(searchRequest))
-                    .sortOnRank(searchRequest.isSearchAction())// method below
+                    .sortOnRank(searchRequest.isSortOnRank())
                     .build();
 
             String url = commerceValueConfig.getCentralCatalogueBaseUrl()
