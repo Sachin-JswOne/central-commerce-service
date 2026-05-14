@@ -8,4 +8,6 @@ public interface PurchasedSkuService {
     List<PurchasedSku> fetchRecentlyPurchasedSku(String customerId);
 
     List<PurchasedSku> fetchRecentlyPurchasedSkuForAllCustomers(int offset, int limit);
+
+    Boolean checkTransactingCustomer(String customerId);
 }

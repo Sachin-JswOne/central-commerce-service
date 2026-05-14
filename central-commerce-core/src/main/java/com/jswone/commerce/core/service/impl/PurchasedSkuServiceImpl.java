@@ -1,6 +1,7 @@
 package com.jswone.commerce.core.service.impl;
 
 import com.jswone.commerce.core.entity.PurchasedSku;
+import com.jswone.commerce.core.exceptions.CentralCommerceServiceException;
 import com.jswone.commerce.core.mapper.PurchasedSkuRowMapper;
 import com.jswone.commerce.core.service.PurchasedSkuService;
 import lombok.extern.slf4j.Slf4j;
@@ -40,5 +41,24 @@ public class PurchasedSkuServiceImpl implements PurchasedSkuService {
                 """;
 
         return jdbcTemplate.query(sql, purchasedSkuRowMapper, limit, offset);
+    }
+
+    @Override
+    public Boolean checkTransactingCustomer(String customerId) {
+        try {
+            final String sql = """
+                    SELECT EXISTS (
+                    SELECT 1
+                    FROM public.recent_purchase_v2_vw
+                    WHERE customer_id = ?
+                    )
+                    """;
+
+            return jdbcTemplate.queryForObject(sql, Boolean.class, customerId);
+
+        } catch (Exception ex) {
+            log.error("Error while checking transacting customer for customerId: {}", customerId, ex);
+            throw new CentralCommerceServiceException("Failed to check transacting customer for customerId: " + customerId, ex);
+        }
     }
 }
