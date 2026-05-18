@@ -23,13 +23,13 @@ import static com.jswone.commerce.core.constants.RestConstants.X_API_KEY;
 
 @Slf4j
 @Service
-public class MouMouAccountMasterServiceImpl implements MouAccountMasterService {
+public class MouAccountMasterServiceImpl implements MouAccountMasterService {
 
     private final CommerceValueConfig commerceValueConfig;
     private final RestUtil restUtil;
 
 
-    public MouMouAccountMasterServiceImpl(CommerceValueConfig commerceValueConfig, RestUtil restUtil) {
+    public MouAccountMasterServiceImpl(CommerceValueConfig commerceValueConfig, RestUtil restUtil) {
         this.commerceValueConfig = commerceValueConfig;
         this.restUtil = restUtil;
     }
