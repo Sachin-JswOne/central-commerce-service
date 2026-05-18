@@ -5,7 +5,7 @@ import com.jswone.commerce.core.model.accountMaster.CustomerMouRequest;
 
 import java.util.List;
 
-public interface AccountMasterService {
+public interface MouAccountMasterService {
 
     List<CustomerMouData> getCustomerMouDetails(String gstin, String financialYear);
 

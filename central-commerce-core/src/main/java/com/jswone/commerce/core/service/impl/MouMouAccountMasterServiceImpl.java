@@ -5,7 +5,7 @@ import com.jswone.commerce.core.exceptions.CentralCommerceServiceException;
 import com.jswone.commerce.core.model.accountMaster.CustomerMouData;
 import com.jswone.commerce.core.model.accountMaster.CustomerMouRequest;
 import com.jswone.commerce.core.model.accountMaster.CustomerMouResponse;
-import com.jswone.commerce.core.service.AccountMasterService;
+import com.jswone.commerce.core.service.MouAccountMasterService;
 import com.jswone.commerce.core.util.RestUtil;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpMethod;
@@ -23,13 +23,13 @@ import static com.jswone.commerce.core.constants.RestConstants.X_API_KEY;
 
 @Slf4j
 @Service
-public class AccountMasterServiceImpl implements AccountMasterService {
+public class MouMouAccountMasterServiceImpl implements MouAccountMasterService {
 
     private final CommerceValueConfig commerceValueConfig;
     private final RestUtil restUtil;
 
 
-    public AccountMasterServiceImpl(CommerceValueConfig commerceValueConfig, RestUtil restUtil) {
+    public MouMouAccountMasterServiceImpl(CommerceValueConfig commerceValueConfig, RestUtil restUtil) {
         this.commerceValueConfig = commerceValueConfig;
         this.restUtil = restUtil;
     }

@@ -7,7 +7,7 @@ import com.jswone.commerce.core.model.accountMaster.CustomerMouRequest;
 import com.jswone.commerce.core.model.mou.CustomerMouDetails;
 import com.jswone.commerce.core.model.mou.MouEligibility;
 import com.jswone.commerce.core.model.mou.MouGstEntity;
-import com.jswone.commerce.core.service.AccountMasterService;
+import com.jswone.commerce.core.service.MouAccountMasterService;
 import com.jswone.commerce.core.service.mou.MouEligibilityService;
 import com.jswone.commerce.core.util.MouUtil;
 import lombok.extern.slf4j.Slf4j;
@@ -22,10 +22,10 @@ import java.util.stream.Collectors;
 @Service
 public class MouEligibilityServiceImpl implements MouEligibilityService {
 
-    private final AccountMasterService accountMasterService;
+    private final MouAccountMasterService mouAccountMasterService;
 
-    public MouEligibilityServiceImpl(AccountMasterService accountMasterService) {
-        this.accountMasterService = accountMasterService;
+    public MouEligibilityServiceImpl(MouAccountMasterService mouAccountMasterService) {
+        this.mouAccountMasterService = mouAccountMasterService;
     }
 
     @Override
@@ -36,7 +36,7 @@ public class MouEligibilityServiceImpl implements MouEligibilityService {
         MouUtil.validateGstIn(gstin);
         MouUtil.validateFinancialYear(financialYear);
 
-        List<CustomerMouData> customerMouDataList = accountMasterService.getCustomerMouDetails(gstin, financialYear);
+        List<CustomerMouData> customerMouDataList = mouAccountMasterService.getCustomerMouDetails(gstin, financialYear);
 
         if (customerMouDataList.isEmpty()) {
             log.info("No eligible MoU found for gstin={}, financialYear={}",
@@ -78,7 +78,7 @@ public class MouEligibilityServiceImpl implements MouEligibilityService {
                 customerMouRequestMap.keySet());
 
         List<CustomerMouData> bulkCustomerMouDetails =
-                accountMasterService.getBulkCustomerMouDetails(customerMouBulkRequest);
+                mouAccountMasterService.getBulkCustomerMouDetails(customerMouBulkRequest);
 
         if (bulkCustomerMouDetails.isEmpty()) {
             log.error("No MoU entity data returned with mouIds={}", customerMouRequestMap.keySet());
