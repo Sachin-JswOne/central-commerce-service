@@ -21,7 +21,7 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
-      pull-requests: read
+      pull-requests: write
       issues: read
       id-token: write
 
@@ -38,7 +38,24 @@ jobs:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           plugin_marketplaces: 'https://github.com/anthropics/claude-code.git'
           plugins: 'code-review@claude-code-plugins'
-          prompt: '/code-review:code-review ${{ github.repository }}/pull/${{ github.event.pull_request.number }}'
+          prompt: |
+            Before starting the review, gather context by reading these local files:
+
+            1. Read `review.md` in the repository root — it contains code style guidelines,
+               review instructions, and a checklist to apply during the review.
+
+            2. Check if `.github/reviews/PR-${{ github.event.pull_request.number }}/jira.md` exists.
+               If it does, read it for the Jira ticket details and acceptance criteria.
+
+            3. Check if `.github/reviews/PR-${{ github.event.pull_request.number }}/testcases.md` exists.
+               If it does, read it for the expected test cases and scenarios.
+
+            Then perform a thorough code review:
+            /code-review:code-review ${{ github.repository }}/pull/${{ github.event.pull_request.number }}
+
+            Apply the guidelines from `review.md` throughout. Where Jira context is available,
+            verify the implementation satisfies the acceptance criteria. Where test cases are
+            defined, check that the PR's tests cover those scenarios.
           # See https://github.com/anthropics/claude-code-action/blob/main/docs/usage.md
           # or https://code.claude.com/docs/en/cli-reference for available options
 
