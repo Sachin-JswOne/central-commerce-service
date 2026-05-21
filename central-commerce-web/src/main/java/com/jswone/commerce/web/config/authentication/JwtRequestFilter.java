@@ -48,6 +48,7 @@ import static com.jswone.commerce.core.constants.JWTConstants.*;
 public class JwtRequestFilter extends OncePerRequestFilter {
 
     private static final int SESSION_COOKIE_MAX_AGE = 30 * 24 * 60 * 60; // 30 days
+    private static final AntPathMatcher PATH_MATCHER = new AntPathMatcher();
 
     private final JwtTokenUtil jwtTokenUtil;
     private final UserTokenService userTokenService;
@@ -87,15 +88,13 @@ public class JwtRequestFilter extends OncePerRequestFilter {
                 handleGuestAuthentication(request, response);
             }
         } catch (Exception e) {
-            if (Objects.nonNull(e.getMessage()) && e.getMessage().contains(TOKEN_EXPIRE_MESSAGE)
-                    || Objects.nonNull(e.getMessage())
-                            && e.getMessage().contains(INVALID_TOKEN_MESSAGE)
-                    || Objects.nonNull(e.getMessage())
-                            && e.getMessage().contains(TOKEN_NOT_PRESENT_MESSAGE)
-                    || Objects.nonNull(e.getMessage())
-                            && e.getMessage().contains(USER_NOT_PRESENT_MESSAGE)) {
-                log.error("Unexpected error during authentication: ", e);
-                response.sendError(HttpServletResponse.SC_UNAUTHORIZED, e.getMessage());
+            if (e instanceof UserTokenException ute) {
+                log.error("Authentication token error: ", e);
+                response.sendError(ute.getHttpStatus().value(), e.getMessage());
+                return;
+            } else if (e instanceof CentralCommerceServiceException cse) {
+                log.error("Authentication error: ", e);
+                response.sendError(cse.getHttpStatus().value(), e.getMessage());
                 return;
             }
             log.error("Unexpected error during authentication: ", e);
@@ -127,8 +126,11 @@ public class JwtRequestFilter extends OncePerRequestFilter {
             if (!userTokenService.userTokenExists(jwtAccessToken)) {
                 throw new UserTokenException(TOKEN_EXPIRE_MESSAGE, HttpStatus.UNAUTHORIZED);
             }
-             // Parse Context & map Authorities using auth-common-util
-            JwtUserContext userContext = jwtParserUtil.extractUserContext(jwtAccessToken, null);
+            // Use pre-validated claims to build the user context — avoids re-decoding without signature verification
+            JwtUserContext userContext = jwtParserUtil.extractUserContextFromClaims(claims);
+            if (userContext == null) {
+                throw new UserTokenException(INVALID_TOKEN_MESSAGE, HttpStatus.UNAUTHORIZED);
+            }
             if("R".equalsIgnoreCase(userContext.getUserType()) && CollectionUtils.isEmpty(userContext.getPermissions())){
                 Customer customer = customerDAO.getCustomerById(userContext.getUserId());
                 if(Objects.nonNull(customer) && Objects.nonNull(customer.getId())){
@@ -212,7 +214,6 @@ public class JwtRequestFilter extends OncePerRequestFilter {
             List<String> apiKeyParts = Arrays.asList(commerceValueConfig.getX_API_KEY_COMMERCE_SERVICE().split("-"));
             if (apiKeyParts.size() >= 3) {
                 String userId = apiKeyParts.get(0);
-                String token = apiKeyParts.get(2);
                 JwtUserContext userContext = jwtParserUtil.extractUserContext(null, userId);
                 // Set JwtUserContext as the secure Principal natively in Spring
                 Collection<GrantedAuthority> authorities =
@@ -248,13 +249,6 @@ public class JwtRequestFilter extends OncePerRequestFilter {
         return jwtAccessToken;
     }
 
-    private Collection<? extends GrantedAuthority> getAuthorities(String authority) {
-        List<SimpleGrantedAuthority> authorities = new ArrayList<>();
-        authorities.add(new SimpleGrantedAuthority(authority));
-        // add actual authorities when RBAC implemented
-        return authorities;
-    }
-
     private void addTokenValuesToRequestAttributes(HttpServletRequest request, Map claims) {
         if (claims.containsKey(CORRELATION_ID_CLAIM)) {
             request.setAttribute(
@@ -266,7 +260,7 @@ public class JwtRequestFilter extends OncePerRequestFilter {
     @Override
     protected boolean shouldNotFilter(HttpServletRequest request) {
         return excludeUrlPatterns.stream()
-                .anyMatch(p -> new AntPathMatcher().match(p, request.getRequestURI()));
+                .anyMatch(p -> PATH_MATCHER.match(p, request.getRequestURI()));
     }
 
     private AuthenticationMode getAuthenticationMode(HttpServletRequest request) {

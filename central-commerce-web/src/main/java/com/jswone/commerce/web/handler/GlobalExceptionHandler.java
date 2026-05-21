@@ -56,7 +56,7 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(UserTokenException.class)
     public ResponseEntity<ApiResponse<Object>> handleUserTokenException(UserTokenException ex) {
         log.error("UserTokenException:", ex);
-        return buildErrorResponse(BAD_REQUEST, ex.getMessage());
+        return buildErrorResponse(ex.getHttpStatus(), ex.getMessage());
     }
 
     @ExceptionHandler(CentralCommerceServiceException.class)

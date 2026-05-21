@@ -49,6 +49,20 @@ public class JwtParserUtil {
     }
 
     /**
+     * Builds a JwtUserContext from pre-validated claims returned by JwtTokenUtil.
+     * Use this instead of extractUserContext(token, ...) for JWT paths so the payload
+     * is never decoded a second time without signature verification.
+     */
+    public JwtUserContext extractUserContextFromClaims(Map<?, ?> validatedClaims) {
+        try {
+            return objectMapper.convertValue(validatedClaims, JwtUserContext.class);
+        } catch (Exception e) {
+            log.error("Failed to map validated JWT claims to user context", e);
+            throw new IllegalArgumentException("Failed to map JWT claims to user context", e);
+        }
+    }
+
+    /**
      * Extracts permissions map from the JWT token.
      * @param token The raw JWT token string
      * @return Map of permissions

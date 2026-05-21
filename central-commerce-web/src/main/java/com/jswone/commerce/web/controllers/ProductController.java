@@ -11,7 +11,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -38,10 +37,10 @@ public class ProductController {
     @PreAuthorize("@permissionValidator.isAnonymousUser(principal) or " +
             "@permissionValidator.hasPermissionForResource(principal.permissions, 'REQUIREMENTS_CART', '00010000') ")
     public ApiResponse<ProductSlug> getProductFromSlug(
-            @PathVariable String slugId,
+            @PathVariable String slugPath,
             @RequestParam(defaultValue = "msme") String storeFront) {
-        log.debug("Received request to find product slug :{} ", slugId);
-        ProductSlug productSlug = productService.getProductFromSlug(slugId, storeFront);
+        log.debug("Received request to find product slug :{} ", slugPath);
+        ProductSlug productSlug = productService.getProductFromSlug(slugPath, storeFront);
 
         return ApiResponseUtil.createSuccessResponse(productSlug, HttpStatus.OK);
     }

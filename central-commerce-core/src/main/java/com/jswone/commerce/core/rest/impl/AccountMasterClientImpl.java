@@ -20,7 +20,9 @@ import org.springframework.web.client.HttpStatusCodeException;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
 
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
@@ -36,6 +38,8 @@ public class AccountMasterClientImpl implements AccountMasterClient {
     private final ObjectMapper objectMapper;
 
     private static final String ACCOUNT_MASTER_EXP_MSG = "Client Exception occurred while calling the Account Master details.";
+    private static final String ADMIN_PERMISSION_BITS = "11111100";
+    private static final int PAGE_SIZE = 100;
 
     public AccountMasterClientImpl(RestTemplate jswRestTemplate, CommerceValueConfig commerceValueConfig, ObjectMapper objectMapper) {
         this.jswRestTemplate = jswRestTemplate;
@@ -45,16 +49,29 @@ public class AccountMasterClientImpl implements AccountMasterClient {
 
     @Override
     public Map<String,String> getAdminPermissionMap(){
-        PageResponseDTO<ResourceResponse> response =  getAllResources();
-        Set<String> resources = response.getContent().stream().map(ResourceResponse::getName).collect(Collectors.toSet());
-        String adminPermissionBits = "11111100";
-        Map<String, String> adminPermissionMap =  new HashMap<>();
-        resources.forEach(s -> adminPermissionMap.put(s,adminPermissionBits));
+        List<ResourceResponse> allResources = new ArrayList<>();
+        int page = 0;
+        PageResponseDTO<ResourceResponse> response;
+        do {
+            response = fetchResourcePage(page++, PAGE_SIZE);
+            if (response.getContent() != null) {
+                allResources.addAll(response.getContent());
+            }
+        } while (!response.isLast());
+
+        Map<String, String> adminPermissionMap = new HashMap<>();
+        allResources.stream()
+                .map(ResourceResponse::getName)
+                .forEach(name -> adminPermissionMap.put(name, ADMIN_PERMISSION_BITS));
         return adminPermissionMap;
     }
 
     @Override
     public PageResponseDTO<ResourceResponse> getAllResources() {
+        return fetchResourcePage(0, PAGE_SIZE);
+    }
+
+    private PageResponseDTO<ResourceResponse> fetchResourcePage(int page, int size) {
         try {
             HttpHeaders headers = new HttpHeaders();
             String token = commerceValueConfig.getTemporalToken();
@@ -68,8 +85,8 @@ public class AccountMasterClientImpl implements AccountMasterClient {
 
             String urlTemplate = UriComponentsBuilder.fromHttpUrl(commerceValueConfig.getTemporalBaseUrl())
                     .path("/jswone/resources/v1/get-all")
-                    .queryParam("page", 0)
-                    .queryParam("size", 100)
+                    .queryParam("page", page)
+                    .queryParam("size", size)
                     .encode()
                     .toUriString();
 
@@ -81,10 +98,12 @@ public class AccountMasterClientImpl implements AccountMasterClient {
                     }
             );
 
-            return handleResponse(response, "getAllResources()");
+            return handleResponse(response, "fetchResourcePage(page=" + page + ")");
         } catch (HttpServerErrorException | HttpClientErrorException e) {
             log.error(ACCOUNT_MASTER_EXP_MSG, e);
-            throw handleHttpException(e, "getAllResources");
+            throw handleHttpException(e, "fetchResourcePage");
+        } catch (AccountMasterException e) {
+            throw e;
         } catch (Exception exception) {
             log.error("Exception occurred while calling the Account Master details.", exception);
             throw new AccountMasterException("Internal error occurred while calling the Account Master details.", exception);
