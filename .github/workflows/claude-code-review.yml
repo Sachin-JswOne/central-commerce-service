@@ -1,35 +1,53 @@
 name: Claude Code Review
 
 on:
-  pull_request:
-    types: [opened, synchronize, ready_for_review, reopened]
-    # Optional: Only run on specific file changes
-    # paths:
-    #   - "src/**/*.ts"
-    #   - "src/**/*.tsx"
-    #   - "src/**/*.js"
-    #   - "src/**/*.jsx"
+  issue_comment:
+    types: [created]
 
 jobs:
   claude-review:
-    # Optional: Filter by PR author
-    # if: |
-    #   github.event.pull_request.user.login == 'external-contributor' ||
-    #   github.event.pull_request.user.login == 'new-developer' ||
-    #   github.event.pull_request.author_association == 'FIRST_TIME_CONTRIBUTOR'
-
+    # Only run when:
+    # 1. The comment is on a PR (not a plain issue)
+    # 2. The comment body contains the trigger phrase
+    if: |
+      github.event.issue.pull_request != null &&
+      contains(github.event.comment.body, '@claude review')
     runs-on: ubuntu-latest
     permissions:
       contents: read
       pull-requests: write
       issues: read
       id-token: write
-
     steps:
-      - name: Checkout repository
+      - name: Get PR head ref
+        id: pr
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const pr = await github.rest.pulls.get({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: context.issue.number,
+            });
+            core.setOutput('number', pr.data.number);
+            core.setOutput('head_sha', pr.data.head.sha);
+            core.setOutput('head_ref', pr.data.head.ref);
+
+      - name: Checkout PR head branch
         uses: actions/checkout@v4
         with:
+          # Check out the PR's actual head commit directly.
+          # This is where PR-<n>/jira.md and testcases.md live,
+          # committed by whoever prepared the review context.
+          ref: ${{ steps.pr.outputs.head_sha }}
           fetch-depth: 1
+
+      - name: Debug review context files
+        run: |
+          echo "PR number: ${{ steps.pr.outputs.number }}"
+          echo "Head ref: ${{ steps.pr.outputs.head_ref }}"
+          ls -la ".github/reviews/PR-${{ steps.pr.outputs.number }}/" 2>/dev/null \
+            || echo "No .github/reviews/PR-${{ steps.pr.outputs.number }}/ directory found on head branch"
 
       - name: Run Claude Code Review
         id: claude-review
@@ -41,22 +59,23 @@ jobs:
           plugins: 'code-review@claude-code-plugins'
           prompt: |
             Before starting the review, gather context by reading these local files:
-
             1. Read `review.md` in the repository root — it contains code style guidelines,
                review instructions, and a checklist to apply during the review.
-
-            2. Check if `.github/reviews/PR-${{ github.event.pull_request.number }}/jira.md` exists.
+            2. Check if `.github/reviews/PR-${{ steps.pr.outputs.number }}/jira.md` exists.
                If it does, read it for the Jira ticket details and acceptance criteria.
-
-            3. Check if `.github/reviews/PR-${{ github.event.pull_request.number }}/testcases.md` exists.
+               If it does not exist, explicitly say so at the start of your review comment.
+            3. Check if `.github/reviews/PR-${{ steps.pr.outputs.number }}/testcases.md` exists.
                If it does, read it for the expected test cases and scenarios.
+               If it does not exist, explicitly say so at the start of your review comment.
+
+            At the start of your review comment, state explicitly whether jira.md and
+            testcases.md were found and read, so this is auditable from the PR thread itself.
 
             Then perform a thorough code review:
-            /code-review:code-review ${{ github.repository }}/pull/${{ github.event.pull_request.number }}
+            /code-review:code-review ${{ github.repository }}/pull/${{ steps.pr.outputs.number }}
 
             Apply the guidelines from `review.md` throughout. Where Jira context is available,
             verify the implementation satisfies the acceptance criteria. Where test cases are
             defined, check that the PR's tests cover those scenarios.
           # See https://github.com/anthropics/claude-code-action/blob/main/docs/usage.md
-          # or https://code.claude.com/docs/en/cli-reference for available options
-
+          # or https://code.claude.com/docs/en/cli-reference for available options.
