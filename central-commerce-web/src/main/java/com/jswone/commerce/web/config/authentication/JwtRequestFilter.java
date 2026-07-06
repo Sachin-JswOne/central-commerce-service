@@ -1,9 +1,16 @@
 package com.jswone.commerce.web.config.authentication;
 
+import com.commercetools.api.models.customer.Customer;
 import com.jswone.commerce.core.config.CommerceValueConfig;
+import com.jswone.commerce.core.exceptions.CentralCommerceServiceException;
 import com.jswone.commerce.core.exceptions.UserTokenException;
+import com.jswone.commerce.core.model.auth.JwtUserContext;
+import com.jswone.commerce.core.rest.AccountMasterClient;
 import com.jswone.commerce.core.service.UserTokenService;
 
+import com.jswone.commerce.core.util.AuthorityMapper;
+import com.jswone.commerce.core.util.JSWCustomerUtil;
+import com.jswone.commerce.core.util.JwtParserUtil;
 import com.jswone.commons.util.JwtTokenUtil;
 import io.jsonwebtoken.JwtException;
 import jakarta.servlet.FilterChain;
@@ -26,6 +33,7 @@ import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
 import org.springframework.stereotype.Component;
 import org.springframework.util.AntPathMatcher;
+import org.springframework.util.CollectionUtils;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 
@@ -40,16 +48,28 @@ import static com.jswone.commerce.core.constants.JWTConstants.*;
 public class JwtRequestFilter extends OncePerRequestFilter {
 
     private static final int SESSION_COOKIE_MAX_AGE = 30 * 24 * 60 * 60; // 30 days
+    private static final AntPathMatcher PATH_MATCHER = new AntPathMatcher();
 
     private final JwtTokenUtil jwtTokenUtil;
     private final UserTokenService userTokenService;
     private final CommerceValueConfig commerceValueConfig;
+    private final JwtParserUtil jwtParserUtil;
+    private final AuthorityMapper authorityMapper;
+    private final JSWCustomerUtil customerDAO;
+    private final AccountMasterClient accountMasterService;
 
 
-    public JwtRequestFilter(JwtTokenUtil jwtTokenUtil, UserTokenService userTokenService, CommerceValueConfig commerceValueConfig) {
+    public JwtRequestFilter(JwtTokenUtil jwtTokenUtil, UserTokenService userTokenService,
+                            CommerceValueConfig commerceValueConfig, JwtParserUtil jwtParserUtil,
+                            AuthorityMapper authorityMapper, JSWCustomerUtil customerDAO,
+                            AccountMasterClient accountMasterService) {
         this.jwtTokenUtil = jwtTokenUtil;
         this.userTokenService = userTokenService;
         this.commerceValueConfig = commerceValueConfig;
+        this.jwtParserUtil = jwtParserUtil;
+        this.authorityMapper = authorityMapper;
+        this.customerDAO = customerDAO;
+        this.accountMasterService = accountMasterService;
     }
 
     @Override
@@ -68,13 +88,13 @@ public class JwtRequestFilter extends OncePerRequestFilter {
                 handleGuestAuthentication(request, response);
             }
         } catch (Exception e) {
-            if (Objects.nonNull(e.getMessage()) && e.getMessage().contains(TOKEN_EXPIRE_MESSAGE)
-                    || Objects.nonNull(e.getMessage())
-                            && e.getMessage().contains(INVALID_TOKEN_MESSAGE)
-                    || Objects.nonNull(e.getMessage())
-                            && e.getMessage().contains(TOKEN_NOT_PRESENT_MESSAGE)) {
-                log.error("Unexpected error during authentication: ", e);
-                response.sendError(HttpServletResponse.SC_UNAUTHORIZED, e.getMessage());
+            if (e instanceof UserTokenException ute) {
+                log.error("Authentication token error: ", e);
+                response.sendError(ute.getHttpStatus().value(), e.getMessage());
+                return;
+            } else if (e instanceof CentralCommerceServiceException cse) {
+                log.error("Authentication error: ", e);
+                response.sendError(cse.getHttpStatus().value(), e.getMessage());
                 return;
             }
             log.error("Unexpected error during authentication: ", e);
@@ -98,19 +118,37 @@ public class JwtRequestFilter extends OncePerRequestFilter {
             if (claims == null || !claims.containsKey(USER_ID_CLAIM)) {
                 throw new UserTokenException(INVALID_TOKEN_MESSAGE, HttpStatus.UNAUTHORIZED);
             }
-
-            if (!userTokenService.userTokenExists(jwtAccessToken)) {
-                throw new UserTokenException(TOKEN_EXPIRE_MESSAGE, HttpStatus.UNAUTHORIZED);
-            }
-
             String userId = (String) claims.get(USER_ID_CLAIM);
             MDC.put(USER_ID_CLAIM,userId);
             MDC.put(SF_ID_CLAIM, (String) claims.getOrDefault(SF_ID_CLAIM,null));
             MDC.put(USER_TYPE_CLAIM, (String) claims.getOrDefault(USER_TYPE_CLAIM,null));
-            UserDetails userDetails = new User(userId, jwtAccessToken, getAuthorities("REGUSER"));
+
+            if (!userTokenService.userTokenExists(jwtAccessToken)) {
+                throw new UserTokenException(TOKEN_EXPIRE_MESSAGE, HttpStatus.UNAUTHORIZED);
+            }
+            // Use pre-validated claims to build the user context — avoids re-decoding without signature verification
+            JwtUserContext userContext = jwtParserUtil.extractUserContextFromClaims(claims);
+            if (userContext == null) {
+                throw new UserTokenException(INVALID_TOKEN_MESSAGE, HttpStatus.UNAUTHORIZED);
+            }
+            if("R".equalsIgnoreCase(userContext.getUserType()) && CollectionUtils.isEmpty(userContext.getPermissions())){
+                Customer customer = customerDAO.getCustomerById(userContext.getUserId());
+                if(Objects.nonNull(customer) && Objects.nonNull(customer.getId())){
+                    Map<String,String> permissions = accountMasterService.getAdminPermissionMap();
+                    userContext.setPermissions(permissions);
+                }else {
+                    throw new CentralCommerceServiceException(USER_NOT_PRESENT_MESSAGE, HttpStatus.UNAUTHORIZED);
+                }
+            }
+            Collection<GrantedAuthority> authorities = authorityMapper.mapPermissions(userContext.getPermissions());
+            // Retaining your fallback logic for now
+            if (authorities == null || authorities.isEmpty()) {
+                authorities = new ArrayList<>();
+                authorities.add(new SimpleGrantedAuthority("REGUSER"));
+            }
+            // Set JwtUserContext as the secure Principal natively in Spring
             UsernamePasswordAuthenticationToken authentication =
-                    new UsernamePasswordAuthenticationToken(
-                            userDetails, null, userDetails.getAuthorities());
+                    new UsernamePasswordAuthenticationToken(userContext, null, authorities);
             authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
             SecurityContextHolder.getContext().setAuthentication(authentication);
             addTokenValuesToRequestAttributes(request, claims);
@@ -149,10 +187,17 @@ public class JwtRequestFilter extends OncePerRequestFilter {
         MDC.put(USER_ID_CLAIM, sessionId);
         MDC.put(USER_TYPE_CLAIM, GUEST_USER_TYPE);
 
-        UserDetails userDetails = new User(sessionId, "", getAuthorities("GUEST"));
+        //If token is null auth util consider it as guest user
+        JwtUserContext userContext = jwtParserUtil.extractUserContext(null, sessionId);
+        // Set JwtUserContext as the secure Principal natively in Spring
+        Collection<GrantedAuthority> authorities = authorityMapper.mapPermissions(userContext.getPermissions());
+        // Retaining your fallback logic for now
+        if (authorities == null || authorities.isEmpty()) {
+            authorities = new ArrayList<>();
+            authorities.add(new SimpleGrantedAuthority("GUEST"));
+        }
         UsernamePasswordAuthenticationToken authentication =
-                new UsernamePasswordAuthenticationToken(
-                        userDetails, null, userDetails.getAuthorities());
+                new UsernamePasswordAuthenticationToken(userContext, null, authorities);
         authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
         SecurityContextHolder.getContext().setAuthentication(authentication);
     }
@@ -169,13 +214,20 @@ public class JwtRequestFilter extends OncePerRequestFilter {
             List<String> apiKeyParts = Arrays.asList(commerceValueConfig.getX_API_KEY_COMMERCE_SERVICE().split("-"));
             if (apiKeyParts.size() >= 3) {
                 String userId = apiKeyParts.get(0);
-                String token = apiKeyParts.get(2);
-                UserDetails userDetails = new User(userId, token, getAuthorities("REGUSER"));
+                JwtUserContext userContext = jwtParserUtil.extractUserContext(null, userId);
+                // Set JwtUserContext as the secure Principal natively in Spring
+                Collection<GrantedAuthority> authorities =
+                        authorityMapper.mapPermissions(userContext.getPermissions());
+                // Retaining your fallback logic for now
+                if (authorities == null || authorities.isEmpty()) {
+                    authorities = new ArrayList<>();
+                    authorities.add(new SimpleGrantedAuthority("GUEST"));
+                }
+
+                // Set JwtUserContext as the secure Principal natively in Spring
                 UsernamePasswordAuthenticationToken authentication =
-                        new UsernamePasswordAuthenticationToken(
-                                userDetails, null, userDetails.getAuthorities());
-                authentication.setDetails(
-                        new WebAuthenticationDetailsSource().buildDetails(request));
+                        new UsernamePasswordAuthenticationToken(userContext, null, authorities);
+                authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
                 SecurityContextHolder.getContext().setAuthentication(authentication);
                 addTokenValuesToRequestAttributes(request, new HashMap<>());
             } else {
@@ -197,13 +249,6 @@ public class JwtRequestFilter extends OncePerRequestFilter {
         return jwtAccessToken;
     }
 
-    private Collection<? extends GrantedAuthority> getAuthorities(String authority) {
-        List<SimpleGrantedAuthority> authorities = new ArrayList<>();
-        authorities.add(new SimpleGrantedAuthority(authority));
-        // add actual authorities when RBAC implemented
-        return authorities;
-    }
-
     private void addTokenValuesToRequestAttributes(HttpServletRequest request, Map claims) {
         if (claims.containsKey(CORRELATION_ID_CLAIM)) {
             request.setAttribute(
@@ -215,7 +260,7 @@ public class JwtRequestFilter extends OncePerRequestFilter {
     @Override
     protected boolean shouldNotFilter(HttpServletRequest request) {
         return excludeUrlPatterns.stream()
-                .anyMatch(p -> new AntPathMatcher().match(p, request.getRequestURI()));
+                .anyMatch(p -> PATH_MATCHER.match(p, request.getRequestURI()));
     }
 
     private AuthenticationMode getAuthenticationMode(HttpServletRequest request) {

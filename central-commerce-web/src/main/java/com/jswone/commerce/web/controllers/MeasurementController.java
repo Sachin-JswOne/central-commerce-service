@@ -8,6 +8,7 @@ import com.jswone.commerce.core.util.ApiResponseUtil;
 import jakarta.validation.Valid;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
@@ -23,6 +24,8 @@ public class MeasurementController {
     }
 
     @PostMapping("/uom-convert")
+    @PreAuthorize("@permissionValidator.isAnonymousUser(principal) or " +
+                  "@permissionValidator.hasPermissionForResource(principal.permissions, 'REQUIREMENTS_CART', '00010000') ")
     public ApiResponse<UomConvertResponse> convertUom(@RequestBody @Valid UomConvertRequest uomConvertRequest) {
         return ApiResponseUtil.createSuccessResponse(uomConvertService.convertUom(uomConvertRequest.getUomRequests()),
                 HttpStatus.OK);

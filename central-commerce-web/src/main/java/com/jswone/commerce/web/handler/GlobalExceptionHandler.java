@@ -5,10 +5,7 @@ import com.jsw.notification_common_model.email.NotificationConfig;
 import com.jsw.notification_common_model.email.NotificationData;
 import com.jsw.notification_common_model.email.NotificationModel;
 import com.jswone.commerce.core.config.CommerceValueConfig;
-import com.jswone.commerce.core.exceptions.CentralCatalogueServiceException;
-import com.jswone.commerce.core.exceptions.CentralCommerceServiceException;
-import com.jswone.commerce.core.exceptions.ProductSelectorException;
-import com.jswone.commerce.core.exceptions.UserTokenException;
+import com.jswone.commerce.core.exceptions.*;
 import com.jswone.commerce.core.model.ApiResponse;
 import com.jswone.commerce.core.model.ErrorResponse;
 import com.jswone.commerce.core.service.NotificationService;
@@ -20,6 +17,7 @@ import org.springframework.core.annotation.Order;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.MissingServletRequestParameterException;
@@ -58,7 +56,7 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(UserTokenException.class)
     public ResponseEntity<ApiResponse<Object>> handleUserTokenException(UserTokenException ex) {
         log.error("UserTokenException:", ex);
-        return buildErrorResponse(BAD_REQUEST, ex.getMessage());
+        return buildErrorResponse(ex.getHttpStatus(), ex.getMessage());
     }
 
     @ExceptionHandler(CentralCommerceServiceException.class)
@@ -84,6 +82,12 @@ public class GlobalExceptionHandler {
             sendSearchFailureNotification(ex, request);
         }
 
+        return buildErrorResponse(ex.getHttpStatus(), ex.getMessage());
+    }
+
+    @ExceptionHandler(AccountMasterException.class)
+    public ResponseEntity<ApiResponse<Object>> handleAccountMasterException(AccountMasterException ex) {
+        log.error("CentralCommerceServiceException:", ex);
         return buildErrorResponse(ex.getHttpStatus(), ex.getMessage());
     }
 
@@ -206,6 +210,20 @@ public class GlobalExceptionHandler {
                 .orElse("Validation failed");
 
         return buildErrorResponse(BAD_REQUEST, errorMessage);
+    }
+
+    // --- IllegalArgumentException ---
+    @ExceptionHandler(IllegalArgumentException.class)
+    public ResponseEntity<ApiResponse<Object>> handleIllegalArgumentException(IllegalArgumentException ex) {
+        log.error("IllegalArgumentException: {}", ex.getMessage());
+        return buildErrorResponse(HttpStatus.BAD_REQUEST, ex.getMessage());
+    }
+
+    // --- AccessDeniedException ---
+    @ExceptionHandler(AccessDeniedException.class)
+    public ResponseEntity<ApiResponse<Object>> handleAccessDeniedException(AccessDeniedException ex) {
+        log.error("AccessDeniedException: {}", ex.getMessage());
+        return buildErrorResponse(HttpStatus.FORBIDDEN, "Access denied: Required  permission for this operation");
     }
 
 

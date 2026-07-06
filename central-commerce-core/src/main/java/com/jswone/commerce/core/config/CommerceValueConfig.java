@@ -195,4 +195,10 @@ public class CommerceValueConfig {
 
     @Value("${catalogue.admin.filter.conditions}")
     private String catalogueAdminFilter;
+
+    @Value("${rest.service.temporal.url}")
+    private String temporalBaseUrl;
+
+    @Value("${rest.service.temporal.token}")
+    private String temporalToken;
 }

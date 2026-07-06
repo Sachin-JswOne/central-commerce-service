@@ -13,6 +13,7 @@ public class JWTConstants {
     public static final String TOKEN_EXPIRE_MESSAGE = "Token Expired : cannot be reused";
     public static final String INVALID_TOKEN_MESSAGE = "Invalid token, claims expected";
     public static final String TOKEN_NOT_PRESENT_MESSAGE = "Auth token not present";
+    public static final String USER_NOT_PRESENT_MESSAGE = "User is not present in CT";
     public static final String ACCESS_TOKEN = "access_token";
     public static final String SESSION_ID_HEADER = "X-Session-Id";
     public static final String CORRELATION_ID_CLAIM = "x-correlation-id";
